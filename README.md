@@ -1,0 +1,2 @@
+# quarantine
+A game. WIP.
