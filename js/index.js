@@ -3,11 +3,19 @@ myCircle.fillColor = 'yellow';
 myCircle.strokeColor = 'black';
 
 var people = [];
+var radius = 8;
+
+function MakeFaceSymbol() {
+	var path = new Path.Circle(new Point(20, 20), radius);
+	path.fillColor = 'yellow';
+	path.strokeColor = 'black';
+	return new Symbol(path);
+}
+var faceSymbol = MakeFaceSymbol();
+
 
 function Person(center) {
-	this.face = new Path.Circle(center, 10);
-	this.face.fillColor = 'yellow';
-	this.face.strokeColor = 'black';
+	this.face = faceSymbol.place(center);
 
 	this.velocity = new Point();
 	this.velocity.length = 1;
@@ -15,10 +23,10 @@ function Person(center) {
 }
 
 function createPeople() {
-	var minx = 10;
-	var maxx = 890;
-	var miny = 10;
-	var maxy = 590;
+	var minx = radius;
+	var maxx = view.size.width - radius;
+	var miny = radius;
+	var maxy = view.size.height - radius;
 	var spacing = 50;
 
 	for (var x = minx; x < maxx; x += spacing) {
@@ -40,5 +48,15 @@ function onFrame(event) {
 		var person = people[i];
 		person.velocity.angle += (Math.random() - 0.5)*20;
 		person.face.position += person.velocity;
+
+		// Make people stay in bounds.
+		if (person.face.position.x < radius || person.face.position.x > view.size.width - radius) {
+			person.velocity.x *= -1;
+		}
+		if (person.face.position.y < radius || person.face.position.y > view.size.height - radius) {
+			person.velocity.y *= -1;
+		}
+		person.face.position = Point.min(Point.max(person.face.position, radius), view.size);
+
 	}
 }
