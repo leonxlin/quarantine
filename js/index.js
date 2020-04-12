@@ -1,62 +1,102 @@
-var myCircle = new Path.Circle(new Point(100, 70), 50);
-myCircle.fillColor = 'yellow';
-myCircle.strokeColor = 'black';
 
 var people = [];
 var radius = 8;
+var pause = false;
+var faceSymbol;
+var infectedFaceSymbol;
 
-function MakeFaceSymbol() {
-	var path = new Path.Circle(new Point(20, 20), radius);
-	path.fillColor = 'yellow';
+
+function MakeFaceSymbol(color) {
+	var path = new paper.Path.Circle(new paper.Point(20, 20), radius);
+	path.fillColor = color;
 	path.strokeColor = 'black';
-	return new Symbol(path);
+	return new paper.Symbol(path);
 }
-var faceSymbol = MakeFaceSymbol();
-
 
 function Person(center) {
 	this.face = faceSymbol.place(center);
 
-	this.velocity = new Point();
-	this.velocity.length = 1;
+	this.velocity = new paper.Point();
+	this.velocity.length = 0.2;
 	this.velocity.angle = Math.random() * 360;
+	this.infected = false;
+
+	this.iterate = function() {
+		this.velocity.angle += (Math.random() - 0.5)*20;
+		this.face.position = this.face.position.add(this.velocity);
+
+		// Make people stay in bounds.
+		if (this.face.position.x < radius || this.face.position.x > paper.view.size.width - radius) {
+			this.velocity.x *= -1;
+		}
+		if (this.face.position.y < radius || this.face.position.y > paper.view.size.height - radius) {
+			this.velocity.y *= -1;
+		}
+		this.face.position = paper.Point.min(paper.Point.max(this.face.position, radius), paper.view.size);
+
+		this.face.fillColor = 'orange';
+	};
+
+	this.infect = function() {
+		if (this.infected) return;
+		this.infected = true;
+		this.face.remove();
+		this.face = infectedFaceSymbol.place(this.face.position);
+	}
 }
 
 function createPeople() {
 	var minx = radius;
-	var maxx = view.size.width - radius;
+	var maxx = paper.view.size.width - radius;
 	var miny = radius;
-	var maxy = view.size.height - radius;
+	var maxy = paper.view.size.height - radius;
 	var spacing = 50;
 
 	for (var x = minx; x < maxx; x += spacing) {
 		for (var y = miny; y < maxy; y += spacing) {
-			people.push(new Person(new Point(x, y)));
+			people.push(new Person(new paper.Point(x, y)));
 		}
 	}
 }
 
-createPeople();
+hitOptions = {
+	stroke: false,
+	segments: false,
+	fill: true
+}
 
 function onMouseDown(event) {
-	// Add a segment to the path at the position of the mouse:
-	myCircle.position = new Point(event.point);
+	var hitResult = paper.project.hitTest(event.point, hitOptions);
+	console.log(hitResult.item);
+	hitResult.item.position = [0, 0];
+	console.log(hitResult.item);
 }
 
 function onFrame(event) {
-	for (var i = 0; i < people.length; i++) {
-		var person = people[i];
-		person.velocity.angle += (Math.random() - 0.5)*20;
-		person.face.position += person.velocity;
-
-		// Make people stay in bounds.
-		if (person.face.position.x < radius || person.face.position.x > view.size.width - radius) {
-			person.velocity.x *= -1;
-		}
-		if (person.face.position.y < radius || person.face.position.y > view.size.height - radius) {
-			person.velocity.y *= -1;
-		}
-		person.face.position = Point.min(Point.max(person.face.position, radius), view.size);
-
+	if (pause) {
+		return;
 	}
+
+	people[Math.floor(Math.random()*people.length)].infect();
+	for (var i = 0; i < people.length; i++) {
+		people[i].iterate();
+	}
+}
+
+window.onload = function() {
+	// Get a reference to the canvas object
+	var canvas = document.getElementById('game-canvas');
+	// Create an empty project and a view for the canvas:
+	paper.setup(canvas);
+
+	faceSymbol = MakeFaceSymbol('yellow');
+	infectedFaceSymbol = MakeFaceSymbol('orange');
+	createPeople();
+
+	paper.view.onFrame = onFrame;
+
+	var tool = new paper.Tool();
+	tool.onMouseDown = onMouseDown;
+
+	paper.view.draw();
 }
