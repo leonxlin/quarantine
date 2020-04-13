@@ -1,12 +1,73 @@
 
 var people = [];
-var radius = 8;
+var radius = 5;
 var pause = false;
 var faceSymbol;
 var infectedFaceSymbol;
+var frames = 0;
+var collisionDetector;
+var currentPersonId = 0;
 
 var FACE_TO_PERSON_SYMBOL = Symbol('FACE_TO_PERSON_SYMBOL');
 
+function generatePersonId() {
+	currentPersonId++;
+	return currentPersonId;
+}
+
+// Currently for Person objects only.
+function CollisionDetector(resolution) {
+	this.resolution = resolution;
+	this.zones = {};  // Maps zone keys to objects that map person ids to persons.
+	this.personIdToZoneKey = {};
+	this.formatZoneKey = function(gridX, gridY) {
+		return "z" + gridX + "," + gridY;
+	};
+	this.zoneKey = function(position) {
+		return this.formatZoneKey(Math.floor(position.x/resolution), Math.floor(position.y/resolution));
+	};
+	this.nearbyZoneKeys = function(position) {
+		var centerX = Math.floor(position.x/resolution);
+		var centerY = Math.floor(position.y/resolution);
+		var keys = [];
+		for (var x = centerX - 1; x <= centerX + 1; x++) {
+			for (var y = centerY - 1; y <= centerY + 1; y++) {
+				keys.push(this.formatZoneKey(x, y));
+			}
+		}
+		return keys;
+	};
+	this.registerPosition = function(person) {
+		key = this.zoneKey(person.face.position);
+		if (!(key in this.zones)) {
+			this.zones[key] = {};
+		}
+
+		this.zones[key][person.id] = person;
+		previousKey = this.personIdToZoneKey[person.id];
+		if (previousKey != key) {
+			if (previousKey != undefined) {
+				delete this.zones[previousKey][person.id];
+			}
+			this.personIdToZoneKey[person.id] = key;
+		}
+	};
+	this.findCollisions = function(person) {
+		var ret = [];
+		for (let key of this.nearbyZoneKeys(person.face.position)) {
+			for (let personId in this.zones[key]) {
+				if (personId == person.id) {
+					continue;
+				}
+				let p = this.zones[key][personId];
+				if (person.face.position.getDistance(p.face.position, true) < 4*radius*radius) {
+					ret.push(p);
+				}
+			}
+		}
+		return ret;
+	};
+}
 
 function MakeFaceSymbol(color) {
 	var path = new paper.Path.Circle(new paper.Point(20, 20), radius);
@@ -16,28 +77,28 @@ function MakeFaceSymbol(color) {
 }
 
 function Person(center) {
+	this.id = generatePersonId();
+
 	this.face = faceSymbol.place(center);
 	this.face[FACE_TO_PERSON_SYMBOL] = this;
 
 	this.velocity = new paper.Point();
-	this.velocity.length = 0.5;
+	this.velocity.length = 3;
 	this.velocity.angle = Math.random() * 360;
 	this.infected = false;
 
 	this.iterate = function() {
 		this.velocity.angle += (Math.random() - 0.5)*20;
-		this.face.position = this.face.position.add(this.velocity);
+		pos = this.face.position.add(this.velocity);
 
 		// Make people stay in bounds.
-		if (this.face.position.x < radius || this.face.position.x > paper.view.size.width - radius) {
+		if (pos.x < radius || pos.x > paper.view.size.width - radius) {
 			this.velocity.x *= -1;
 		}
-		if (this.face.position.y < radius || this.face.position.y > paper.view.size.height - radius) {
+		if (pos.y < radius || pos.y > paper.view.size.height - radius) {
 			this.velocity.y *= -1;
 		}
-		this.face.position = paper.Point.min(paper.Point.max(this.face.position, radius), paper.view.size);
-
-		this.face.fillColor = 'orange';
+		this.setPosition(paper.Point.min(paper.Point.max(pos, radius), paper.view.size));
 	};
 
 	this.infect = function() {
@@ -46,7 +107,14 @@ function Person(center) {
 		this.face.remove();
 		this.face = infectedFaceSymbol.place(this.face.position);
 		this.face[FACE_TO_PERSON_SYMBOL] = this;
-	}
+	};
+
+	this.setPosition = function(point) {
+		this.face.position = point;
+		collisionDetector.registerPosition(this);
+	};
+
+	this.setPosition(center);
 }
 
 function createPeople() {
@@ -78,6 +146,7 @@ function onMouseDown(event) {
 }
 
 function onFrame(event) {
+	frames += 1;
 	if (pause) {
 		return;
 	}
@@ -89,11 +158,9 @@ function onFrame(event) {
 			continue;
 		}
 
-		var hitResults = paper.project.hitTestAll(people[i].face.position, hitOptions);
-		for (let hitResult of hitResults) {
-			if (people[i].infected && (hitResult.item[FACE_TO_PERSON_SYMBOL] != undefined)) {
-				hitResult.item[FACE_TO_PERSON_SYMBOL].infect();
-			}
+		var collideds = collisionDetector.findCollisions(people[i]);
+		for (let p of collideds) {
+			p.infect();
 		}
 	}
 }
@@ -103,6 +170,8 @@ window.onload = function() {
 	var canvas = document.getElementById('game-canvas');
 	// Create an empty project and a view for the canvas:
 	paper.setup(canvas);
+
+	collisionDetector = new CollisionDetector(radius*2);
 
 	faceSymbol = MakeFaceSymbol('yellow');
 	infectedFaceSymbol = MakeFaceSymbol('orange');
@@ -116,4 +185,9 @@ window.onload = function() {
 	tool.onMouseDown = onMouseDown;
 
 	paper.view.draw();
+
+	setInterval(function() {
+		console.log("Frames per second: " + frames);
+		frames = 0;
+	}, 1000);
 }
