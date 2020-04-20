@@ -7,6 +7,13 @@ var infectedFaceSymbol;
 var frames = 0;
 var collisionDetector;
 var currentPersonId = 0;
+var numGraphDataPoints = 1000;
+var infectedGraph;
+var infectedGraphRectangle;
+var infectedGraphLine;
+var infectedPeople = [];
+var infectedGraphData = [];
+var textItem;
 
 var FACE_TO_PERSON_SYMBOL = Symbol('FACE_TO_PERSON_SYMBOL');
 
@@ -81,9 +88,10 @@ function Person(center) {
 
 	this.face = faceSymbol.place(center);
 	this.face[FACE_TO_PERSON_SYMBOL] = this;
+	this.infectedFace = infectedFaceSymbol.place([-10, -10]);
 
 	this.velocity = new paper.Point();
-	this.velocity.length = 3;
+	this.velocity.length = 1;
 	this.velocity.angle = Math.random() * 360;
 	this.infected = false;
 
@@ -104,9 +112,12 @@ function Person(center) {
 	this.infect = function() {
 		if (this.infected) return;
 		this.infected = true;
+		this.infectedFace.position = this.face.position;
 		this.face.remove();
-		this.face = infectedFaceSymbol.place(this.face.position);
+		this.face = this.infectedFace;
 		this.face[FACE_TO_PERSON_SYMBOL] = this;
+
+		infectedPeople.push(this);
 	};
 
 	this.setPosition = function(point) {
@@ -129,6 +140,51 @@ function createPeople() {
 			people.push(new Person(new paper.Point(x, y)));
 		}
 	}
+}
+
+function drawInfectedGraph() {
+	infectedGraph = new paper.Group();
+	infectedGraph.name = 'infected_graph';
+
+	infectedGraphRectangle = new paper.Rectangle(paper.view.bounds.bottomLeft.add([0, -100]), paper.view.bounds.bottomRight);
+	var path = new paper.Path.Rectangle(infectedGraphRectangle);
+	path.fillColor = '#cccccc';
+	path.opacity = 0.9;
+	path.addTo(infectedGraph);
+
+
+	textItem = new paper.PointText([20, paper.view.size.height - 20]);
+	textItem.addTo(infectedGraph);
+
+	for (let i = 0; i < numGraphDataPoints; i++) {
+		infectedGraphData.push(0);
+	}
+
+
+	infectedGraphLine = new paper.Path();
+	infectedGraphLine.addTo(infectedGraph);
+}
+
+function updateInfectedGraph() {
+	infectedGraphData.push(infectedPeople.length);
+	if (infectedGraphData.length > 100000) {
+		console.log('discarding old graph data');
+		infectedGraphData.splice(0, infectedGraphData.length - numGraphDataPoints);
+	}
+
+	infectedGraphLine.remove();
+	infectedGraphLine = new paper.Path();
+	infectedGraphLine.addTo(infectedGraph);
+	infectedGraphLine.strokeColor = 'black';
+
+	offset = infectedGraphData.length - numGraphDataPoints;
+	for (let i = 0; i < numGraphDataPoints; i++) {
+		let x = infectedGraphRectangle.left + i/numGraphDataPoints * infectedGraphRectangle.width;
+		let y = infectedGraphRectangle.bottom - infectedGraphData[offset + i] / people.length * infectedGraphRectangle.height;
+		infectedGraphLine.add([x, y]);
+	}
+
+	infectedGraph.bringToFront();
 }
 
 hitOptions = {
@@ -163,6 +219,9 @@ function onFrame(event) {
 			p.infect();
 		}
 	}
+	textItem.content = infectedPeople.length;
+
+	updateInfectedGraph();
 }
 
 window.onload = function() {
@@ -171,13 +230,17 @@ window.onload = function() {
 	// Create an empty project and a view for the canvas:
 	paper.setup(canvas);
 
+	drawInfectedGraph();
+
 	collisionDetector = new CollisionDetector(radius*2);
+
 
 	faceSymbol = MakeFaceSymbol('yellow');
 	infectedFaceSymbol = MakeFaceSymbol('orange');
 	createPeople();
 
 	people[37].infect();
+
 
 	paper.view.onFrame = onFrame;
 
@@ -188,6 +251,7 @@ window.onload = function() {
 
 	setInterval(function() {
 		console.log("Frames per second: " + frames);
+		console.log("infected graph data: " + infectedGraphData.length);
 		frames = 0;
 	}, 1000);
 }
