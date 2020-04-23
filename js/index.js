@@ -15,6 +15,12 @@ var infectedPeople = [];
 var infectedGraphData = [];
 var textItem;
 
+/*
+----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90|
+*/
+var map = "\
+"
+
 var FACE_TO_PERSON_SYMBOL = Symbol('FACE_TO_PERSON_SYMBOL');
 
 function generatePersonId() {
@@ -114,6 +120,7 @@ function Person(center) {
 			this.velocity.y *= -1;
 		}
 		this.setPosition(paper.Point.min(paper.Point.max(pos, radius), paper.view.size));
+		this.face.rotation = this.velocity.angle + 45;
 	};
 
 	this.infect = function() {
@@ -153,7 +160,7 @@ function drawInfectedGraph() {
 	infectedGraph = new paper.Group();
 	infectedGraph.name = 'infected_graph';
 
-	infectedGraphRectangle = new paper.Rectangle(paper.view.bounds.bottomLeft.add([0, -100]), paper.view.bounds.bottomRight);
+	infectedGraphRectangle = new paper.Rectangle(paper.view.bounds.bottomLeft.add([0, -100]), paper.view.bounds.bottomCenter);
 	var path = new paper.Path.Rectangle(infectedGraphRectangle);
 	path.fillColor = '#cccccc';
 	path.opacity = 0.9;
@@ -257,8 +264,8 @@ window.onload = function() {
 	paper.view.draw();
 
 	setInterval(function() {
-		console.log("Frames per second: " + frames + " at " + Date.now()/1000);
-		console.log("infected graph data: " + infectedGraphData.length);
+		//console.log("Frames per second: " + frames + " at " + Date.now()/1000);
+		//console.log("infected graph data: " + infectedGraphData.length);
 		frames = 0;
 	}, 1000);
 }
