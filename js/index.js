@@ -77,10 +77,17 @@ function CollisionDetector(resolution) {
 }
 
 function MakeFaceSymbol(color) {
-	var path = new paper.Path.Circle(new paper.Point(20, 20), radius);
+	// var path = new paper.Path.Circle(new paper.Point(20, 20), radius);
+	
+	var path = new paper.Path.Rectangle(new paper.Rectangle([0, 0], [2*radius, 2*radius]));
+	
 	path.fillColor = color;
 	path.strokeColor = 'black';
 	return new paper.Symbol(path);
+
+	// return new paper.Symbol(new paper.Raster({
+	//     source: color + '_circle.png'
+	// }));
 }
 
 function Person(center) {
@@ -250,7 +257,7 @@ window.onload = function() {
 	paper.view.draw();
 
 	setInterval(function() {
-		console.log("Frames per second: " + frames);
+		console.log("Frames per second: " + frames + " at " + Date.now()/1000);
 		console.log("infected graph data: " + infectedGraphData.length);
 		frames = 0;
 	}, 1000);
