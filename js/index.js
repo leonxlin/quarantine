@@ -15,13 +15,47 @@ var infectedPeople = [];
 var infectedGraphData = [];
 var textItem;
 
+MAP_HEIGHT = 5;
+MAP_WIDTH = 90;
+
 /*
 ----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90|
 */
-var map = "\
+var MAP = "\
+                                                                                          \
+    xxxxxxxxxxxxxxxxx                                                                     \
+    x      x  x  x          ggggggggggg                                                   \
+    x      x  x  x          ggggggggggg                                                   \
+    x  xxxxx  x  xxxx                                                                     \
 "
 
 var FACE_TO_PERSON_SYMBOL = Symbol('FACE_TO_PERSON_SYMBOL');
+
+function drawMap() {
+
+	var wallPath = new paper.Path.Rectangle(new paper.Rectangle([0, 0], [2*radius, 2*radius]));
+	wallPath.fillColor = 'brown';
+	var wallSymbol = new paper.Symbol(wallPath);
+
+	var greenPath = new paper.Path.Rectangle(new paper.Rectangle([0, 0], [2*radius, 2*radius]));
+	greenPath.fillColor = '#9abaed';
+	var greenSymbol = new paper.Symbol(greenPath);
+
+
+	for (var r = 0; r < MAP_HEIGHT; r++) {
+		for (var c = 0; c < MAP_WIDTH; c++) {
+			switch(MAP.charAt(r*MAP_WIDTH + c)) {
+				case 'x':
+					wallSymbol.place([(2*c + 1)*radius, (2*r + 1)*radius]);
+					break;
+				case 'g':
+					greenSymbol.place([(2*c + 1)*radius, (2*r + 1)*radius]);
+				default:
+					break;
+			}
+		}
+	}
+}
 
 function generatePersonId() {
 	currentPersonId++;
@@ -120,7 +154,7 @@ function Person(center) {
 			this.velocity.y *= -1;
 		}
 		this.setPosition(paper.Point.min(paper.Point.max(pos, radius), paper.view.size));
-		this.face.rotation = this.velocity.angle + 45;
+		//this.face.rotation = this.velocity.angle + 45;
 	};
 
 	this.infect = function() {
@@ -245,6 +279,7 @@ window.onload = function() {
 	paper.setup(canvas);
 
 	drawInfectedGraph();
+	drawMap();
 
 	collisionDetector = new CollisionDetector(radius*2);
 
@@ -264,7 +299,7 @@ window.onload = function() {
 	paper.view.draw();
 
 	setInterval(function() {
-		//console.log("Frames per second: " + frames + " at " + Date.now()/1000);
+		console.log("Frames per second: " + frames + " at " + Date.now()/1000);
 		//console.log("infected graph data: " + infectedGraphData.length);
 		frames = 0;
 	}, 1000);
