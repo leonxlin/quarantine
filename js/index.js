@@ -14,6 +14,8 @@ var infectedGraphLine;
 var infectedPeople = [];
 var infectedGraphData = [];
 var textItem;
+var wallSymbol, greenSymbol;
+var gameMap;
 
 MAP_HEIGHT = 5;
 MAP_WIDTH = 90;
@@ -21,7 +23,7 @@ MAP_WIDTH = 90;
 /*
 ----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90|
 */
-var MAP = "\
+var MAP_STRING = "\
                                                                                           \
     xxxxxxxxxxxxxxxxx                                                                     \
     x      x  x  x          ggggggggggg                                                   \
@@ -31,30 +33,51 @@ var MAP = "\
 
 var FACE_TO_PERSON_SYMBOL = Symbol('FACE_TO_PERSON_SYMBOL');
 
-function drawMap() {
+function Cell(charCode, r, c) {
+	this.charCode = charCode;
+	this.r = r;
+	this.c = c;
+	this.path = null;
+	this.center = new paper.Point([(2*c + 1)*radius, (2*r + 1)*radius]);
+	switch(this.charCode) {
+		case 'x':
+			this.path = wallSymbol.place(this.center);
+			break;
+		case 'g':
+			this.path = greenSymbol.place(this.center);
+		default:
+			break;
+	} 
+}
 
-	var wallPath = new paper.Path.Rectangle(new paper.Rectangle([0, 0], [2*radius, 2*radius]));
-	wallPath.fillColor = 'brown';
-	var wallSymbol = new paper.Symbol(wallPath);
-
-	var greenPath = new paper.Path.Rectangle(new paper.Rectangle([0, 0], [2*radius, 2*radius]));
-	greenPath.fillColor = '#9abaed';
-	var greenSymbol = new paper.Symbol(greenPath);
-
-
-	for (var r = 0; r < MAP_HEIGHT; r++) {
-		for (var c = 0; c < MAP_WIDTH; c++) {
-			switch(MAP.charAt(r*MAP_WIDTH + c)) {
-				case 'x':
-					wallSymbol.place([(2*c + 1)*radius, (2*r + 1)*radius]);
-					break;
-				case 'g':
-					greenSymbol.place([(2*c + 1)*radius, (2*r + 1)*radius]);
-				default:
-					break;
-			}
+function GameMap(map_string, width, height) {
+	this.map_string = map_string;
+	this.width = width;
+	this.height = height;
+	this.cells = [];
+	for (var r = 0; r < this.height; r++) {
+		this.cells.push([]);
+		for (var c = 0; c < this.width; c++) {
+			this.cells[r].push(new Cell(this.map_string.charAt(r*this.width + c), r, c));
 		}
 	}
+
+}
+
+function drawMap() {
+	wallSymbol = new paper.Symbol(new paper.Path.Rectangle({
+		from: [0, 0],
+		to: [2*radius, 2*radius],
+		fillColor: 'brown'
+	}));
+
+	greenSymbol = new paper.Symbol(new paper.Path.Rectangle({
+		from: [0, 0],
+		to: [2*radius, 2*radius],
+		fillColor: 'green'
+	}));
+
+	gameMap = GameMap(MAP_STRING, MAP_WIDTH, MAP_HEIGHT);
 }
 
 function generatePersonId() {
