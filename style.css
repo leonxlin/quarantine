@@ -3,3 +3,8 @@ canvas {
 	height: 600px; 
 	border: 1px solid black;
 }
+
+
+circle {
+  stroke: #fff;
+}
