@@ -2,11 +2,22 @@ import sayHi from './d3test.js';
 import * as d3 from 'd3';
 import collideForce from './collide.js'
 
+// Print ticks per second for the last 20 seconds.
+var recentTicksPerSecond = new Array(20),
+    recentTicksPerSecondIndex = 0;
+export function logRecentTickCount() {
+    console.log(recentTicksPerSecond
+                .slice(recentTicksPerSecondIndex)
+                .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
+}
+
 window.onload = function() {
     sayHi();
 
     // Copied in part
     // from https://stackoverflow.com/questions/44055869/converting-collision-detection-example-to-from-v3-to-v4-d3
+
+    var numTicksSinceLastRecord = 0;
 
     var canvas = document.querySelector("canvas"),
         context = canvas.getContext("2d"),
@@ -69,6 +80,8 @@ window.onload = function() {
 
     function ticked(e) {
 
+        numTicksSinceLastRecord += 1;
+
         context.clearRect(0, 0, width, height);
         context.save();
 
@@ -87,6 +100,14 @@ window.onload = function() {
 
         context.restore();
     };
+
+    // Record number of ticks per second.
+    setInterval(function() {
+        recentTicksPerSecond[recentTicksPerSecondIndex] = numTicksSinceLastRecord;
+        recentTicksPerSecondIndex += 1;
+        recentTicksPerSecondIndex %= recentTicksPerSecond.length;
+        numTicksSinceLastRecord = 0;
+    }, 1000);
 
     d3.select("canvas").on("mousemove", function() {
         var p1 = d3.mouse(this);

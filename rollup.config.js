@@ -4,7 +4,8 @@ export default {
   input: 'js/index.js',
   output: {
     file: 'bundle.js',
-    format: 'iife'
+    format: 'iife',
+    name: 'quarantine',
   },
   plugins: [ resolve() ]
 };

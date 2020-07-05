@@ -1,4 +1,4 @@
-(function () {
+var quarantine = (function (exports) {
   'use strict';
 
   function ascending(a, b) {
@@ -3415,7 +3415,7 @@
 
   var category10 = colors("1f77b4ff7f0e2ca02cd627289467bd8c564be377c27f7f7fbcbd2217becf");
 
-  // adapted from d3-force/src/collide.js
+  // The code in this file is adapted 
 
   function constant$3(x) {
     return function() {
@@ -3480,6 +3480,7 @@
               data.vx -= x * (r = 1 - r);
               data.vy -= y * r;
 
+              // CONTAGION
               if (Math.random() < 0.001)
                 node.infected = data.infected = node.infected || data.infected;
             }
@@ -3526,10 +3527,21 @@
     return force;
   }
 
+  var recentTicksPerSecond = new Array(20),
+      recentTicksPerSecondIndex = 0;
+
+  function logRecentTickCount() {
+      console.log(recentTicksPerSecond.slice(
+          recentTicksPerSecondIndex).concat(
+          recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
+  }
+
   window.onload = function() {
 
       // Copied in part
       // from https://stackoverflow.com/questions/44055869/converting-collision-detection-example-to-from-v3-to-v4-d3
+
+      var numTicksSinceLastRecord = 0;
 
       var canvas = document.querySelector("canvas"),
           context = canvas.getContext("2d"),
@@ -3592,6 +3604,8 @@
 
       function ticked(e) {
 
+          numTicksSinceLastRecord += 1;
+
           context.clearRect(0, 0, width, height);
           context.save();
 
@@ -3610,6 +3624,13 @@
 
           context.restore();
       }
+      setInterval(function() {
+          recentTicksPerSecond[recentTicksPerSecondIndex] = numTicksSinceLastRecord;
+          recentTicksPerSecondIndex += 1;
+          recentTicksPerSecondIndex %= recentTicksPerSecond.length;
+          numTicksSinceLastRecord = 0;
+      }, 1000);
+
       select("canvas").on("mousemove", function() {
           var p1 = mouse(this);
           root.fx = p1[0];
@@ -3618,4 +3639,8 @@
       });
   };
 
-}());
+  exports.logRecentTickCount = logRecentTickCount;
+
+  return exports;
+
+}({}));
