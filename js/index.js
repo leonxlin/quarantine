@@ -1,5 +1,6 @@
 import sayHi from './d3test.js';
 import * as d3 from 'd3';
+import collideForce from './collide.js'
 
 window.onload = function() {
     sayHi();
@@ -15,10 +16,12 @@ window.onload = function() {
     var color = d3.scaleOrdinal().range(d3.schemeCategory10);
     var nodes = d3.range(200).map(function(i) {
             return {
-                r: Math.random() * 12 + 4,
-                x: 0,
-                y: 0,
-                fillColor: color(i % 10)
+                r: Math.random() * 5 + 4,
+                x: Math.random() * width,
+                y: Math.random() * height,
+                // fillColor: 'color(i % 10)'
+                // fillColor: 'yellow',
+                infected: i == 1,
             };
         }),
         root = nodes[0];
@@ -54,7 +57,8 @@ window.onload = function() {
         // .force("x", forceX)
         // .force("y", forceY)
         .force("agent", agentForce)
-        .force("collide", d3.forceCollide().radius(function(d) {
+        // .force("collide", d3.forceCollide().radius(function(d) {
+        .force("collide", collideForce().radius(function(d) {
             if (d === root) {
                 return Math.random() * 50 + 100;
             }
@@ -74,7 +78,8 @@ window.onload = function() {
             context.beginPath();
             context.moveTo(d.x + d.r, d.y);
             context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-            context.fillStyle = d.fillColor;
+            // context.fillStyle = d.fillColor;
+            context.fillStyle = d.infected ? 'orange' : 'yellow';
             context.fill();
             context.strokeStyle = "#333";
             context.stroke();
