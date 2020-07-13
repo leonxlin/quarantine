@@ -1,6 +1,6 @@
 // The code in this file is adapted 
-// from https://github.com/d3/d3-force/blob/master/LICENSE, which carries the
-// following license (BSD 3-Clause "New" or "Revised" License):
+// from https://github.com/d3/d3-force/blob/master/src/collide.js, which carries 
+// the following license (BSD 3-Clause "New" or "Revised" License):
 
 // Copyright 2010-2016 Mike Bostock
 // All rights reserved.
@@ -50,11 +50,24 @@ function y(d) {
   return d.y + d.vy;
 }
 
+// TODO: document arguments.
+export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+  if (x === 0) x = jiggle(), l += x * x;
+  if (y === 0) y = jiggle(), l += y * y;
+  l = (r - (l = Math.sqrt(l))) / l * strength;
+  node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
+  node1.vy += (y *= l) * r;
+  node2.vx -= x * (r = 1 - r);
+  node2.vy -= y * r;
+}
+
 export default function(radius) {
   var nodes,
       radii,
       strength = 1,
-      iterations = 1;
+      iterations = 1,
+      // {str: function}. Named interactions between pairs of nodes.
+      interactions = new Map();
 
   if (typeof radius !== "function") radius = constant(radius == null ? 1 : +radius);
 
@@ -69,6 +82,8 @@ export default function(radius) {
 
     for (var k = 0; k < iterations; ++k) {
       tree = quadtree(nodes, x, y).visitAfter(prepare);
+
+      // For each node, visit other nodes that could collide.
       for (i = 0; i < n; ++i) {
         node = nodes[i];
         ri = radii[node.index], ri2 = ri * ri;
@@ -81,33 +96,24 @@ export default function(radius) {
     function apply(quad, x0, y0, x1, y1) {
       var data = quad.data, rj = quad.r, r = ri + rj;
       if (data) {
+        // Only process node pairs with the smaller index first.
         if (data.index > node.index) {
           var x = xi - data.x - data.vx,
               y = yi - data.y - data.vy,
               l = x * x + y * y;
           if (l < r * r) {
-
-            if (x === 0) x = jiggle(), l += x * x;
-            if (y === 0) y = jiggle(), l += y * y;
-            l = (r - (l = Math.sqrt(l))) / l * strength;
-            node.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-            node.vy += (y *= l) * r;
-            data.vx -= x * (r = 1 - r);
-            data.vy -= y * r;
-
-            // CONTAGION
-            if (Math.random() < 0.001)
-              node.infected = data.infected = node.infected || data.infected;
+            // Execute registered interactions for (node, data).
+            interactions.forEach(function(interaction) {
+              interaction(node, data, x, y, l, r, ri2, rj, strength);
+            });
           }
         }
         return;
       }
+
+      // Return true if there is no need to visit the children of `quad`.
       return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
     }
-  }
-
-  function addHook() {
-
   }
 
   function prepare(quad) {
@@ -129,6 +135,13 @@ export default function(radius) {
   force.initialize = function(_) {
     nodes = _;
     initialize();
+  };
+
+  // Add a named interaction, or get the interaction with the given name.
+  force.interaction = function(name, _) {
+    return arguments.length > 1 
+        ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force) 
+        : interactions.get(name);
   };
 
   force.iterations = function(_) {

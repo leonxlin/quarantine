@@ -2612,10 +2612,10 @@ var quarantine = (function (exports) {
 
   var prefix = "$";
 
-  function Map() {}
+  function Map$1() {}
 
-  Map.prototype = map.prototype = {
-    constructor: Map,
+  Map$1.prototype = map.prototype = {
+    constructor: Map$1,
     has: function(key) {
       return (prefix + key) in this;
     },
@@ -2663,10 +2663,10 @@ var quarantine = (function (exports) {
   };
 
   function map(object, f) {
-    var map = new Map;
+    var map = new Map$1;
 
     // Copy constructor.
-    if (object instanceof Map) object.each(function(value, key) { map.set(key, value); });
+    if (object instanceof Map$1) object.each(function(value, key) { map.set(key, value); });
 
     // Index array by numeric index or specified key function.
     else if (Array.isArray(object)) {
@@ -3435,11 +3435,24 @@ var quarantine = (function (exports) {
     return d.y + d.vy;
   }
 
+  // TODO: document arguments.
+  function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+    if (x === 0) x = jiggle(), l += x * x;
+    if (y === 0) y = jiggle(), l += y * y;
+    l = (r - (l = Math.sqrt(l))) / l * strength;
+    node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
+    node1.vy += (y *= l) * r;
+    node2.vx -= x * (r = 1 - r);
+    node2.vy -= y * r;
+  }
+
   function collideForce(radius) {
     var nodes,
         radii,
         strength = 1,
-        iterations = 1;
+        iterations = 1,
+        // {str: function}. Named interactions between pairs of nodes.
+        interactions = new Map();
 
     if (typeof radius !== "function") radius = constant$3(radius == null ? 1 : +radius);
 
@@ -3454,6 +3467,8 @@ var quarantine = (function (exports) {
 
       for (var k = 0; k < iterations; ++k) {
         tree = quadtree(nodes, x$1, y$1).visitAfter(prepare);
+
+        // For each node, visit other nodes that could collide.
         for (i = 0; i < n; ++i) {
           node = nodes[i];
           ri = radii[node.index], ri2 = ri * ri;
@@ -3466,27 +3481,22 @@ var quarantine = (function (exports) {
       function apply(quad, x0, y0, x1, y1) {
         var data = quad.data, rj = quad.r, r = ri + rj;
         if (data) {
+          // Only process node pairs with the smaller index first.
           if (data.index > node.index) {
             var x = xi - data.x - data.vx,
                 y = yi - data.y - data.vy,
                 l = x * x + y * y;
             if (l < r * r) {
-
-              if (x === 0) x = jiggle(), l += x * x;
-              if (y === 0) y = jiggle(), l += y * y;
-              l = (r - (l = Math.sqrt(l))) / l * strength;
-              node.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-              node.vy += (y *= l) * r;
-              data.vx -= x * (r = 1 - r);
-              data.vy -= y * r;
-
-              // CONTAGION
-              if (Math.random() < 0.001)
-                node.infected = data.infected = node.infected || data.infected;
+              // Execute registered interactions for (node, data).
+              interactions.forEach(function(interaction) {
+                interaction(node, data, x, y, l, r, ri2, rj, strength);
+              });
             }
           }
           return;
         }
+
+        // Return true if there is no need to visit the children of `quad`.
         return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
       }
     }
@@ -3512,6 +3522,13 @@ var quarantine = (function (exports) {
       initialize();
     };
 
+    // Add a named interaction, or get the interaction with the given name.
+    force.interaction = function(name, _) {
+      return arguments.length > 1 
+          ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force) 
+          : interactions.get(name);
+    };
+
     force.iterations = function(_) {
       return arguments.length ? (iterations = +_, force) : iterations;
     };
@@ -3527,13 +3544,13 @@ var quarantine = (function (exports) {
     return force;
   }
 
+  // Print ticks per second for the last 20 seconds.
   var recentTicksPerSecond = new Array(20),
       recentTicksPerSecondIndex = 0;
-
   function logRecentTickCount() {
-      console.log(recentTicksPerSecond.slice(
-          recentTicksPerSecondIndex).concat(
-          recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
+      console.log(recentTicksPerSecond
+          .slice(recentTicksPerSecondIndex)
+          .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
   }
 
   window.onload = function() {
@@ -3593,12 +3610,18 @@ var quarantine = (function (exports) {
           // .force("y", forceY)
           .force("agent", agentForce)
           // .force("collide", d3.forceCollide().radius(function(d) {
-          .force("collide", collideForce().radius(function(d) {
-              if (d === root) {
-                  return Math.random() * 50 + 100;
-              }
-              return d.r + 0.5;
-          }).iterations(5))
+          .force("interaction",
+              collideForce().radius(function(d) {
+                  if (d === root) {
+                      return Math.random() * 50 + 100;
+                  }
+                  return d.r + 0.5;
+              }).iterations(5)
+              .interaction('collision', collisionInteraction)
+              .interaction('contagion', function(node1, node2) {
+                  if (Math.random() < 0.001)
+                      node1.infected = node2.infected = node1.infected || node2.infected;
+              }))
           .nodes(nodes).on("tick", ticked);
 
 
@@ -3624,6 +3647,7 @@ var quarantine = (function (exports) {
 
           context.restore();
       }
+      // Record number of ticks per second.
       setInterval(function() {
           recentTicksPerSecond[recentTicksPerSecondIndex] = numTicksSinceLastRecord;
           recentTicksPerSecondIndex += 1;

@@ -1,14 +1,17 @@
 import sayHi from './d3test.js';
 import * as d3 from 'd3';
 import collideForce from './collide.js'
+import {
+    collisionInteraction
+} from './collide.js'
 
 // Print ticks per second for the last 20 seconds.
 var recentTicksPerSecond = new Array(20),
     recentTicksPerSecondIndex = 0;
 export function logRecentTickCount() {
     console.log(recentTicksPerSecond
-                .slice(recentTicksPerSecondIndex)
-                .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
+        .slice(recentTicksPerSecondIndex)
+        .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
 }
 
 window.onload = function() {
@@ -69,12 +72,18 @@ window.onload = function() {
         // .force("y", forceY)
         .force("agent", agentForce)
         // .force("collide", d3.forceCollide().radius(function(d) {
-        .force("collide", collideForce().radius(function(d) {
-            if (d === root) {
-                return Math.random() * 50 + 100;
-            }
-            return d.r + 0.5;
-        }).iterations(5))
+        .force("interaction",
+            collideForce().radius(function(d) {
+                if (d === root) {
+                    return Math.random() * 50 + 100;
+                }
+                return d.r + 0.5;
+            }).iterations(5)
+            .interaction('collision', collisionInteraction)
+            .interaction('contagion', function(node1, node2) {
+                if (Math.random() < 0.001)
+                    node1.infected = node2.infected = node1.infected || node2.infected;
+            }))
         .nodes(nodes).on("tick", ticked);
 
 

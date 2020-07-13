@@ -13,5 +13,4 @@ in the top-level directory and visit `localhost:8000`.
 
 ## TODO
 
-* clean up collide.js - abstract out nearby detection and infection spread
 * implement dragging
