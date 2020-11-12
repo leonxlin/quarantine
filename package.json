@@ -18,6 +18,7 @@
   "homepage": "https://github.com/leonxlin/quarantine#readme",
   "dependencies": {
     "d3": "^5.16.0",
+    "d3-drag": "^2.0.0",
     "d3-scale": "^3.2.1"
   },
   "devDependencies": {

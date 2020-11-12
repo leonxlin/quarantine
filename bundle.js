@@ -914,6 +914,17 @@ var quarantine = (function (exports) {
     return this;
   }
 
+  function customEvent(event1, listener, that, args) {
+    var event0 = event;
+    event1.sourceEvent = event;
+    event = event1;
+    try {
+      return listener.apply(that, args);
+    } finally {
+      event = event0;
+    }
+  }
+
   function dispatchEvent(node, type, params) {
     var window = defaultView(node),
         event = window.CustomEvent;
@@ -1023,6 +1034,18 @@ var quarantine = (function (exports) {
     var event = sourceEvent();
     if (event.changedTouches) event = event.changedTouches[0];
     return point(node, event);
+  }
+
+  function touch(node, touches, identifier) {
+    if (arguments.length < 3) identifier = touches, touches = sourceEvent().changedTouches;
+
+    for (var i = 0, n = touches ? touches.length : 0, touch; i < n; ++i) {
+      if ((touch = touches[i]).identifier === identifier) {
+        return point(node, touch);
+      }
+    }
+
+    return null;
   }
 
   function define(constructor, factory, prototype) {
@@ -2720,7 +2743,227 @@ var quarantine = (function (exports) {
     return set;
   }
 
+  function nopropagation() {
+    event.stopImmediatePropagation();
+  }
+
+  function noevent() {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  function nodrag(view) {
+    var root = view.document.documentElement,
+        selection = select(view).on("dragstart.drag", noevent, true);
+    if ("onselectstart" in root) {
+      selection.on("selectstart.drag", noevent, true);
+    } else {
+      root.__noselect = root.style.MozUserSelect;
+      root.style.MozUserSelect = "none";
+    }
+  }
+
+  function yesdrag(view, noclick) {
+    var root = view.document.documentElement,
+        selection = select(view).on("dragstart.drag", null);
+    if (noclick) {
+      selection.on("click.drag", noevent, true);
+      setTimeout(function() { selection.on("click.drag", null); }, 0);
+    }
+    if ("onselectstart" in root) {
+      selection.on("selectstart.drag", null);
+    } else {
+      root.style.MozUserSelect = root.__noselect;
+      delete root.__noselect;
+    }
+  }
+
   function constant$2(x) {
+    return function() {
+      return x;
+    };
+  }
+
+  function DragEvent(target, type, subject, id, active, x, y, dx, dy, dispatch) {
+    this.target = target;
+    this.type = type;
+    this.subject = subject;
+    this.identifier = id;
+    this.active = active;
+    this.x = x;
+    this.y = y;
+    this.dx = dx;
+    this.dy = dy;
+    this._ = dispatch;
+  }
+
+  DragEvent.prototype.on = function() {
+    var value = this._.on.apply(this._, arguments);
+    return value === this._ ? this : value;
+  };
+
+  // Ignore right-click, since that should open the context menu.
+  function defaultFilter() {
+    return !event.ctrlKey && !event.button;
+  }
+
+  function defaultContainer() {
+    return this.parentNode;
+  }
+
+  function defaultSubject(d) {
+    return d == null ? {x: event.x, y: event.y} : d;
+  }
+
+  function defaultTouchable() {
+    return navigator.maxTouchPoints || ("ontouchstart" in this);
+  }
+
+  function drag() {
+    var filter = defaultFilter,
+        container = defaultContainer,
+        subject = defaultSubject,
+        touchable = defaultTouchable,
+        gestures = {},
+        listeners = dispatch("start", "drag", "end"),
+        active = 0,
+        mousedownx,
+        mousedowny,
+        mousemoving,
+        touchending,
+        clickDistance2 = 0;
+
+    function drag(selection) {
+      selection
+          .on("mousedown.drag", mousedowned)
+        .filter(touchable)
+          .on("touchstart.drag", touchstarted)
+          .on("touchmove.drag", touchmoved)
+          .on("touchend.drag touchcancel.drag", touchended)
+          .style("touch-action", "none")
+          .style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+    }
+
+    function mousedowned() {
+      if (touchending || !filter.apply(this, arguments)) return;
+      var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
+      if (!gesture) return;
+      select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
+      nodrag(event.view);
+      nopropagation();
+      mousemoving = false;
+      mousedownx = event.clientX;
+      mousedowny = event.clientY;
+      gesture("start");
+    }
+
+    function mousemoved() {
+      noevent();
+      if (!mousemoving) {
+        var dx = event.clientX - mousedownx, dy = event.clientY - mousedowny;
+        mousemoving = dx * dx + dy * dy > clickDistance2;
+      }
+      gestures.mouse("drag");
+    }
+
+    function mouseupped() {
+      select(event.view).on("mousemove.drag mouseup.drag", null);
+      yesdrag(event.view, mousemoving);
+      noevent();
+      gestures.mouse("end");
+    }
+
+    function touchstarted() {
+      if (!filter.apply(this, arguments)) return;
+      var touches = event.changedTouches,
+          c = container.apply(this, arguments),
+          n = touches.length, i, gesture;
+
+      for (i = 0; i < n; ++i) {
+        if (gesture = beforestart(touches[i].identifier, c, touch, this, arguments)) {
+          nopropagation();
+          gesture("start");
+        }
+      }
+    }
+
+    function touchmoved() {
+      var touches = event.changedTouches,
+          n = touches.length, i, gesture;
+
+      for (i = 0; i < n; ++i) {
+        if (gesture = gestures[touches[i].identifier]) {
+          noevent();
+          gesture("drag");
+        }
+      }
+    }
+
+    function touchended() {
+      var touches = event.changedTouches,
+          n = touches.length, i, gesture;
+
+      if (touchending) clearTimeout(touchending);
+      touchending = setTimeout(function() { touchending = null; }, 500); // Ghost clicks are delayed!
+      for (i = 0; i < n; ++i) {
+        if (gesture = gestures[touches[i].identifier]) {
+          nopropagation();
+          gesture("end");
+        }
+      }
+    }
+
+    function beforestart(id, container, point, that, args) {
+      var p = point(container, id), s, dx, dy,
+          sublisteners = listeners.copy();
+
+      if (!customEvent(new DragEvent(drag, "beforestart", s, id, active, p[0], p[1], 0, 0, sublisteners), function() {
+        if ((event.subject = s = subject.apply(that, args)) == null) return false;
+        dx = s.x - p[0] || 0;
+        dy = s.y - p[1] || 0;
+        return true;
+      })) return;
+
+      return function gesture(type) {
+        var p0 = p, n;
+        switch (type) {
+          case "start": gestures[id] = gesture, n = active++; break;
+          case "end": delete gestures[id], --active; // nobreak
+          case "drag": p = point(container, id), n = active; break;
+        }
+        customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
+      };
+    }
+
+    drag.filter = function(_) {
+      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$2(!!_), drag) : filter;
+    };
+
+    drag.container = function(_) {
+      return arguments.length ? (container = typeof _ === "function" ? _ : constant$2(_), drag) : container;
+    };
+
+    drag.subject = function(_) {
+      return arguments.length ? (subject = typeof _ === "function" ? _ : constant$2(_), drag) : subject;
+    };
+
+    drag.touchable = function(_) {
+      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$2(!!_), drag) : touchable;
+    };
+
+    drag.on = function() {
+      var value = listeners.on.apply(listeners, arguments);
+      return value === listeners ? drag : value;
+    };
+
+    drag.clickDistance = function(_) {
+      return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
+    };
+
+    return drag;
+  }
+
+  function constant$3(x) {
     return function() {
       return x;
     };
@@ -3274,12 +3517,12 @@ var quarantine = (function (exports) {
   }
 
   function x(x) {
-    var strength = constant$2(0.1),
+    var strength = constant$3(0.1),
         nodes,
         strengths,
         xz;
 
-    if (typeof x !== "function") x = constant$2(x == null ? 0 : +x);
+    if (typeof x !== "function") x = constant$3(x == null ? 0 : +x);
 
     function force(alpha) {
       for (var i = 0, n = nodes.length, node; i < n; ++i) {
@@ -3303,23 +3546,23 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$2(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : strength;
     };
 
     force.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$2(+_), initialize(), force) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : x;
     };
 
     return force;
   }
 
   function y(y) {
-    var strength = constant$2(0.1),
+    var strength = constant$3(0.1),
         nodes,
         strengths,
         yz;
 
-    if (typeof y !== "function") y = constant$2(y == null ? 0 : +y);
+    if (typeof y !== "function") y = constant$3(y == null ? 0 : +y);
 
     function force(alpha) {
       for (var i = 0, n = nodes.length, node; i < n; ++i) {
@@ -3343,11 +3586,11 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$2(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : strength;
     };
 
     force.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$2(+_), initialize(), force) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : y;
     };
 
     return force;
@@ -3417,7 +3660,7 @@ var quarantine = (function (exports) {
 
   // The code in this file is adapted 
 
-  function constant$3(x) {
+  function constant$4(x) {
     return function() {
       return x;
     };
@@ -3454,7 +3697,7 @@ var quarantine = (function (exports) {
         // {str: function}. Named interactions between pairs of nodes.
         interactions = new Map();
 
-    if (typeof radius !== "function") radius = constant$3(radius == null ? 1 : +radius);
+    if (typeof radius !== "function") radius = constant$4(radius == null ? 1 : +radius);
 
     function force() {
       var i, n = nodes.length,
@@ -3538,7 +3781,7 @@ var quarantine = (function (exports) {
     };
 
     force.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$4(+_), initialize(), force) : radius;
     };
 
     return force;
@@ -3578,7 +3821,7 @@ var quarantine = (function (exports) {
           }),
           root = nodes[0];
 
-      root.radius = 0;
+      // root.radius = 0;
 
       const forceX = x(width / 2).strength(0.015);
       const forceY = y(height / 2).strength(0.015);
@@ -3612,18 +3855,53 @@ var quarantine = (function (exports) {
           // .force("collide", d3.forceCollide().radius(function(d) {
           .force("interaction",
               collideForce().radius(function(d) {
-                  if (d === root) {
-                      return Math.random() * 50 + 100;
-                  }
-                  return d.r + 0.5;
+                  // if (d === root) {
+                  //     return Math.random() * 50 + 100;
+                  // }
+                  return d.r;
               }).iterations(5)
               .interaction('collision', collisionInteraction)
               .interaction('contagion', function(node1, node2) {
-                  if (Math.random() < 0.001)
+                  if (Math.random() < 0.002)
                       node1.infected = node2.infected = node1.infected || node2.infected;
               }))
           .nodes(nodes).on("tick", ticked);
 
+
+      // Dragging. Note: dragging code may have to change when upgrading to d3v6.
+      // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
+
+      select(canvas).call(
+          drag()
+          .subject(dragSubject)
+          .on("start", dragStarted)
+          .on("drag", dragDragged)
+          .on("end", dragEnded)
+      );
+
+      function dragSubject() {
+          const subject = force.find(event.x, event.y, 200);
+          return subject;
+      }
+
+      function dragStarted() {
+          if (!event.active) force.alphaTarget(0.3).restart();
+          event.subject.fx = event.subject.x;
+          event.subject.fy = event.subject.y;
+      }
+
+      function dragDragged() {
+          event.subject.fx = event.x;
+          event.subject.fy = event.y;
+      }
+
+      function dragEnded() {
+          event.subject.fx = null;
+          event.subject.fy = null;
+      }
+
+
+      // Draw canvas at each tick.
 
       function ticked(e) {
 
@@ -3633,7 +3911,7 @@ var quarantine = (function (exports) {
           context.save();
 
           nodes.forEach(function(d) {
-              if (d === root) return;
+              // if (d === root) return;
 
               context.beginPath();
               context.moveTo(d.x + d.r, d.y);
@@ -3653,13 +3931,19 @@ var quarantine = (function (exports) {
           recentTicksPerSecondIndex += 1;
           recentTicksPerSecondIndex %= recentTicksPerSecond.length;
           numTicksSinceLastRecord = 0;
+
       }, 1000);
 
+      // Start simulation.
+      force.alphaTarget(0.3).restart();
+
+      // Old avoid-the-mouse thingy.
+
       select("canvas").on("mousemove", function() {
-          var p1 = mouse(this);
-          root.fx = p1[0];
-          root.fy = p1[1];
-          force.alphaTarget(0.3).restart(); //reheat the simulation
+          // var p1 = d3.mouse(this);
+          // root.fx = p1[0];
+          // root.fy = p1[1];
+          // force.alphaTarget(0.3).restart(); //reheat the simulation
       });
   };
 

@@ -40,7 +40,7 @@ window.onload = function() {
         }),
         root = nodes[0];
 
-    root.radius = 0;
+    // root.radius = 0;
 
     const forceX = d3.forceX(width / 2).strength(0.015);
     const forceY = d3.forceY(height / 2).strength(0.015);
@@ -74,18 +74,54 @@ window.onload = function() {
         // .force("collide", d3.forceCollide().radius(function(d) {
         .force("interaction",
             collideForce().radius(function(d) {
-                if (d === root) {
-                    return Math.random() * 50 + 100;
-                }
-                return d.r + 0.5;
+                // if (d === root) {
+                //     return Math.random() * 50 + 100;
+                // }
+                return d.r;
             }).iterations(5)
             .interaction('collision', collisionInteraction)
             .interaction('contagion', function(node1, node2) {
-                if (Math.random() < 0.001)
+                if (Math.random() < 0.002)
                     node1.infected = node2.infected = node1.infected || node2.infected;
             }))
         .nodes(nodes).on("tick", ticked);
 
+
+    // Dragging. Note: dragging code may have to change when upgrading to d3v6.
+    // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
+
+    d3.select(canvas).call(
+        d3
+        .drag()
+        .subject(dragSubject)
+        .on("start", dragStarted)
+        .on("drag", dragDragged)
+        .on("end", dragEnded)
+    );
+
+    function dragSubject() {
+        const subject = force.find(d3.event.x, d3.event.y, 200);
+        return subject;
+    }
+
+    function dragStarted() {
+        if (!d3.event.active) force.alphaTarget(0.3).restart();
+        d3.event.subject.fx = d3.event.subject.x;
+        d3.event.subject.fy = d3.event.subject.y;
+    }
+
+    function dragDragged() {
+        d3.event.subject.fx = d3.event.x;
+        d3.event.subject.fy = d3.event.y;
+    }
+
+    function dragEnded() {
+        d3.event.subject.fx = null;
+        d3.event.subject.fy = null;
+    }
+
+
+    // Draw canvas at each tick.
 
     function ticked(e) {
 
@@ -95,7 +131,7 @@ window.onload = function() {
         context.save();
 
         nodes.forEach(function(d) {
-            if (d === root) return;
+            // if (d === root) return;
 
             context.beginPath();
             context.moveTo(d.x + d.r, d.y);
@@ -116,12 +152,18 @@ window.onload = function() {
         recentTicksPerSecondIndex += 1;
         recentTicksPerSecondIndex %= recentTicksPerSecond.length;
         numTicksSinceLastRecord = 0;
+
     }, 1000);
 
+    // Start simulation.
+    force.alphaTarget(0.3).restart();
+
+    // Old avoid-the-mouse thingy.
+
     d3.select("canvas").on("mousemove", function() {
-        var p1 = d3.mouse(this);
-        root.fx = p1[0];
-        root.fy = p1[1];
-        force.alphaTarget(0.3).restart(); //reheat the simulation
+        // var p1 = d3.mouse(this);
+        // root.fx = p1[0];
+        // root.fy = p1[1];
+        // force.alphaTarget(0.3).restart(); //reheat the simulation
     });
 };
