@@ -8,7 +8,7 @@ import {
 // Print ticks per second for the last 20 seconds.
 var recentTicksPerSecond = new Array(20),
     recentTicksPerSecondIndex = 0;
-export function logRecentTickCount() {
+window.logRecentTickCount = function() {
     console.log(recentTicksPerSecond
         .slice(recentTicksPerSecondIndex)
         .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
@@ -86,6 +86,7 @@ window.onload = function() {
             }))
         .nodes(nodes).on("tick", ticked);
 
+    window.simulation = force;
 
     // Dragging. Note: dragging code may have to change when upgrading to d3v6.
     // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -100,12 +101,29 @@ window.onload = function() {
     );
 
     function dragSubject() {
-        const subject = force.find(d3.event.x, d3.event.y, 200);
+        var subject = force.find(d3.event.x, d3.event.y, 20);
+        if (!subject) {
+            subject = {
+                r: 10,
+                fx: d3.event.x,
+                fy: d3.event.y,
+                x: d3.event.x,
+                y: d3.event.y,
+                // fillColor: 'color(i % 10)'
+                // fillColor: 'yellow',
+                infected: false,
+                wall: true,
+            };
+            nodes.push(subject);
+            force.nodes(nodes);
+            console.log(nodes[nodes.length - 1]);
+            return null;
+        }
         return subject;
     }
 
     function dragStarted() {
-        if (!d3.event.active) force.alphaTarget(0.3).restart();
+        //if (!d3.event.active) force.alphaTarget(0.3).restart();
         d3.event.subject.fx = d3.event.subject.x;
         d3.event.subject.fy = d3.event.subject.y;
     }
@@ -137,7 +155,7 @@ window.onload = function() {
             context.moveTo(d.x + d.r, d.y);
             context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
             // context.fillStyle = d.fillColor;
-            context.fillStyle = d.infected ? 'orange' : 'yellow';
+            context.fillStyle = d.wall ? 'blue' : (d.infected ? 'orange' : 'yellow');
             context.fill();
             context.strokeStyle = "#333";
             context.stroke();
