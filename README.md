@@ -12,3 +12,5 @@ and
 in the top-level directory and visit `localhost:8000`.
 
 ## TODO
+
+* migrate to typescript

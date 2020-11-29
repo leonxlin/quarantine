@@ -35,7 +35,9 @@ window.onload = function() {
                 y: Math.random() * height,
                 // fillColor: 'color(i % 10)'
                 // fillColor: 'yellow',
+                type: 'creature',
                 infected: i == 1,
+                health: 1,
                 currentScore: 0, // Reset to 0 each tick.
             };
         }),
@@ -52,6 +54,8 @@ window.onload = function() {
 
     function agentForce(alpha) {
         nodes.forEach(function(n) {
+            if (n.type != 'creature') return;
+
             if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
                 n.goal = {
                     x: Math.random() * width,
@@ -78,11 +82,11 @@ window.onload = function() {
             }).iterations(5)
             .interaction('collision', collisionInteraction)
             .interaction('contagion', function(node1, node2) {
-                if (Math.random() < 0.002)
+                if (Math.random() < 0.002 && node1.type == 'creature' && node2.type == 'creature')
                     node1.infected = node2.infected = node1.infected || node2.infected;
             })
             .interaction('score', function(node1, node2) {
-                if (Math.random() < 0.0005) {
+                if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
                     node1.curentScore += 1;
                     node2.currentScore += 1;
                     tempScoreIndicators.push({
@@ -121,11 +125,13 @@ window.onload = function() {
                 // fillColor: 'color(i % 10)'
                 // fillColor: 'yellow',
                 infected: false,
-                wall: true,
+                type: 'wall',
             };
             nodes.push(subject);
             simulation.nodes(nodes);
             console.log(nodes[nodes.length - 1]);
+            return null;
+        } else if (subject.type != 'creature') {
             return null;
         }
         return subject;
@@ -157,6 +163,7 @@ window.onload = function() {
         context.clearRect(0, 0, width, height);
         context.save();
 
+        // Draw nodes.
         nodes.forEach(function(d) {
             // if (d === root) return;
 
@@ -164,18 +171,21 @@ window.onload = function() {
             context.moveTo(d.x + d.r, d.y);
             context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
             // context.fillStyle = d.fillColor;
-            context.fillStyle = d.wall ? 'blue' : (d.infected ? 'orange' : 'yellow');
+            context.fillStyle = (d.type == 'wall') ? 'blue' : (d.infected ? 'orange' : 'yellow');
             context.fill();
             context.strokeStyle = "#333";
             context.stroke();
 
             // Collect score.
-            gameScore += d.currentScore;
-            d.currentScore = 0;
+            if (d.type == 'creature') {
+                gameScore += d.currentScore;
+                d.currentScore = 0;
+            }
         });
 
+        // Print indicators when score increases.
         context.fillStyle = "#0a6b24";
-        context.font = '10px bold sans-serif';
+        context.font = 'bold 10px sans-serif';
         var numExpiring = 0;
         tempScoreIndicators.forEach(function(indicator, index) {
             context.fillText(indicator.text, indicator.x, indicator.y);
