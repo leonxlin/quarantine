@@ -129,7 +129,6 @@ window.onload = function() {
             };
             nodes.push(subject);
             simulation.nodes(nodes);
-            console.log(nodes[nodes.length - 1]);
             return null;
         } else if (subject.type != 'creature') {
             return null;
