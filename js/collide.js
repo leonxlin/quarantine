@@ -58,6 +58,9 @@ function y(d) {
 
 // TODO: document arguments.
 export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+  // Dead things don't collide.
+  if (node1.type == 'dead' || node2.type == 'dead') return;
+
   if (x === 0) x = jiggle(), l += x * x;
   if (y === 0) y = jiggle(), l += y * y;
   l = (r - (l = Math.sqrt(l))) / l * strength;

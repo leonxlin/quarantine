@@ -65,7 +65,7 @@ window.onload = function() {
             var len = Math.sqrt(squaredDistance(n, n.goal));
             n.vx += alpha * (n.goal.x - n.x) / len;
             n.vy += alpha * (n.goal.y - n.y) / len;
-        })
+        });
     }
 
 
@@ -97,6 +97,16 @@ window.onload = function() {
                     });
                 }
             }))
+        .force("health", function(alpha) {
+            nodes.forEach(function(n) {
+                if (!n.infected) return;
+                n.health -= 0.0003;
+                if (n.health <= 0) {
+                    n.type = "dead";
+                    n.health = 0;
+                }
+            });
+        })
         .nodes(nodes).on("tick", ticked);
 
     window.simulation = simulation;
@@ -164,13 +174,13 @@ window.onload = function() {
 
         // Draw nodes.
         nodes.forEach(function(d) {
-            // if (d === root) return;
+            if (d.type == 'dead') return;
 
             context.beginPath();
             context.moveTo(d.x + d.r, d.y);
             context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-            // context.fillStyle = d.fillColor;
-            context.fillStyle = (d.type == 'wall') ? 'blue' : (d.infected ? 'orange' : 'yellow');
+            // A range from yellow (1 health) to purple (0 health).
+            context.fillStyle = (d.type == 'wall') ? 'blue' : d3.interpolatePlasma(d.health * .8 + .2);
             context.fill();
             context.strokeStyle = "#333";
             context.stroke();
