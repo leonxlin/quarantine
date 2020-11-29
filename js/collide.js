@@ -30,6 +30,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+// This file defines a d3 force (see https://github.com/d3/d3-force#forces) that
+// handles interactions between nearby objects on the map.
+//
+// Clients 
+
 import {quadtree} from "d3-quadtree";
 
 function constant(x) {
@@ -61,6 +67,9 @@ export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength
   node2.vy -= y * r;
 }
 
+// Returns the collide force.
+// 
+// `radius` is a function that takes a node and returns a number.
 export default function(radius) {
   var nodes,
       radii,

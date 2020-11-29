@@ -36,14 +36,13 @@ window.onload = function() {
                 // fillColor: 'color(i % 10)'
                 // fillColor: 'yellow',
                 infected: i == 1,
+                currentScore: 0, // Reset to 0 each tick.
             };
         }),
         root = nodes[0];
 
-    // root.radius = 0;
-
-    const forceX = d3.forceX(width / 2).strength(0.015);
-    const forceY = d3.forceY(height / 2).strength(0.015);
+    var gameScore = 0;
+    var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
 
     function squaredDistance(p1, p2) {
         var dx = p1.x - p2.x,
@@ -66,10 +65,8 @@ window.onload = function() {
     }
 
 
-    var force = d3.forceSimulation()
+    var simulation = d3.forceSimulation()
         .velocityDecay(0.2)
-        // .force("x", forceX)
-        // .force("y", forceY)
         .force("agent", agentForce)
         // .force("collide", d3.forceCollide().radius(function(d) {
         .force("interaction",
@@ -83,10 +80,22 @@ window.onload = function() {
             .interaction('contagion', function(node1, node2) {
                 if (Math.random() < 0.002)
                     node1.infected = node2.infected = node1.infected || node2.infected;
+            })
+            .interaction('score', function(node1, node2) {
+                if (Math.random() < 0.0005) {
+                    node1.curentScore += 1;
+                    node2.currentScore += 1;
+                    tempScoreIndicators.push({
+                        x: 0.5 * (node1.x + node2.x),
+                        y: 0.5 * (node1.y + node2.y),
+                        text: "+2",
+                        ticksRemaining: 60
+                    });
+                }
             }))
         .nodes(nodes).on("tick", ticked);
 
-    window.simulation = force;
+    window.simulation = simulation;
 
     // Dragging. Note: dragging code may have to change when upgrading to d3v6.
     // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -101,7 +110,7 @@ window.onload = function() {
     );
 
     function dragSubject() {
-        var subject = force.find(d3.event.x, d3.event.y, 20);
+        var subject = simulation.find(d3.event.x, d3.event.y, 20);
         if (!subject) {
             subject = {
                 r: 10,
@@ -115,7 +124,7 @@ window.onload = function() {
                 wall: true,
             };
             nodes.push(subject);
-            force.nodes(nodes);
+            simulation.nodes(nodes);
             console.log(nodes[nodes.length - 1]);
             return null;
         }
@@ -123,7 +132,7 @@ window.onload = function() {
     }
 
     function dragStarted() {
-        //if (!d3.event.active) force.alphaTarget(0.3).restart();
+        //if (!d3.event.active) simulation.alphaTarget(0.3).restart();
         d3.event.subject.fx = d3.event.subject.x;
         d3.event.subject.fy = d3.event.subject.y;
     }
@@ -159,7 +168,27 @@ window.onload = function() {
             context.fill();
             context.strokeStyle = "#333";
             context.stroke();
+
+            // Collect score.
+            gameScore += d.currentScore;
+            d.currentScore = 0;
         });
+
+        context.fillStyle = "#0a6b24";
+        context.font = '10px bold sans-serif';
+        var numExpiring = 0;
+        tempScoreIndicators.forEach(function(indicator, index) {
+            context.fillText(indicator.text, indicator.x, indicator.y);
+            indicator.ticksRemaining -= 1;
+            if (indicator.ticksRemaining == 0) numExpiring++;
+        });
+        tempScoreIndicators.splice(0, numExpiring);
+
+        // Print score in the top-right corner.
+        context.fillStyle = "#000";
+        context.font = '20px sans-serif';
+        context.textAlign = 'right';
+        context.fillText(gameScore, width - 10, 30);
 
         context.restore();
     };
@@ -174,7 +203,7 @@ window.onload = function() {
     }, 1000);
 
     // Start simulation.
-    force.alphaTarget(0.3).restart();
+    simulation.alphaTarget(0.3).restart();
 
     // Old avoid-the-mouse thingy.
 
@@ -182,6 +211,6 @@ window.onload = function() {
         // var p1 = d3.mouse(this);
         // root.fx = p1[0];
         // root.fy = p1[1];
-        // force.alphaTarget(0.3).restart(); //reheat the simulation
+        // simulation.alphaTarget(0.3).restart(); //reheat the simulation
     });
 };

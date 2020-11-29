@@ -2963,12 +2963,6 @@
     return drag;
   }
 
-  function constant$3(x) {
-    return function() {
-      return x;
-    };
-  }
-
   function tree_add(d) {
     var x = +this._x.call(null, d),
         y = +this._y.call(null, d);
@@ -3516,86 +3510,6 @@
     };
   }
 
-  function x(x) {
-    var strength = constant$3(0.1),
-        nodes,
-        strengths,
-        xz;
-
-    if (typeof x !== "function") x = constant$3(x == null ? 0 : +x);
-
-    function force(alpha) {
-      for (var i = 0, n = nodes.length, node; i < n; ++i) {
-        node = nodes[i], node.vx += (xz[i] - node.x) * strengths[i] * alpha;
-      }
-    }
-
-    function initialize() {
-      if (!nodes) return;
-      var i, n = nodes.length;
-      strengths = new Array(n);
-      xz = new Array(n);
-      for (i = 0; i < n; ++i) {
-        strengths[i] = isNaN(xz[i] = +x(nodes[i], i, nodes)) ? 0 : +strength(nodes[i], i, nodes);
-      }
-    }
-
-    force.initialize = function(_) {
-      nodes = _;
-      initialize();
-    };
-
-    force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : strength;
-    };
-
-    force.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : x;
-    };
-
-    return force;
-  }
-
-  function y(y) {
-    var strength = constant$3(0.1),
-        nodes,
-        strengths,
-        yz;
-
-    if (typeof y !== "function") y = constant$3(y == null ? 0 : +y);
-
-    function force(alpha) {
-      for (var i = 0, n = nodes.length, node; i < n; ++i) {
-        node = nodes[i], node.vy += (yz[i] - node.y) * strengths[i] * alpha;
-      }
-    }
-
-    function initialize() {
-      if (!nodes) return;
-      var i, n = nodes.length;
-      strengths = new Array(n);
-      yz = new Array(n);
-      for (i = 0; i < n; ++i) {
-        strengths[i] = isNaN(yz[i] = +y(nodes[i], i, nodes)) ? 0 : +strength(nodes[i], i, nodes);
-      }
-    }
-
-    force.initialize = function(_) {
-      nodes = _;
-      initialize();
-    };
-
-    force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : strength;
-    };
-
-    force.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : y;
-    };
-
-    return force;
-  }
-
   function initRange(domain, range) {
     switch (arguments.length) {
       case 0: break;
@@ -3660,7 +3574,7 @@
 
   // The code in this file is adapted 
 
-  function constant$4(x) {
+  function constant$3(x) {
     return function() {
       return x;
     };
@@ -3670,11 +3584,11 @@
     return (Math.random() - 0.5) * 1e-6;
   }
 
-  function x$1(d) {
+  function x(d) {
     return d.x + d.vx;
   }
 
-  function y$1(d) {
+  function y(d) {
     return d.y + d.vy;
   }
 
@@ -3689,6 +3603,9 @@
     node2.vy -= y * r;
   }
 
+  // Returns the collide force.
+  // 
+  // `radius` is a function that takes a node and returns a number.
   function collideForce(radius) {
     var nodes,
         radii,
@@ -3697,7 +3614,7 @@
         // {str: function}. Named interactions between pairs of nodes.
         interactions = new Map();
 
-    if (typeof radius !== "function") radius = constant$4(radius == null ? 1 : +radius);
+    if (typeof radius !== "function") radius = constant$3(radius == null ? 1 : +radius);
 
     function force() {
       var i, n = nodes.length,
@@ -3709,7 +3626,7 @@
           ri2;
 
       for (var k = 0; k < iterations; ++k) {
-        tree = quadtree(nodes, x$1, y$1).visitAfter(prepare);
+        tree = quadtree(nodes, x, y).visitAfter(prepare);
 
         // For each node, visit other nodes that could collide.
         for (i = 0; i < n; ++i) {
@@ -3781,7 +3698,7 @@
     };
 
     force.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$4(+_), initialize(), force) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : radius;
     };
 
     return force;
@@ -3817,14 +3734,13 @@
                   // fillColor: 'color(i % 10)'
                   // fillColor: 'yellow',
                   infected: i == 1,
+                  currentScore: 0, // Reset to 0 each tick.
               };
           }),
           root = nodes[0];
 
-      // root.radius = 0;
-
-      const forceX = x(width / 2).strength(0.015);
-      const forceY = y(height / 2).strength(0.015);
+      var gameScore = 0;
+      var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
 
       function squaredDistance(p1, p2) {
           var dx = p1.x - p2.x,
@@ -3847,10 +3763,8 @@
       }
 
 
-      var force = simulation()
+      var simulation$1 = simulation()
           .velocityDecay(0.2)
-          // .force("x", forceX)
-          // .force("y", forceY)
           .force("agent", agentForce)
           // .force("collide", d3.forceCollide().radius(function(d) {
           .force("interaction",
@@ -3864,10 +3778,22 @@
               .interaction('contagion', function(node1, node2) {
                   if (Math.random() < 0.002)
                       node1.infected = node2.infected = node1.infected || node2.infected;
+              })
+              .interaction('score', function(node1, node2) {
+                  if (Math.random() < 0.0005) {
+                      node1.curentScore += 1;
+                      node2.currentScore += 1;
+                      tempScoreIndicators.push({
+                          x: 0.5 * (node1.x + node2.x),
+                          y: 0.5 * (node1.y + node2.y),
+                          text: "+2",
+                          ticksRemaining: 60
+                      });
+                  }
               }))
           .nodes(nodes).on("tick", ticked);
 
-      window.simulation = force;
+      window.simulation = simulation$1;
 
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -3881,7 +3807,7 @@
       );
 
       function dragSubject() {
-          var subject = force.find(event.x, event.y, 20);
+          var subject = simulation$1.find(event.x, event.y, 20);
           if (!subject) {
               subject = {
                   r: 10,
@@ -3895,7 +3821,7 @@
                   wall: true,
               };
               nodes.push(subject);
-              force.nodes(nodes);
+              simulation$1.nodes(nodes);
               console.log(nodes[nodes.length - 1]);
               return null;
           }
@@ -3903,7 +3829,7 @@
       }
 
       function dragStarted() {
-          //if (!d3.event.active) force.alphaTarget(0.3).restart();
+          //if (!d3.event.active) simulation.alphaTarget(0.3).restart();
           event.subject.fx = event.subject.x;
           event.subject.fy = event.subject.y;
       }
@@ -3939,7 +3865,27 @@
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
+
+              // Collect score.
+              gameScore += d.currentScore;
+              d.currentScore = 0;
           });
+
+          context.fillStyle = "#0a6b24";
+          context.font = '10px bold sans-serif';
+          var numExpiring = 0;
+          tempScoreIndicators.forEach(function(indicator, index) {
+              context.fillText(indicator.text, indicator.x, indicator.y);
+              indicator.ticksRemaining -= 1;
+              if (indicator.ticksRemaining == 0) numExpiring++;
+          });
+          tempScoreIndicators.splice(0, numExpiring);
+
+          // Print score in the top-right corner.
+          context.fillStyle = "#000";
+          context.font = '20px sans-serif';
+          context.textAlign = 'right';
+          context.fillText(gameScore, width - 10, 30);
 
           context.restore();
       }
@@ -3953,7 +3899,7 @@
       }, 1000);
 
       // Start simulation.
-      force.alphaTarget(0.3).restart();
+      simulation$1.alphaTarget(0.3).restart();
 
       // Old avoid-the-mouse thingy.
 
@@ -3961,7 +3907,7 @@
           // var p1 = d3.mouse(this);
           // root.fx = p1[0];
           // root.fy = p1[1];
-          // force.alphaTarget(0.3).restart(); //reheat the simulation
+          // simulation.alphaTarget(0.3).restart(); //reheat the simulation
       });
   };
 

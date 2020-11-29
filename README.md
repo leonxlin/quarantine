@@ -12,5 +12,3 @@ and
 in the top-level directory and visit `localhost:8000`.
 
 ## TODO
-
-* implement dragging
