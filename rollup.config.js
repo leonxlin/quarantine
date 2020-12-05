@@ -1,4 +1,5 @@
 import resolve from '@rollup/plugin-node-resolve';
+import typescript from 'rollup-plugin-typescript2';
 
 export default {
   input: 'js/index.js',
@@ -7,5 +8,5 @@ export default {
     format: 'iife',
     name: 'quarantine',
   },
-  plugins: [ resolve() ]
+  plugins: [ resolve(), typescript() ]
 };
