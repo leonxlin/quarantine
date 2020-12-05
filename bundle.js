@@ -3510,67 +3510,11 @@
     };
   }
 
-  function initRange(domain, range) {
-    switch (arguments.length) {
-      case 0: break;
-      case 1: this.range(domain); break;
-      default: this.range(range).domain(domain); break;
-    }
-    return this;
-  }
-
-  var array = Array.prototype;
-  var slice = array.slice;
-
-  var implicit = {name: "implicit"};
-
-  function ordinal() {
-    var index = map(),
-        domain = [],
-        range = [],
-        unknown = implicit;
-
-    function scale(d) {
-      var key = d + "", i = index.get(key);
-      if (!i) {
-        if (unknown !== implicit) return unknown;
-        index.set(key, i = domain.push(d));
-      }
-      return range[(i - 1) % range.length];
-    }
-
-    scale.domain = function(_) {
-      if (!arguments.length) return domain.slice();
-      domain = [], index = map();
-      var i = -1, n = _.length, d, key;
-      while (++i < n) if (!index.has(key = (d = _[i]) + "")) index.set(key, domain.push(d));
-      return scale;
-    };
-
-    scale.range = function(_) {
-      return arguments.length ? (range = slice.call(_), scale) : range.slice();
-    };
-
-    scale.unknown = function(_) {
-      return arguments.length ? (unknown = _, scale) : unknown;
-    };
-
-    scale.copy = function() {
-      return ordinal(domain, range).unknown(unknown);
-    };
-
-    initRange.apply(scale, arguments);
-
-    return scale;
-  }
-
   function colors(specifier) {
     var n = specifier.length / 6 | 0, colors = new Array(n), i = 0;
     while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
     return colors;
   }
-
-  var category10 = colors("1f77b4ff7f0e2ca02cd627289467bd8c564be377c27f7f7fbcbd2217becf");
 
   function ramp(range) {
     var n = range.length;
@@ -3588,190 +3532,146 @@
   var plasma = ramp(colors("0d088710078813078916078a19068c1b068d1d068e20068f2206902406912605912805922a05932c05942e05952f059631059733059735049837049938049a3a049a3c049b3e049c3f049c41049d43039e44039e46039f48039f4903a04b03a14c02a14e02a25002a25102a35302a35502a45601a45801a45901a55b01a55c01a65e01a66001a66100a76300a76400a76600a76700a86900a86a00a86c00a86e00a86f00a87100a87201a87401a87501a87701a87801a87a02a87b02a87d03a87e03a88004a88104a78305a78405a78606a68707a68808a68a09a58b0aa58d0ba58e0ca48f0da4910ea3920fa39410a29511a19613a19814a099159f9a169f9c179e9d189d9e199da01a9ca11b9ba21d9aa31e9aa51f99a62098a72197a82296aa2395ab2494ac2694ad2793ae2892b02991b12a90b22b8fb32c8eb42e8db52f8cb6308bb7318ab83289ba3388bb3488bc3587bd3786be3885bf3984c03a83c13b82c23c81c33d80c43e7fc5407ec6417dc7427cc8437bc9447aca457acb4679cc4778cc4977cd4a76ce4b75cf4c74d04d73d14e72d24f71d35171d45270d5536fd5546ed6556dd7566cd8576bd9586ada5a6ada5b69db5c68dc5d67dd5e66de5f65de6164df6263e06363e16462e26561e26660e3685fe4695ee56a5de56b5de66c5ce76e5be76f5ae87059e97158e97257ea7457eb7556eb7655ec7754ed7953ed7a52ee7b51ef7c51ef7e50f07f4ff0804ef1814df1834cf2844bf3854bf3874af48849f48948f58b47f58c46f68d45f68f44f79044f79143f79342f89441f89540f9973ff9983ef99a3efa9b3dfa9c3cfa9e3bfb9f3afba139fba238fca338fca537fca636fca835fca934fdab33fdac33fdae32fdaf31fdb130fdb22ffdb42ffdb52efeb72dfeb82cfeba2cfebb2bfebd2afebe2afec029fdc229fdc328fdc527fdc627fdc827fdca26fdcb26fccd25fcce25fcd025fcd225fbd324fbd524fbd724fad824fada24f9dc24f9dd25f8df25f8e125f7e225f7e425f6e626f6e826f5e926f5eb27f4ed27f3ee27f3f027f2f227f1f426f1f525f0f724f0f921"));
 
   // The code in this file is adapted 
-
   function constant$3(x) {
-    return function() {
-      return x;
-    };
+      return function () {
+          return x;
+      };
   }
-
   function jiggle() {
-    return (Math.random() - 0.5) * 1e-6;
+      return (Math.random() - 0.5) * 1e-6;
   }
-
   function x(d) {
-    return d.x + d.vx;
+      return d.x + d.vx;
   }
-
   function y(d) {
-    return d.y + d.vy;
+      return d.y + d.vy;
   }
-
   // TODO: document arguments.
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
-    // Dead things don't collide.
-    if (node1.type == 'dead' || node2.type == 'dead') return;
-
-    if (x === 0) x = jiggle(), l += x * x;
-    if (y === 0) y = jiggle(), l += y * y;
-    l = (r - (l = Math.sqrt(l))) / l * strength;
-    node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-    node1.vy += (y *= l) * r;
-    node2.vx -= x * (r = 1 - r);
-    node2.vy -= y * r;
+      // Dead things don't collide.
+      if (node1.type == 'dead' || node2.type == 'dead')
+          return;
+      if (x === 0)
+          x = jiggle(), l += x * x;
+      if (y === 0)
+          y = jiggle(), l += y * y;
+      l = (r - (l = Math.sqrt(l))) / l * strength;
+      node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
+      node1.vy += (y *= l) * r;
+      node2.vx -= x * (r = 1 - r);
+      node2.vy -= y * r;
   }
-
   // Returns the collide force.
   // 
   // `radius` is a function that takes a node and returns a number.
-  function collideForce(radius) {
-    var nodes,
-        radii,
-        strength = 1,
-        iterations = 1,
-        // {str: function}. Named interactions between pairs of nodes.
-        interactions = new Map();
-
-    if (typeof radius !== "function") radius = constant$3(radius == null ? 1 : +radius);
-
-    function force() {
-      var i, n = nodes.length,
-          tree,
-          node,
-          xi,
-          yi,
-          ri,
-          ri2;
-
-      for (var k = 0; k < iterations; ++k) {
-        tree = quadtree(nodes, x, y).visitAfter(prepare);
-
-        // For each node, visit other nodes that could collide.
-        for (i = 0; i < n; ++i) {
-          node = nodes[i];
-          ri = radii[node.index], ri2 = ri * ri;
-          xi = node.x + node.vx;
-          yi = node.y + node.vy;
-          tree.visit(apply);
-        }
-      }
-
-      function apply(quad, x0, y0, x1, y1) {
-        var data = quad.data, rj = quad.r, r = ri + rj;
-        if (data) {
-          // Only process node pairs with the smaller index first.
-          if (data.index > node.index) {
-            var x = xi - data.x - data.vx,
-                y = yi - data.y - data.vy,
-                l = x * x + y * y;
-            if (l < r * r) {
-              // Execute registered interactions for (node, data).
-              interactions.forEach(function(interaction) {
-                interaction(node, data, x, y, l, r, ri2, rj, strength);
-              });
-            }
+  function collideForce (radius) {
+      if (typeof radius !== "function")
+          radius = constant$3(radius == null ? 1 : +radius);
+      var nodes, radii, strength = 1, iterations = 1, 
+      // {str: function}. Named interactions between pairs of nodes.
+      interactions = new Map();
+      function force() {
+          var i, n = nodes.length, tree, node, xi, yi, ri, ri2;
+          for (var k = 0; k < iterations; ++k) {
+              tree = quadtree(nodes, x, y).visitAfter(prepare);
+              // For each node, visit other nodes that could collide.
+              for (i = 0; i < n; ++i) {
+                  node = nodes[i];
+                  ri = radii[node.index], ri2 = ri * ri;
+                  xi = node.x + node.vx;
+                  yi = node.y + node.vy;
+                  tree.visit(apply);
+              }
           }
-          return;
-        }
-
-        // Return true if there is no need to visit the children of `quad`.
-        return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+          function apply(quad, x0, y0, x1, y1) {
+              var data = quad.data, rj = quad.r, r = ri + rj;
+              if (data) {
+                  // Only process node pairs with the smaller index first.
+                  if (data.index > node.index) {
+                      var x = xi - data.x - data.vx, y = yi - data.y - data.vy, l = x * x + y * y;
+                      if (l < r * r) {
+                          // Execute registered interactions for (node, data).
+                          interactions.forEach(function (interaction) {
+                              interaction(node, data, x, y, l, r, ri2, rj, strength);
+                          });
+                      }
+                  }
+                  return;
+              }
+              // Return true if there is no need to visit the children of `quad`.
+              return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+          }
       }
-    }
-
-    function prepare(quad) {
-      if (quad.data) return quad.r = radii[quad.data.index];
-      for (var i = quad.r = 0; i < 4; ++i) {
-        if (quad[i] && quad[i].r > quad.r) {
-          quad.r = quad[i].r;
-        }
+      function prepare(quad) {
+          if (quad.data)
+              return quad.r = radii[quad.data.index];
+          for (var i = quad.r = 0; i < 4; ++i) {
+              if (quad[i] && quad[i].r > quad.r) {
+                  quad.r = quad[i].r;
+              }
+          }
       }
-    }
-
-    function initialize() {
-      if (!nodes) return;
-      var i, n = nodes.length, node;
-      radii = new Array(n);
-      for (i = 0; i < n; ++i) node = nodes[i], radii[node.index] = +radius(node, i, nodes);
-    }
-
-    force.initialize = function(_) {
-      nodes = _;
-      initialize();
-    };
-
-    // Add a named interaction, or get the interaction with the given name.
-    force.interaction = function(name, _) {
-      return arguments.length > 1 
-          ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force) 
-          : interactions.get(name);
-    };
-
-    force.iterations = function(_) {
-      return arguments.length ? (iterations = +_, force) : iterations;
-    };
-
-    force.strength = function(_) {
-      return arguments.length ? (strength = +_, force) : strength;
-    };
-
-    force.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : radius;
-    };
-
-    return force;
+      function initialize() {
+          if (!nodes)
+              return;
+          var i, n = nodes.length, node;
+          radii = new Array(n);
+          for (i = 0; i < n; ++i)
+              node = nodes[i], radii[node.index] = +radius(node, i, nodes);
+      }
+      force.initialize = function (_) {
+          nodes = _;
+          initialize();
+      };
+      // Add a named interaction, or get the interaction with the given name.
+      force.interaction = function (name, _) {
+          return arguments.length > 1
+              ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force)
+              : interactions.get(name);
+      };
+      force.iterations = function (_) {
+          return arguments.length ? (iterations = +_, force) : iterations;
+      };
+      force.strength = function (_) {
+          return arguments.length ? (strength = +_, force) : strength;
+      };
+      force.radius = function (_) {
+          return arguments.length ? (radius = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : radius;
+      };
+      return force;
   }
 
   // Print ticks per second for the last 20 seconds.
-  var recentTicksPerSecond = new Array(20),
-      recentTicksPerSecondIndex = 0;
-  window.logRecentTickCount = function() {
+  var recentTicksPerSecond = new Array(20), recentTicksPerSecondIndex = 0;
+  window.logRecentTickCount = function () {
       console.log(recentTicksPerSecond
           .slice(recentTicksPerSecondIndex)
           .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
   };
-
-  window.onload = function() {
-
-      // Copied in part
-      // from https://stackoverflow.com/questions/44055869/converting-collision-detection-example-to-from-v3-to-v4-d3
-
+  window.onload = function () {
       var numTicksSinceLastRecord = 0;
-
-      var canvas = document.querySelector("canvas"),
-          context = canvas.getContext("2d"),
-          width = canvas.width,
-          height = canvas.height;
-
-      var color = ordinal().range(category10);
-      var nodes = sequence(200).map(function(i) {
-              return {
-                  r: Math.random() * 5 + 4,
-                  x: Math.random() * width,
-                  y: Math.random() * height,
-                  // fillColor: 'color(i % 10)'
-                  // fillColor: 'yellow',
-                  type: 'creature',
-                  infected: i == 1,
-                  health: 1,
-                  currentScore: 0, // Reset to 0 each tick.
-              };
-          }),
-          root = nodes[0];
-
+      var canvas = document.querySelector("canvas"), context = canvas.getContext("2d"), width = canvas.width, height = canvas.height;
+      var nodes = sequence(200).map(function (i) {
+          return {
+              r: Math.random() * 5 + 4,
+              x: Math.random() * width,
+              y: Math.random() * height,
+              type: 'creature',
+              infected: i == 1,
+              health: 1,
+              currentScore: 0,
+          };
+      });
       var gameScore = 0;
       var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
-
       function squaredDistance(p1, p2) {
-          var dx = p1.x - p2.x,
-              dy = p1.y - p2.y;
+          var dx = p1.x - p2.x, dy = p1.y - p2.y;
           return dx * dx + dy * dy;
       }
-
       function agentForce(alpha) {
-          nodes.forEach(function(n) {
-              if (n.type != 'creature') return;
-
+          nodes.forEach(function (n) {
+              if (n.type != 'creature')
+                  return;
               if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
                   n.goal = {
                       x: Math.random() * width,
@@ -3783,61 +3683,53 @@
               n.vy += alpha * (n.goal.y - n.y) / len;
           });
       }
-
-
       var simulation$1 = simulation()
           .velocityDecay(0.2)
           .force("agent", agentForce)
           // .force("collide", d3.forceCollide().radius(function(d) {
-          .force("interaction",
-              collideForce().radius(function(d) {
-                  // if (d === root) {
-                  //     return Math.random() * 50 + 100;
-                  // }
-                  return d.r;
-              }).iterations(5)
-              .interaction('collision', collisionInteraction)
-              .interaction('contagion', function(node1, node2) {
-                  if (Math.random() < 0.002 && node1.type == 'creature' && node2.type == 'creature')
-                      node1.infected = node2.infected = node1.infected || node2.infected;
-              })
-              .interaction('score', function(node1, node2) {
-                  if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
-                      node1.curentScore += 1;
-                      node2.currentScore += 1;
-                      tempScoreIndicators.push({
-                          x: 0.5 * (node1.x + node2.x),
-                          y: 0.5 * (node1.y + node2.y),
-                          text: "+2",
-                          ticksRemaining: 60
-                      });
-                  }
-              }))
-          .force("health", function(alpha) {
-              nodes.forEach(function(n) {
-                  if (!n.infected) return;
-                  n.health -= 0.0003;
-                  if (n.health <= 0) {
-                      n.type = "dead";
-                      n.health = 0;
-                  }
+          .force("interaction", collideForce(0 /* dummy radius */).radius(function (d) {
+          // if (d === root) {
+          //     return Math.random() * 50 + 100;
+          // }
+          return d.r;
+      }).iterations(5)
+          .interaction('collision', collisionInteraction)
+          .interaction('contagion', function (node1, node2) {
+          if (Math.random() < 0.002 && node1.type == 'creature' && node2.type == 'creature')
+              node1.infected = node2.infected = node1.infected || node2.infected;
+      })
+          .interaction('score', function (node1, node2) {
+          if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
+              node1.curentScore += 1;
+              node2.currentScore += 1;
+              tempScoreIndicators.push({
+                  x: 0.5 * (node1.x + node2.x),
+                  y: 0.5 * (node1.y + node2.y),
+                  text: "+2",
+                  ticksRemaining: 60
               });
-          })
+          }
+      }))
+          .force("health", function (alpha) {
+          nodes.forEach(function (n) {
+              if (!n.infected)
+                  return;
+              n.health -= 0.0003;
+              if (n.health <= 0) {
+                  n.type = "dead";
+                  n.health = 0;
+              }
+          });
+      })
           .nodes(nodes).on("tick", ticked);
-
       window.simulation = simulation$1;
-
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
-
-      select(canvas).call(
-          drag()
+      select(canvas).call(drag()
           .subject(dragSubject)
           .on("start", dragStarted)
           .on("drag", dragDragged)
-          .on("end", dragEnded)
-      );
-
+          .on("end", dragEnded));
       function dragSubject() {
           var subject = simulation$1.find(event.x, event.y, 20);
           if (!subject) {
@@ -3847,50 +3739,40 @@
                   fy: event.y,
                   x: event.x,
                   y: event.y,
-                  // fillColor: 'color(i % 10)'
-                  // fillColor: 'yellow',
                   infected: false,
                   type: 'wall',
               };
               nodes.push(subject);
               simulation$1.nodes(nodes);
               return null;
-          } else if (subject.type != 'creature') {
+          }
+          else if (subject.type != 'creature') {
               return null;
           }
           return subject;
       }
-
       function dragStarted() {
           //if (!d3.event.active) simulation.alphaTarget(0.3).restart();
           event.subject.fx = event.subject.x;
           event.subject.fy = event.subject.y;
       }
-
       function dragDragged() {
           event.subject.fx = event.x;
           event.subject.fy = event.y;
       }
-
       function dragEnded() {
           event.subject.fx = null;
           event.subject.fy = null;
       }
-
-
       // Draw canvas at each tick.
-
       function ticked(e) {
-
           numTicksSinceLastRecord += 1;
-
           context.clearRect(0, 0, width, height);
           context.save();
-
           // Draw nodes.
-          nodes.forEach(function(d) {
-              if (d.type == 'dead') return;
-
+          nodes.forEach(function (d) {
+              if (d.type == 'dead')
+                  return;
               context.beginPath();
               context.moveTo(d.x + d.r, d.y);
               context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
@@ -3899,48 +3781,41 @@
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
-
               // Collect score.
               if (d.type == 'creature') {
                   gameScore += d.currentScore;
                   d.currentScore = 0;
               }
           });
-
           // Print indicators when score increases.
           context.fillStyle = "#0a6b24";
           context.font = 'bold 10px sans-serif';
           var numExpiring = 0;
-          tempScoreIndicators.forEach(function(indicator, index) {
+          tempScoreIndicators.forEach(function (indicator, index) {
               context.fillText(indicator.text, indicator.x, indicator.y);
               indicator.ticksRemaining -= 1;
-              if (indicator.ticksRemaining == 0) numExpiring++;
+              if (indicator.ticksRemaining == 0)
+                  numExpiring++;
           });
           tempScoreIndicators.splice(0, numExpiring);
-
           // Print score in the top-right corner.
           context.fillStyle = "#000";
           context.font = '20px sans-serif';
           context.textAlign = 'right';
-          context.fillText(gameScore, width - 10, 30);
-
+          context.fillText(String(gameScore), width - 10, 30);
           context.restore();
       }
       // Record number of ticks per second.
-      setInterval(function() {
+      setInterval(function () {
           recentTicksPerSecond[recentTicksPerSecondIndex] = numTicksSinceLastRecord;
           recentTicksPerSecondIndex += 1;
           recentTicksPerSecondIndex %= recentTicksPerSecond.length;
           numTicksSinceLastRecord = 0;
-
       }, 1000);
-
       // Start simulation.
       simulation$1.alphaTarget(0.3).restart();
-
       // Old avoid-the-mouse thingy.
-
-      select("canvas").on("mousemove", function() {
+      select("canvas").on("mousemove", function () {
           // var p1 = d3.mouse(this);
           // root.fx = p1[0];
           // root.fy = p1[1];

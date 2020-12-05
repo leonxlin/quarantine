@@ -74,14 +74,14 @@ export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength
 // 
 // `radius` is a function that takes a node and returns a number.
 export default function(radius) {
+  if (typeof radius !== "function") radius = constant(radius == null ? 1 : +radius);
+
   var nodes,
       radii,
       strength = 1,
       iterations = 1,
       // {str: function}. Named interactions between pairs of nodes.
       interactions = new Map();
-
-  if (typeof radius !== "function") radius = constant(radius == null ? 1 : +radius);
 
   function force() {
     var i, n = nodes.length,

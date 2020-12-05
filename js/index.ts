@@ -5,6 +5,14 @@ import {
     collisionInteraction
 } from './collide.js'
 
+// Needed to make typescript happy when defining properties on the global window object for easy debugging.
+declare global {
+    interface Window { 
+        logRecentTickCount: any; 
+        simulation: any;
+    }
+}
+
 // Print ticks per second for the last 20 seconds.
 var recentTicksPerSecond = new Array(20),
     recentTicksPerSecondIndex = 0;
@@ -17,9 +25,6 @@ window.logRecentTickCount = function() {
 window.onload = function() {
     sayHi();
 
-    // Copied in part
-    // from https://stackoverflow.com/questions/44055869/converting-collision-detection-example-to-from-v3-to-v4-d3
-
     var numTicksSinceLastRecord = 0;
 
     var canvas = document.querySelector("canvas"),
@@ -27,21 +32,17 @@ window.onload = function() {
         width = canvas.width,
         height = canvas.height;
 
-    var color = d3.scaleOrdinal().range(d3.schemeCategory10);
     var nodes = d3.range(200).map(function(i) {
             return {
                 r: Math.random() * 5 + 4,
                 x: Math.random() * width,
                 y: Math.random() * height,
-                // fillColor: 'color(i % 10)'
-                // fillColor: 'yellow',
                 type: 'creature',
                 infected: i == 1,
                 health: 1,
                 currentScore: 0, // Reset to 0 each tick.
             };
-        }),
-        root = nodes[0];
+        });
 
     var gameScore = 0;
     var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
@@ -74,7 +75,7 @@ window.onload = function() {
         .force("agent", agentForce)
         // .force("collide", d3.forceCollide().radius(function(d) {
         .force("interaction",
-            collideForce().radius(function(d) {
+            collideForce(0 /* dummy radius */).radius(function(d) {
                 // if (d === root) {
                 //     return Math.random() * 50 + 100;
                 // }
@@ -132,8 +133,6 @@ window.onload = function() {
                 fy: d3.event.y,
                 x: d3.event.x,
                 y: d3.event.y,
-                // fillColor: 'color(i % 10)'
-                // fillColor: 'yellow',
                 infected: false,
                 type: 'wall',
             };
@@ -207,7 +206,7 @@ window.onload = function() {
         context.fillStyle = "#000";
         context.font = '20px sans-serif';
         context.textAlign = 'right';
-        context.fillText(gameScore, width - 10, 30);
+        context.fillText(String(gameScore), width - 10, 30);
 
         context.restore();
     };

@@ -26,6 +26,7 @@ in the top-level directory and visit `localhost:8000`.
 		* infectable
 		* collidable
 		* etc.
+	* why are there carriage returns ^M in bundle.js?
 
 * next features
 	* draw linear walls

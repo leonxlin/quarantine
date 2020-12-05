@@ -2,8 +2,13 @@
   "compilerOptions": {
     "outDir": "./build",
     "allowJs": true,
-    "target": "es5"
+    "target": "es5",
+    // "noImplicitAny": true,
+    // "noImplicitReturns": true,
+    "allowJs": false,
+    "noUnusedLocals": true,
+
   },
-  "include": ["js"],
+  "include": ["js"],  // path name
   "exclude": ["node_modules"]
 }
