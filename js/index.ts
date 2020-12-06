@@ -1,5 +1,6 @@
 import sayHi from './d3test.js';
 import * as d3 from 'd3';
+import { SNode, Point } from './simulation-types.js'
 import collideForce from './collide.js'
 import {
     collisionInteraction
@@ -32,7 +33,7 @@ window.onload = function() {
         width = canvas.width,
         height = canvas.height;
 
-    var nodes = d3.range(200).map(function(i) {
+    var nodes = d3.range(200).map(function(i): SNode {
             return {
                 r: Math.random() * 5 + 4,
                 x: Math.random() * width,
@@ -47,14 +48,14 @@ window.onload = function() {
     var gameScore = 0;
     var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
 
-    function squaredDistance(p1, p2) {
+    function squaredDistance(p1 : Point, p2 : Point) : number {
         var dx = p1.x - p2.x,
             dy = p1.y - p2.y;
         return dx * dx + dy * dy;
     }
 
     function agentForce(alpha) {
-        nodes.forEach(function(n) {
+        nodes.forEach(function(n : SNode) {
             if (n.type != 'creature') return;
 
             if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
@@ -124,8 +125,8 @@ window.onload = function() {
         .on("end", dragEnded)
     );
 
-    function dragSubject() {
-        var subject = simulation.find(d3.event.x, d3.event.y, 20);
+    function dragSubject(event) {
+        var subject : SNode = simulation.find(d3.event.x, d3.event.y, 20);
         if (!subject) {
             subject = {
                 r: 10,
@@ -164,7 +165,7 @@ window.onload = function() {
 
     // Draw canvas at each tick.
 
-    function ticked(e) {
+    function ticked() {
 
         numTicksSinceLastRecord += 1;
 

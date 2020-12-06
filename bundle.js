@@ -3730,7 +3730,7 @@
           .on("start", dragStarted)
           .on("drag", dragDragged)
           .on("end", dragEnded));
-      function dragSubject() {
+      function dragSubject(event$1) {
           var subject = simulation$1.find(event.x, event.y, 20);
           if (!subject) {
               subject = {
@@ -3765,7 +3765,7 @@
           event.subject.fy = null;
       }
       // Draw canvas at each tick.
-      function ticked(e) {
+      function ticked() {
           numTicksSinceLastRecord += 1;
           context.clearRect(0, 0, width, height);
           context.save();
