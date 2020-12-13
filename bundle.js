@@ -3723,6 +3723,15 @@
       })
           .nodes(nodes).on("tick", ticked);
       window.simulation = simulation$1;
+      select("body").on("keydown", function () {
+          console.log(event);
+          if (event.key == "p") {
+              simulation$1.stop();
+          }
+          else if (event.key == "s") {
+              simulation$1.restart();
+          }
+      });
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
       select(canvas).call(drag()

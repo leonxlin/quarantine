@@ -1,4 +1,3 @@
-import sayHi from './d3test.js';
 import * as d3 from 'd3';
 import { SNode, Point } from './simulation-types.js'
 import collideForce from './collide.js'
@@ -24,8 +23,6 @@ window.logRecentTickCount = function() {
 }
 
 window.onload = function() {
-    sayHi();
-
     var numTicksSinceLastRecord = 0;
 
     var canvas = document.querySelector("canvas"),
@@ -112,6 +109,16 @@ window.onload = function() {
         .nodes(nodes).on("tick", ticked);
 
     window.simulation = simulation;
+
+    // Pausing and restarting by keypress.
+    d3.select("body").on("keydown", function() {
+        console.log(d3.event);
+        if (d3.event.key == "p") {
+            simulation.stop();
+        } else if (d3.event.key == "s") {
+            simulation.restart();
+        }
+    });
 
     // Dragging. Note: dragging code may have to change when upgrading to d3v6.
     // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
