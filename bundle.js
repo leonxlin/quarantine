@@ -3723,6 +3723,7 @@
       })
           .nodes(nodes).on("tick", ticked);
       window.simulation = simulation$1;
+      // Pausing and restarting by keypress.
       select("body").on("keydown", function () {
           console.log(event);
           if (event.key == "p") {
