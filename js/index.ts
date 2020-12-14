@@ -5,6 +5,7 @@ import {
     collisionInteraction
 } from './collide.js'
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
 declare global {
     interface Window { 
@@ -12,10 +13,11 @@ declare global {
         simulation: any;
     }
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Print ticks per second for the last 20 seconds.
-var recentTicksPerSecond = new Array(20),
-    recentTicksPerSecondIndex = 0;
+const recentTicksPerSecond = new Array(20);
+let recentTicksPerSecondIndex = 0;
 window.logRecentTickCount = function() {
     console.log(recentTicksPerSecond
         .slice(recentTicksPerSecondIndex)
@@ -23,14 +25,14 @@ window.logRecentTickCount = function() {
 }
 
 window.onload = function() {
-    var numTicksSinceLastRecord = 0;
+    let numTicksSinceLastRecord = 0;
 
-    var canvas = document.querySelector("canvas"),
+    const canvas = document.querySelector("canvas"),
         context = canvas.getContext("2d"),
         width = canvas.width,
         height = canvas.height;
 
-    var nodes = d3.range(200).map(function(i): SNode {
+    const nodes = d3.range(200).map(function(i): SNode {
             return {
                 r: Math.random() * 5 + 4,
                 x: Math.random() * width,
@@ -42,11 +44,11 @@ window.onload = function() {
             };
         });
 
-    var gameScore = 0;
-    var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
+    let gameScore = 0;
+    const tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
 
     function squaredDistance(p1 : Point, p2 : Point) : number {
-        var dx = p1.x - p2.x,
+        const dx = p1.x - p2.x,
             dy = p1.y - p2.y;
         return dx * dx + dy * dy;
     }
@@ -61,22 +63,18 @@ window.onload = function() {
                     y: Math.random() * height
                 };
             }
-            var len = Math.sqrt(squaredDistance(n, n.goal));
+            const len = Math.sqrt(squaredDistance(n, n.goal));
             n.vx += alpha * (n.goal.x - n.x) / len;
             n.vy += alpha * (n.goal.y - n.y) / len;
         });
     }
 
 
-    var simulation = d3.forceSimulation()
+    const simulation = d3.forceSimulation()
         .velocityDecay(0.2)
         .force("agent", agentForce)
-        // .force("collide", d3.forceCollide().radius(function(d) {
         .force("interaction",
-            collideForce(0 /* dummy radius */).radius(function(d) {
-                // if (d === root) {
-                //     return Math.random() * 50 + 100;
-                // }
+            collideForce(/* radius */ function(d) {
                 return d.r;
             }).iterations(5)
             .interaction('collision', collisionInteraction)
@@ -86,7 +84,7 @@ window.onload = function() {
             })
             .interaction('score', function(node1, node2) {
                 if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
-                    node1.curentScore += 1;
+                    node1.currentScore += 1;
                     node2.currentScore += 1;
                     tempScoreIndicators.push({
                         x: 0.5 * (node1.x + node2.x),
@@ -96,7 +94,7 @@ window.onload = function() {
                     });
                 }
             }))
-        .force("health", function(alpha) {
+        .force("health", function() {
             nodes.forEach(function(n) {
                 if (!n.infected) return;
                 n.health -= 0.0003;
@@ -132,8 +130,8 @@ window.onload = function() {
         .on("end", dragEnded)
     );
 
-    function dragSubject(event) {
-        var subject : SNode = simulation.find(d3.event.x, d3.event.y, 20);
+    function dragSubject() {
+        let subject : SNode = simulation.find(d3.event.x, d3.event.y, 20);
         if (!subject) {
             subject = {
                 r: 10,
@@ -154,7 +152,6 @@ window.onload = function() {
     }
 
     function dragStarted() {
-        //if (!d3.event.active) simulation.alphaTarget(0.3).restart();
         d3.event.subject.fx = d3.event.subject.x;
         d3.event.subject.fy = d3.event.subject.y;
     }
@@ -171,7 +168,6 @@ window.onload = function() {
 
 
     // Draw canvas at each tick.
-
     function ticked() {
 
         numTicksSinceLastRecord += 1;
@@ -202,8 +198,8 @@ window.onload = function() {
         // Print indicators when score increases.
         context.fillStyle = "#0a6b24";
         context.font = 'bold 10px sans-serif';
-        var numExpiring = 0;
-        tempScoreIndicators.forEach(function(indicator, index) {
+        let numExpiring = 0;
+        tempScoreIndicators.forEach(function(indicator) {
             context.fillText(indicator.text, indicator.x, indicator.y);
             indicator.ticksRemaining -= 1;
             if (indicator.ticksRemaining == 0) numExpiring++;
@@ -217,7 +213,7 @@ window.onload = function() {
         context.fillText(String(gameScore), width - 10, 30);
 
         context.restore();
-    };
+    }
 
     // Record number of ticks per second.
     setInterval(function() {

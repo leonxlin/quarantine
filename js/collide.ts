@@ -32,11 +32,10 @@
 
 
 // This file defines a d3 force (see https://github.com/d3/d3-force#forces) that
-// handles interactions between nearby objects on the map.
-//
-// Clients 
+// detects nearby objects on the map and handles interactions between them.
 
 import {quadtree} from "d3-quadtree";
+import { SNode, SForceCollide, Interaction } from './simulation-types.js'
 
 function constant(x) {
   return function() {
@@ -57,7 +56,7 @@ function y(d) {
 }
 
 // TODO: document arguments.
-export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+export function collisionInteraction(node1 : SNode, node2 : SNode, x : number, y : number, l : number, r : number, ri2 : number, rj : number, strength : number) : void {
   // Dead things don't collide.
   if (node1.type == 'dead' || node2.type == 'dead') return;
 
@@ -73,18 +72,17 @@ export function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength
 // Returns the collide force.
 // 
 // `radius` is a function that takes a node and returns a number.
-export default function(radius) {
-  if (typeof radius !== "function") radius = constant(radius == null ? 1 : +radius);
-
-  var nodes,
+export default function(radius : (SNode) => number) : SForceCollide {
+  let nodes,
       radii,
       strength = 1,
-      iterations = 1,
-      // {str: function}. Named interactions between pairs of nodes.
-      interactions = new Map();
+      iterations = 1;
+  // Named interactions between pairs of nodes.
+  const interactions = new Map<string, Interaction>();
 
   function force() {
-    var i, n = nodes.length,
+    const n = nodes.length;
+    let i,
         tree,
         node,
         xi,
@@ -92,7 +90,7 @@ export default function(radius) {
         ri,
         ri2;
 
-    for (var k = 0; k < iterations; ++k) {
+    for (let k = 0; k < iterations; ++k) {
       tree = quadtree(nodes, x, y).visitAfter(prepare);
 
       // For each node, visit other nodes that could collide.
@@ -106,11 +104,11 @@ export default function(radius) {
     }
 
     function apply(quad, x0, y0, x1, y1) {
-      var data = quad.data, rj = quad.r, r = ri + rj;
+      const data = quad.data, rj = quad.r, r = ri + rj;
       if (data) {
         // Only process node pairs with the smaller index first.
         if (data.index > node.index) {
-          var x = xi - data.x - data.vx,
+          const x = xi - data.x - data.vx,
               y = yi - data.y - data.vy,
               l = x * x + y * y;
           if (l < r * r) {
@@ -130,7 +128,7 @@ export default function(radius) {
 
   function prepare(quad) {
     if (quad.data) return quad.r = radii[quad.data.index];
-    for (var i = quad.r = 0; i < 4; ++i) {
+    for (let i = quad.r = 0; i < 4; ++i) {
       if (quad[i] && quad[i].r > quad.r) {
         quad.r = quad[i].r;
       }
@@ -139,9 +137,10 @@ export default function(radius) {
 
   function initialize() {
     if (!nodes) return;
-    var i, n = nodes.length, node;
+    let i, node;
+    const n = nodes.length;
     radii = new Array(n);
-    for (i = 0; i < n; ++i) node = nodes[i], radii[node.index] = +radius(node, i, nodes);
+    for (i = 0; i < n; ++i) node = nodes[i], radii[node.index] = +radius(node);
   }
 
   force.initialize = function(_) {
@@ -149,22 +148,25 @@ export default function(radius) {
     initialize();
   };
 
+  /* eslint-disable @typescript-eslint/no-explicit-any -- 
+    I can't figure out how to get function overloads to work with typescript without `any`. */
+
   // Add a named interaction, or get the interaction with the given name.
-  force.interaction = function(name, _) {
+  force.interaction = function(name : string, _? : Interaction) : any {
     return arguments.length > 1 
         ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force) 
         : interactions.get(name);
   };
 
-  force.iterations = function(_) {
+  force.iterations = function(_?) : any {
     return arguments.length ? (iterations = +_, force) : iterations;
   };
 
-  force.strength = function(_) {
+  force.strength = function(_? : any) : any {
     return arguments.length ? (strength = +_, force) : strength;
   };
 
-  force.radius = function(_) {
+  force.radius = function(_?) : any {
     return arguments.length ? (radius = typeof _ === "function" ? _ : constant(+_), initialize(), force) : radius;
   };
 
