@@ -3531,7 +3531,7 @@
 
   var plasma = ramp(colors("0d088710078813078916078a19068c1b068d1d068e20068f2206902406912605912805922a05932c05942e05952f059631059733059735049837049938049a3a049a3c049b3e049c3f049c41049d43039e44039e46039f48039f4903a04b03a14c02a14e02a25002a25102a35302a35502a45601a45801a45901a55b01a55c01a65e01a66001a66100a76300a76400a76600a76700a86900a86a00a86c00a86e00a86f00a87100a87201a87401a87501a87701a87801a87a02a87b02a87d03a87e03a88004a88104a78305a78405a78606a68707a68808a68a09a58b0aa58d0ba58e0ca48f0da4910ea3920fa39410a29511a19613a19814a099159f9a169f9c179e9d189d9e199da01a9ca11b9ba21d9aa31e9aa51f99a62098a72197a82296aa2395ab2494ac2694ad2793ae2892b02991b12a90b22b8fb32c8eb42e8db52f8cb6308bb7318ab83289ba3388bb3488bc3587bd3786be3885bf3984c03a83c13b82c23c81c33d80c43e7fc5407ec6417dc7427cc8437bc9447aca457acb4679cc4778cc4977cd4a76ce4b75cf4c74d04d73d14e72d24f71d35171d45270d5536fd5546ed6556dd7566cd8576bd9586ada5a6ada5b69db5c68dc5d67dd5e66de5f65de6164df6263e06363e16462e26561e26660e3685fe4695ee56a5de56b5de66c5ce76e5be76f5ae87059e97158e97257ea7457eb7556eb7655ec7754ed7953ed7a52ee7b51ef7c51ef7e50f07f4ff0804ef1814df1834cf2844bf3854bf3874af48849f48948f58b47f58c46f68d45f68f44f79044f79143f79342f89441f89540f9973ff9983ef99a3efa9b3dfa9c3cfa9e3bfb9f3afba139fba238fca338fca537fca636fca835fca934fdab33fdac33fdae32fdaf31fdb130fdb22ffdb42ffdb52efeb72dfeb82cfeba2cfebb2bfebd2afebe2afec029fdc229fdc328fdc527fdc627fdc827fdca26fdcb26fccd25fcce25fcd025fcd225fbd324fbd524fbd724fad824fada24f9dc24f9dd25f8df25f8e125f7e225f7e425f6e626f6e826f5e926f5eb27f4ed27f3ee27f3f027f2f227f1f426f1f525f0f724f0f921"));
 
-  // The code in this file is adapted 
+  // The code in this file is adapted
   function constant$3(x) {
       return function () {
           return x;
@@ -3549,20 +3549,20 @@
   // TODO: document arguments.
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
       // Dead things don't collide.
-      if (node1.type == 'dead' || node2.type == 'dead')
+      if (node1.type == "dead" || node2.type == "dead")
           return;
       if (x === 0)
-          x = jiggle(), l += x * x;
+          (x = jiggle()), (l += x * x);
       if (y === 0)
-          y = jiggle(), l += y * y;
-      l = (r - (l = Math.sqrt(l))) / l * strength;
+          (y = jiggle()), (l += y * y);
+      l = ((r - (l = Math.sqrt(l))) / l) * strength;
       node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
       node1.vy += (y *= l) * r;
       node2.vx -= x * (r = 1 - r);
       node2.vy -= y * r;
   }
   // Returns the collide force.
-  // 
+  //
   // `radius` is a function that takes a node and returns a number.
   function collideForce (radius) {
       var nodes, radii, strength = 1, iterations = 1;
@@ -3576,7 +3576,7 @@
               // For each node, visit other nodes that could collide.
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
-                  ri = radii[node.index], ri2 = ri * ri;
+                  (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
                   yi = node.y + node.vy;
                   tree.visit(apply);
@@ -3603,8 +3603,8 @@
       }
       function prepare(quad) {
           if (quad.data)
-              return quad.r = radii[quad.data.index];
-          for (var i = quad.r = 0; i < 4; ++i) {
+              return (quad.r = radii[quad.data.index]);
+          for (var i = (quad.r = 0); i < 4; ++i) {
               if (quad[i] && quad[i].r > quad.r) {
                   quad.r = quad[i].r;
               }
@@ -3617,7 +3617,7 @@
           var n = nodes.length;
           radii = new Array(n);
           for (i = 0; i < n; ++i)
-              node = nodes[i], radii[node.index] = +radius(node);
+              (node = nodes[i]), (radii[node.index] = +radius(node));
       }
       force.initialize = function (_) {
           nodes = _;
@@ -3628,17 +3628,22 @@
       // Add a named interaction, or get the interaction with the given name.
       force.interaction = function (name, _) {
           return arguments.length > 1
-              ? ((_ == null ? interactions.delete(name) : interactions.set(name, _)), force)
+              ? (_ == null ? interactions.delete(name) : interactions.set(name, _),
+                  force)
               : interactions.get(name);
       };
       force.iterations = function (_) {
-          return arguments.length ? (iterations = +_, force) : iterations;
+          return arguments.length ? ((iterations = +_), force) : iterations;
       };
       force.strength = function (_) {
-          return arguments.length ? (strength = +_, force) : strength;
+          return arguments.length ? ((strength = +_), force) : strength;
       };
       force.radius = function (_) {
-          return arguments.length ? (radius = typeof _ === "function" ? _ : constant$3(+_), initialize(), force) : radius;
+          return arguments.length
+              ? ((radius = typeof _ === "function" ? _ : constant$3(+_)),
+                  initialize(),
+                  force)
+              : radius;
       };
       return force;
   }
@@ -3660,7 +3665,7 @@
               r: Math.random() * 5 + 4,
               x: Math.random() * width,
               y: Math.random() * height,
-              type: 'creature',
+              type: "creature",
               infected: i == 1,
               health: 1,
               currentScore: 0,
@@ -3674,39 +3679,45 @@
       }
       function agentForce(alpha) {
           nodes.forEach(function (n) {
-              if (n.type != 'creature')
+              if (n.type != "creature")
                   return;
               if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
                   n.goal = {
                       x: Math.random() * width,
-                      y: Math.random() * height
+                      y: Math.random() * height,
                   };
               }
               var len = Math.sqrt(squaredDistance(n, n.goal));
-              n.vx += alpha * (n.goal.x - n.x) / len;
-              n.vy += alpha * (n.goal.y - n.y) / len;
+              n.vx += (alpha * (n.goal.x - n.x)) / len;
+              n.vy += (alpha * (n.goal.y - n.y)) / len;
           });
       }
       var simulation$1 = simulation()
           .velocityDecay(0.2)
           .force("agent", agentForce)
-          .force("interaction", collideForce(/* radius */ function (d) {
+          .force("interaction", collideForce(
+      /* radius */ function (d) {
           return d.r;
-      }).iterations(5)
-          .interaction('collision', collisionInteraction)
-          .interaction('contagion', function (node1, node2) {
-          if (Math.random() < 0.002 && node1.type == 'creature' && node2.type == 'creature')
+      })
+          .iterations(5)
+          .interaction("collision", collisionInteraction)
+          .interaction("contagion", function (node1, node2) {
+          if (Math.random() < 0.002 &&
+              node1.type == "creature" &&
+              node2.type == "creature")
               node1.infected = node2.infected = node1.infected || node2.infected;
       })
-          .interaction('score', function (node1, node2) {
-          if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
+          .interaction("score", function (node1, node2) {
+          if (Math.random() < 0.0005 &&
+              node1.type == "creature" &&
+              node2.type == "creature") {
               node1.currentScore += 1;
               node2.currentScore += 1;
               tempScoreIndicators.push({
                   x: 0.5 * (node1.x + node2.x),
                   y: 0.5 * (node1.y + node2.y),
                   text: "+2",
-                  ticksRemaining: 60
+                  ticksRemaining: 60,
               });
           }
       }))
@@ -3721,7 +3732,8 @@
               }
           });
       })
-          .nodes(nodes).on("tick", ticked);
+          .nodes(nodes)
+          .on("tick", ticked);
       window.simulation = simulation$1;
       // Pausing and restarting by keypress.
       select("body").on("keydown", function () {
@@ -3750,13 +3762,13 @@
                   x: event.x,
                   y: event.y,
                   infected: false,
-                  type: 'wall',
+                  type: "wall",
               };
               nodes.push(subject);
               simulation$1.nodes(nodes);
               return null;
           }
-          else if (subject.type != 'creature') {
+          else if (subject.type != "creature") {
               return null;
           }
           return subject;
@@ -3780,25 +3792,26 @@
           context.save();
           // Draw nodes.
           nodes.forEach(function (d) {
-              if (d.type == 'dead')
+              if (d.type == "dead")
                   return;
               context.beginPath();
               context.moveTo(d.x + d.r, d.y);
               context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
               // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = (d.type == 'wall') ? 'blue' : plasma(d.health * .8 + .2);
+              context.fillStyle =
+                  d.type == "wall" ? "blue" : plasma(d.health * 0.8 + 0.2);
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
               // Collect score.
-              if (d.type == 'creature') {
+              if (d.type == "creature") {
                   gameScore += d.currentScore;
                   d.currentScore = 0;
               }
           });
           // Print indicators when score increases.
           context.fillStyle = "#0a6b24";
-          context.font = 'bold 10px sans-serif';
+          context.font = "bold 10px sans-serif";
           var numExpiring = 0;
           tempScoreIndicators.forEach(function (indicator) {
               context.fillText(indicator.text, indicator.x, indicator.y);
@@ -3809,8 +3822,8 @@
           tempScoreIndicators.splice(0, numExpiring);
           // Print score in the top-right corner.
           context.fillStyle = "#000";
-          context.font = '20px sans-serif';
-          context.textAlign = 'right';
+          context.font = "20px sans-serif";
+          context.textAlign = "right";
           context.fillText(String(gameScore), width - 10, 30);
           context.restore();
       }

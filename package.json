@@ -4,7 +4,7 @@
   "description": "Quarantine, a game.",
   "main": "index.js",
   "scripts": {
-    "build": "npx eslint ./js --ext .js,.jsx,.ts,.tsx; npx rollup -c"
+    "build": "npx eslint ./js --ext .js,.jsx,.ts,.tsx; npx prettier --write .; npx rollup -c"
   },
   "repository": {
     "type": "git",
@@ -30,7 +30,9 @@
     "@typescript-eslint/parser": "^4.9.1",
     "eslint": "^7.15.0",
     "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^7.0.0",
     "eslint-plugin-import": "^2.22.1",
+    "prettier": "2.2.1",
     "rollup": "^2.34.2"
   }
 }

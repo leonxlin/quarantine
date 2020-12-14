@@ -6,9 +6,8 @@
     // "noImplicitAny": true,
     // "noImplicitReturns": true,
     "allowJs": false,
-    "noUnusedLocals": true,
-
+    "noUnusedLocals": true
   },
-  "include": ["js"],  // path name
+  "include": ["js"], // path name
   "exclude": ["node_modules"]
 }
