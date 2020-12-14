@@ -15,6 +15,8 @@ in the top-level directory and visit `localhost:8000`.
 
 * bugs
 	* can't build walls where dead nodes are
+	* I suspect interactions are being run for multiple iterations per tick,
+	  which is not what we want except for collision handling...
 
 * migrate to typescript
 * clean up code

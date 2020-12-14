@@ -3565,13 +3565,12 @@
   // 
   // `radius` is a function that takes a node and returns a number.
   function collideForce (radius) {
-      if (typeof radius !== "function")
-          radius = constant$3(radius == null ? 1 : +radius);
-      var nodes, radii, strength = 1, iterations = 1, 
-      // {str: function}. Named interactions between pairs of nodes.
-      interactions = new Map();
+      var nodes, radii, strength = 1, iterations = 1;
+      // Named interactions between pairs of nodes.
+      var interactions = new Map();
       function force() {
-          var i, n = nodes.length, tree, node, xi, yi, ri, ri2;
+          var n = nodes.length;
+          var i, tree, node, xi, yi, ri, ri2;
           for (var k = 0; k < iterations; ++k) {
               tree = quadtree(nodes, x, y).visitAfter(prepare);
               // For each node, visit other nodes that could collide.
@@ -3588,11 +3587,11 @@
               if (data) {
                   // Only process node pairs with the smaller index first.
                   if (data.index > node.index) {
-                      var x = xi - data.x - data.vx, y = yi - data.y - data.vy, l = x * x + y * y;
-                      if (l < r * r) {
+                      var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
+                      if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
-                              interaction(node, data, x, y, l, r, ri2, rj, strength);
+                              interaction(node, data, x_1, y_1, l_1, r, ri2, rj, strength);
                           });
                       }
                   }
@@ -3614,15 +3613,18 @@
       function initialize() {
           if (!nodes)
               return;
-          var i, n = nodes.length, node;
+          var i, node;
+          var n = nodes.length;
           radii = new Array(n);
           for (i = 0; i < n; ++i)
-              node = nodes[i], radii[node.index] = +radius(node, i, nodes);
+              node = nodes[i], radii[node.index] = +radius(node);
       }
       force.initialize = function (_) {
           nodes = _;
           initialize();
       };
+      /* eslint-disable @typescript-eslint/no-explicit-any --
+        I can't figure out how to get function overloads to work with typescript without `any`. */
       // Add a named interaction, or get the interaction with the given name.
       force.interaction = function (name, _) {
           return arguments.length > 1
@@ -3641,8 +3643,10 @@
       return force;
   }
 
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   // Print ticks per second for the last 20 seconds.
-  var recentTicksPerSecond = new Array(20), recentTicksPerSecondIndex = 0;
+  var recentTicksPerSecond = new Array(20);
+  var recentTicksPerSecondIndex = 0;
   window.logRecentTickCount = function () {
       console.log(recentTicksPerSecond
           .slice(recentTicksPerSecondIndex)
@@ -3686,11 +3690,7 @@
       var simulation$1 = simulation()
           .velocityDecay(0.2)
           .force("agent", agentForce)
-          // .force("collide", d3.forceCollide().radius(function(d) {
-          .force("interaction", collideForce(0 /* dummy radius */).radius(function (d) {
-          // if (d === root) {
-          //     return Math.random() * 50 + 100;
-          // }
+          .force("interaction", collideForce(/* radius */ function (d) {
           return d.r;
       }).iterations(5)
           .interaction('collision', collisionInteraction)
@@ -3700,7 +3700,7 @@
       })
           .interaction('score', function (node1, node2) {
           if (Math.random() < 0.0005 && node1.type == 'creature' && node2.type == 'creature') {
-              node1.curentScore += 1;
+              node1.currentScore += 1;
               node2.currentScore += 1;
               tempScoreIndicators.push({
                   x: 0.5 * (node1.x + node2.x),
@@ -3710,7 +3710,7 @@
               });
           }
       }))
-          .force("health", function (alpha) {
+          .force("health", function () {
           nodes.forEach(function (n) {
               if (!n.infected)
                   return;
@@ -3740,7 +3740,7 @@
           .on("start", dragStarted)
           .on("drag", dragDragged)
           .on("end", dragEnded));
-      function dragSubject(event$1) {
+      function dragSubject() {
           var subject = simulation$1.find(event.x, event.y, 20);
           if (!subject) {
               subject = {
@@ -3762,7 +3762,6 @@
           return subject;
       }
       function dragStarted() {
-          //if (!d3.event.active) simulation.alphaTarget(0.3).restart();
           event.subject.fx = event.subject.x;
           event.subject.fy = event.subject.y;
       }
@@ -3801,7 +3800,7 @@
           context.fillStyle = "#0a6b24";
           context.font = 'bold 10px sans-serif';
           var numExpiring = 0;
-          tempScoreIndicators.forEach(function (indicator, index) {
+          tempScoreIndicators.forEach(function (indicator) {
               context.fillText(indicator.text, indicator.x, indicator.y);
               indicator.ticksRemaining -= 1;
               if (indicator.ticksRemaining == 0)
