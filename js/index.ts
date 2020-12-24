@@ -34,6 +34,8 @@ export class Game {
   recentTicksPerSecond: number[] = new Array(20);
   recentTicksPerSecondIndex = 0;
 
+  paused = false;
+
   constructor() {
     this.canvas = document.querySelector("canvas");
     this.nodes = d3.range(200).map(
@@ -195,6 +197,16 @@ export class Game {
 
     context.restore();
   }
+
+  togglePause(): void {
+    if (this.paused) {
+      this.simulation.restart();
+      this.paused = false;
+    } else {
+      this.simulation.stop();
+      this.paused = true;
+    }
+  }
 }
 
 window.onload = function () {
@@ -203,11 +215,8 @@ window.onload = function () {
 
   // Pausing and restarting by keypress.
   d3.select("body").on("keydown", function () {
-    console.log(d3.event);
-    if (d3.event.key == "p") {
-      game.simulation.stop();
-    } else if (d3.event.key == "s") {
-      game.simulation.restart();
+    if (d3.event.key == "p" || d3.event.key == " ") {
+      game.togglePause();
     }
   });
 

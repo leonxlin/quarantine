@@ -3662,6 +3662,7 @@ var quarantine = (function (exports) {
           this.numTicksSinceLastRecord = 0;
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
+          this.paused = false;
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function (i) {
               return {
@@ -3791,6 +3792,16 @@ var quarantine = (function (exports) {
           context.fillText(String(this.score), this.canvas.width - 10, 30);
           context.restore();
       };
+      Game.prototype.togglePause = function () {
+          if (this.paused) {
+              this.simulation.restart();
+              this.paused = false;
+          }
+          else {
+              this.simulation.stop();
+              this.paused = true;
+          }
+      };
       return Game;
   }());
   window.onload = function () {
@@ -3798,12 +3809,8 @@ var quarantine = (function (exports) {
       var game = window.game;
       // Pausing and restarting by keypress.
       select("body").on("keydown", function () {
-          console.log(event);
-          if (event.key == "p") {
-              game.simulation.stop();
-          }
-          else if (event.key == "s") {
-              game.simulation.restart();
+          if (event.key == "p" || event.key == " ") {
+              game.togglePause();
           }
       });
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
