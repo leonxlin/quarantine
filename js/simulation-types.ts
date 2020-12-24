@@ -24,3 +24,10 @@ export interface SForceCollide extends d3.ForceCollide<SNode> {
   interaction(name: string): Interaction;
   interaction(name: string, f: Interaction): SForceCollide;
 }
+
+export interface TempScoreIndicator {
+  x?: number;
+  y?: number;
+  ticksRemaining?: number;
+  text?: string;
+}

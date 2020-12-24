@@ -157,7 +157,7 @@ export default function (radius: (SNode) => number): SForceCollide {
   /* eslint-disable @typescript-eslint/no-explicit-any -- 
     I can't figure out how to get function overloads to work with typescript without `any`. */
 
-  // Add a named interaction, or get the interaction with the given name.
+  // Set a named interaction, or get the interaction with the given name.
   force.interaction = function (name: string, _?: Interaction): any {
     return arguments.length > 1
       ? (_ == null ? interactions.delete(name) : interactions.set(name, _),

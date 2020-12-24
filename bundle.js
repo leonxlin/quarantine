@@ -1,4 +1,4 @@
-(function () {
+var quarantine = (function (exports) {
   'use strict';
 
   function ascending(a, b) {
@@ -3625,7 +3625,7 @@
       };
       /* eslint-disable @typescript-eslint/no-explicit-any --
         I can't figure out how to get function overloads to work with typescript without `any`. */
-      // Add a named interaction, or get the interaction with the given name.
+      // Set a named interaction, or get the interaction with the given name.
       force.interaction = function (name, _) {
           return arguments.length > 1
               ? (_ == null ? interactions.delete(name) : interactions.set(name, _),
@@ -3649,111 +3649,172 @@
   }
 
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  // Print ticks per second for the last 20 seconds.
-  var recentTicksPerSecond = new Array(20);
-  var recentTicksPerSecondIndex = 0;
-  window.logRecentTickCount = function () {
-      console.log(recentTicksPerSecond
-          .slice(recentTicksPerSecondIndex)
-          .concat(recentTicksPerSecond.slice(0, recentTicksPerSecondIndex)));
-  };
-  window.onload = function () {
-      var numTicksSinceLastRecord = 0;
-      var canvas = document.querySelector("canvas"), context = canvas.getContext("2d"), width = canvas.width, height = canvas.height;
-      var nodes = sequence(200).map(function (i) {
-          return {
-              r: Math.random() * 5 + 4,
-              x: Math.random() * width,
-              y: Math.random() * height,
-              type: "creature",
-              infected: i == 1,
-              health: 1,
-              currentScore: 0,
-          };
-      });
-      var gameScore = 0;
-      var tempScoreIndicators = []; // Contains elements of the form {x: 0, y: 0, ticksRemaining: 0, text: "+2"}
-      function squaredDistance(p1, p2) {
-          var dx = p1.x - p2.x, dy = p1.y - p2.y;
-          return dx * dx + dy * dy;
-      }
-      function agentForce(alpha) {
-          nodes.forEach(function (n) {
-              if (n.type != "creature")
-                  return;
-              if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
-                  n.goal = {
-                      x: Math.random() * width,
-                      y: Math.random() * height,
-                  };
-              }
-              var len = Math.sqrt(squaredDistance(n, n.goal));
-              n.vx += (alpha * (n.goal.x - n.x)) / len;
-              n.vy += (alpha * (n.goal.y - n.y)) / len;
-          });
-      }
-      var simulation$1 = simulation()
-          .velocityDecay(0.2)
-          .force("agent", agentForce)
-          .force("interaction", collideForce(
-      /* radius */ function (d) {
-          return d.r;
-      })
-          .iterations(5)
-          .interaction("collision", collisionInteraction)
-          .interaction("contagion", function (node1, node2) {
-          if (Math.random() < 0.002 &&
-              node1.type == "creature" &&
-              node2.type == "creature")
-              node1.infected = node2.infected = node1.infected || node2.infected;
-      })
-          .interaction("score", function (node1, node2) {
-          if (Math.random() < 0.0005 &&
-              node1.type == "creature" &&
-              node2.type == "creature") {
-              node1.currentScore += 1;
-              node2.currentScore += 1;
-              tempScoreIndicators.push({
-                  x: 0.5 * (node1.x + node2.x),
-                  y: 0.5 * (node1.y + node2.y),
-                  text: "+2",
-                  ticksRemaining: 60,
+  function squaredDistance(p1, p2) {
+      var dx = p1.x - p2.x, dy = p1.y - p2.y;
+      return dx * dx + dy * dy;
+  }
+  // Not sure if a class is really the best way to organize this code...
+  // TODO: revisit code organization.
+  var Game = /** @class */ (function () {
+      function Game() {
+          this.score = 0;
+          this.tempScoreIndicators = [];
+          this.numTicksSinceLastRecord = 0;
+          this.recentTicksPerSecond = new Array(20);
+          this.recentTicksPerSecondIndex = 0;
+          this.canvas = document.querySelector("canvas");
+          this.nodes = sequence(200).map(function (i) {
+              return {
+                  r: Math.random() * 5 + 4,
+                  x: Math.random() * this.canvas.width,
+                  y: Math.random() * this.canvas.height,
+                  type: "creature",
+                  infected: i == 1,
+                  health: 1,
+                  currentScore: 0,
+              };
+          }.bind(this));
+          var nodes = this.nodes;
+          var canvas = this.canvas;
+          this.simulation = simulation()
+              .velocityDecay(0.2)
+              .force("agent", function (alpha) {
+              nodes.forEach(function (n) {
+                  if (n.type != "creature")
+                      return;
+                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
+                      n.goal = {
+                          x: Math.random() * canvas.width,
+                          y: Math.random() * canvas.height,
+                      };
+                  }
+                  var len = Math.sqrt(squaredDistance(n, n.goal));
+                  n.vx += (alpha * (n.goal.x - n.x)) / len;
+                  n.vy += (alpha * (n.goal.y - n.y)) / len;
               });
-          }
-      }))
-          .force("health", function () {
-          nodes.forEach(function (n) {
-              if (!n.infected)
-                  return;
-              n.health -= 0.0003;
-              if (n.health <= 0) {
-                  n.type = "dead";
-                  n.health = 0;
+          })
+              .force("interaction", collideForce(
+          /* radius */ function (d) {
+              return d.r;
+          })
+              .iterations(5)
+              .interaction("collision", collisionInteraction)
+              .interaction("contagion", function (node1, node2) {
+              if (Math.random() < 0.002 &&
+                  node1.type == "creature" &&
+                  node2.type == "creature")
+                  node1.infected = node2.infected =
+                      node1.infected || node2.infected;
+          })
+              .interaction("score", function (node1, node2) {
+              if (Math.random() < 0.0005 &&
+                  node1.type == "creature" &&
+                  node2.type == "creature") {
+                  node1.currentScore += 1;
+                  node2.currentScore += 1;
+                  window.game.tempScoreIndicators.push({
+                      x: 0.5 * (node1.x + node2.x),
+                      y: 0.5 * (node1.y + node2.y),
+                      text: "+2",
+                      ticksRemaining: 60,
+                  });
               }
+          }))
+              .force("health", function () {
+              nodes.forEach(function (n) {
+                  if (!n.infected)
+                      return;
+                  n.health -= 0.0003;
+                  if (n.health <= 0) {
+                      n.type = "dead";
+                      n.health = 0;
+                  }
+              });
+          })
+              .nodes(nodes)
+              .on("tick", this.tick.bind(this));
+          // Record number of ticks per second.
+          setInterval(function () {
+              this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
+              this.recentTicksPerSecondIndex += 1;
+              this.recentTicksPerSecondIndex %= this.recentTicksPerSecond.length;
+              this.numTicksSinceLastRecord = 0;
+          }.bind(this), 1000);
+      }
+      // Print ticks per second for the last 20 seconds.
+      Game.prototype.logRecentTickCount = function () {
+          console.log(this.recentTicksPerSecond
+              .slice(this.recentTicksPerSecondIndex)
+              .concat(this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)));
+      };
+      Game.prototype.tick = function () {
+          var context = this.canvas.getContext("2d");
+          this.numTicksSinceLastRecord += 1;
+          context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          context.save();
+          // Draw nodes.
+          this.nodes.forEach(function (d) {
+              if (d.type == "dead")
+                  return;
+              context.beginPath();
+              context.moveTo(d.x + d.r, d.y);
+              context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+              // A range from yellow (1 health) to purple (0 health).
+              context.fillStyle =
+                  d.type == "wall"
+                      ? "blue"
+                      : plasma(d.health * 0.8 + 0.2);
+              context.fill();
+              context.strokeStyle = "#333";
+              context.stroke();
+              // Collect score.
+              if (d.type == "creature") {
+                  this.score += d.currentScore;
+                  d.currentScore = 0;
+              }
+          }.bind(this));
+          // Print indicators when score increases.
+          context.fillStyle = "#0a6b24";
+          context.font = "bold 10px sans-serif";
+          var numExpiring = 0;
+          this.tempScoreIndicators.forEach(function (indicator) {
+              context.fillText(indicator.text, indicator.x, indicator.y);
+              indicator.ticksRemaining -= 1;
+              if (indicator.ticksRemaining == 0)
+                  numExpiring++;
           });
-      })
-          .nodes(nodes)
-          .on("tick", ticked);
-      window.simulation = simulation$1;
+          this.tempScoreIndicators.splice(0, numExpiring);
+          // Print score in the top-right corner.
+          context.fillStyle = "#000";
+          context.font = "20px sans-serif";
+          context.textAlign = "right";
+          context.fillText(String(this.score), this.canvas.width - 10, 30);
+          context.restore();
+      };
+      return Game;
+  }());
+  window.onload = function () {
+      window.game = new Game();
+      var game = window.game;
       // Pausing and restarting by keypress.
       select("body").on("keydown", function () {
           console.log(event);
           if (event.key == "p") {
-              simulation$1.stop();
+              game.simulation.stop();
           }
           else if (event.key == "s") {
-              simulation$1.restart();
+              game.simulation.restart();
           }
       });
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
-      select(canvas).call(drag()
+      select(window.game.canvas).call(drag()
           .subject(dragSubject)
           .on("start", dragStarted)
           .on("drag", dragDragged)
           .on("end", dragEnded));
       function dragSubject() {
-          var subject = simulation$1.find(event.x, event.y, 20);
+          var subject = game.simulation.find(event.x, event.y, 20);
           if (!subject) {
               subject = {
                   r: 10,
@@ -3764,8 +3825,8 @@
                   infected: false,
                   type: "wall",
               };
-              nodes.push(subject);
-              simulation$1.nodes(nodes);
+              game.nodes.push(subject);
+              game.simulation.nodes(game.nodes);
               return null;
           }
           else if (subject.type != "creature") {
@@ -3785,64 +3846,14 @@
           event.subject.fx = null;
           event.subject.fy = null;
       }
-      // Draw canvas at each tick.
-      function ticked() {
-          numTicksSinceLastRecord += 1;
-          context.clearRect(0, 0, width, height);
-          context.save();
-          // Draw nodes.
-          nodes.forEach(function (d) {
-              if (d.type == "dead")
-                  return;
-              context.beginPath();
-              context.moveTo(d.x + d.r, d.y);
-              context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-              // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle =
-                  d.type == "wall" ? "blue" : plasma(d.health * 0.8 + 0.2);
-              context.fill();
-              context.strokeStyle = "#333";
-              context.stroke();
-              // Collect score.
-              if (d.type == "creature") {
-                  gameScore += d.currentScore;
-                  d.currentScore = 0;
-              }
-          });
-          // Print indicators when score increases.
-          context.fillStyle = "#0a6b24";
-          context.font = "bold 10px sans-serif";
-          var numExpiring = 0;
-          tempScoreIndicators.forEach(function (indicator) {
-              context.fillText(indicator.text, indicator.x, indicator.y);
-              indicator.ticksRemaining -= 1;
-              if (indicator.ticksRemaining == 0)
-                  numExpiring++;
-          });
-          tempScoreIndicators.splice(0, numExpiring);
-          // Print score in the top-right corner.
-          context.fillStyle = "#000";
-          context.font = "20px sans-serif";
-          context.textAlign = "right";
-          context.fillText(String(gameScore), width - 10, 30);
-          context.restore();
-      }
-      // Record number of ticks per second.
-      setInterval(function () {
-          recentTicksPerSecond[recentTicksPerSecondIndex] = numTicksSinceLastRecord;
-          recentTicksPerSecondIndex += 1;
-          recentTicksPerSecondIndex %= recentTicksPerSecond.length;
-          numTicksSinceLastRecord = 0;
-      }, 1000);
       // Start simulation.
-      simulation$1.alphaTarget(0.3).restart();
-      // Old avoid-the-mouse thingy.
-      select("canvas").on("mousemove", function () {
-          // var p1 = d3.mouse(this);
-          // root.fx = p1[0];
-          // root.fy = p1[1];
-          // simulation.alphaTarget(0.3).restart(); //reheat the simulation
-      });
+      game.simulation.alphaTarget(0.3).restart();
   };
 
-}());
+  exports.Game = Game;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+  return exports;
+
+}({}));
