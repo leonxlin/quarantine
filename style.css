@@ -1,9 +1,63 @@
 canvas {
-  width: 900px;
-  height: 600px;
-  border: 1px solid black;
+	width: 900px;
+	height: 600px;
+	border: 1px solid black;
 }
 
 circle {
-  stroke: #fff;
+	stroke: #fff;
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+}
+
+.game {
+	width: 970px;
+	display: flex;
+	flex-direction: row;
+}
+
+.left-panel {
+}
+
+.right-panel {
+	float: left;
+	width: 50px;
+	margin: 0px;
+	display: flex;
+	flex-direction: column;
+}
+
+.right-panel label {
+	width: 50px;
+	margin: 0;
+}
+
+/* Hide native radio buttons. */
+[name="toolbelt"][type="radio"] {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+/* IMAGE STYLES */
+[name="toolbelt"] + img {
+	cursor: pointer;
+	width: 30px;
+	border: 2px solid #fff;
+	padding: 5px;
+	margin: 5px;
+}
+
+/* CHECKED STYLES */
+[name="toolbelt"]:checked + img {
+	border: 2px solid #0d0;
+}
+
+.credits {
+	font-size: x-small;
+	color: gray;
 }

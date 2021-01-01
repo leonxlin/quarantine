@@ -1,17 +1,44 @@
 <!DOCTYPE html>
 
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
+	<head>
+		<meta charset="utf-8" />
 
-    <title>Quarantine: a game</title>
+		<title>Quarantine: a game</title>
 
-    <link href="style.css" rel="stylesheet" />
-  </head>
+		<link href="style.css" rel="stylesheet" />
+	</head>
 
-  <body>
-    <canvas id="game-canvas" width="900" height="600"></canvas>
+	<body>
+		<div class="game">
+			<div class="left-panel">
+				<canvas class="game-canvas" width="900" height="600"></canvas>
+			</div>
 
-    <script src="bundle.js"></script>
-  </body>
+			<div class="right-panel">
+				<label>
+					<input type="radio" name="toolbelt" value="select-mode" checked />
+					<img src="assets/select.png" />
+				</label>
+
+				<label>
+					<input type="radio" name="toolbelt" value="wall-mode" />
+					<img src="assets/wall.png" />
+				</label>
+			</div>
+		</div>
+
+		<div class="credits">
+			Icons made by
+			<a
+				href="https://www.flaticon.com/authors/pixel-perfect"
+				title="Pixel perfect"
+				>Pixel perfect</a
+			>
+			from
+			<a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
+		</div>
+
+		<script src="bundle.js"></script>
+	</body>
 </html>
