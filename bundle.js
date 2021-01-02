@@ -1036,6 +1036,12 @@ var quarantine = (function (exports) {
     return point(node, event);
   }
 
+  function selectAll(selector) {
+    return typeof selector === "string"
+        ? new Selection([document.querySelectorAll(selector)], [document.documentElement])
+        : new Selection([selector == null ? [] : selector], root);
+  }
+
   function touch(node, touches, identifier) {
     if (arguments.length < 3) identifier = touches, touches = sourceEvent().changedTouches;
 
@@ -3531,6 +3537,58 @@ var quarantine = (function (exports) {
 
   var plasma = ramp(colors("0d088710078813078916078a19068c1b068d1d068e20068f2206902406912605912805922a05932c05942e05952f059631059733059735049837049938049a3a049a3c049b3e049c3f049c41049d43039e44039e46039f48039f4903a04b03a14c02a14e02a25002a25102a35302a35502a45601a45801a45901a55b01a55c01a65e01a66001a66100a76300a76400a76600a76700a86900a86a00a86c00a86e00a86f00a87100a87201a87401a87501a87701a87801a87a02a87b02a87d03a87e03a88004a88104a78305a78405a78606a68707a68808a68a09a58b0aa58d0ba58e0ca48f0da4910ea3920fa39410a29511a19613a19814a099159f9a169f9c179e9d189d9e199da01a9ca11b9ba21d9aa31e9aa51f99a62098a72197a82296aa2395ab2494ac2694ad2793ae2892b02991b12a90b22b8fb32c8eb42e8db52f8cb6308bb7318ab83289ba3388bb3488bc3587bd3786be3885bf3984c03a83c13b82c23c81c33d80c43e7fc5407ec6417dc7427cc8437bc9447aca457acb4679cc4778cc4977cd4a76ce4b75cf4c74d04d73d14e72d24f71d35171d45270d5536fd5546ed6556dd7566cd8576bd9586ada5a6ada5b69db5c68dc5d67dd5e66de5f65de6164df6263e06363e16462e26561e26660e3685fe4695ee56a5de56b5de66c5ce76e5be76f5ae87059e97158e97257ea7457eb7556eb7655ec7754ed7953ed7a52ee7b51ef7c51ef7e50f07f4ff0804ef1814df1834cf2844bf3854bf3874af48849f48948f58b47f58c46f68d45f68f44f79044f79143f79342f89441f89540f9973ff9983ef99a3efa9b3dfa9c3cfa9e3bfb9f3afba139fba238fca338fca537fca636fca835fca934fdab33fdac33fdae32fdaf31fdb130fdb22ffdb42ffdb52efeb72dfeb82cfeba2cfebb2bfebd2afebe2afec029fdc229fdc328fdc527fdc627fdc827fdca26fdcb26fccd25fcce25fcd025fcd225fbd324fbd524fbd724fad824fada24f9dc24f9dd25f8df25f8e125f7e225f7e425f6e626f6e826f5e926f5eb27f4ed27f3ee27f3f027f2f227f1f426f1f525f0f724f0f921"));
 
+  function point$1(that, x, y) {
+    that._context.bezierCurveTo(
+      (2 * that._x0 + that._x1) / 3,
+      (2 * that._y0 + that._y1) / 3,
+      (that._x0 + 2 * that._x1) / 3,
+      (that._y0 + 2 * that._y1) / 3,
+      (that._x0 + 4 * that._x1 + x) / 6,
+      (that._y0 + 4 * that._y1 + y) / 6
+    );
+  }
+
+  function Basis(context) {
+    this._context = context;
+  }
+
+  Basis.prototype = {
+    areaStart: function() {
+      this._line = 0;
+    },
+    areaEnd: function() {
+      this._line = NaN;
+    },
+    lineStart: function() {
+      this._x0 = this._x1 =
+      this._y0 = this._y1 = NaN;
+      this._point = 0;
+    },
+    lineEnd: function() {
+      switch (this._point) {
+        case 3: point$1(this, this._x1, this._y1); // proceed
+        case 2: this._context.lineTo(this._x1, this._y1); break;
+      }
+      if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
+      this._line = 1 - this._line;
+    },
+    point: function(x, y) {
+      x = +x, y = +y;
+      switch (this._point) {
+        case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
+        case 1: this._point = 2; break;
+        case 2: this._point = 3; this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6); // proceed
+        default: point$1(this, x, y); break;
+      }
+      this._x0 = this._x1, this._x1 = x;
+      this._y0 = this._y1, this._y1 = y;
+    }
+  };
+
+  function basis(context) {
+    return new Basis(context);
+  }
+
   // The code in this file is adapted
   function constant$3(x) {
       return function () {
@@ -3663,6 +3721,8 @@ var quarantine = (function (exports) {
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
           this.paused = false;
+          this.toolbeltMode = "select-mode";
+          this.strokes = [];
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function (i) {
               return {
@@ -3774,6 +3834,22 @@ var quarantine = (function (exports) {
                   d.currentScore = 0;
               }
           }.bind(this));
+          for (var _i = 0, _a = this.strokes; _i < _a.length; _i++) {
+              var stroke = _a[_i];
+              context.beginPath();
+              var curve = basis(context);
+              curve.lineStart();
+              for (var _b = 0, stroke_1 = stroke; _b < stroke_1.length; _b++) {
+                  var point = stroke_1[_b];
+                  curve.point(point[0], point[1]);
+              }
+              if (stroke.length === 1)
+                  curve.point(stroke[0][0], stroke[0][1]);
+              curve.lineEnd();
+              context.lineWidth = 2;
+              context.strokeStyle = "red";
+              context.stroke();
+          }
           // Print indicators when score increases.
           context.fillStyle = "#0a6b24";
           context.font = "bold 10px sans-serif";
@@ -3820,7 +3896,14 @@ var quarantine = (function (exports) {
           .on("start", dragStarted)
           .on("drag", dragDragged)
           .on("end", dragEnded));
+      selectAll("[name=toolbelt]").on("click", function () {
+          game.toolbeltMode = this.value;
+      });
       function dragSubject() {
+          if (game.toolbeltMode == "wall-mode") {
+              game.strokes.push([event.x, event.y]);
+              return game.strokes[game.strokes.length - 1];
+          }
           var subject = game.simulation.find(event.x, event.y, 20);
           if (!subject) {
               subject = {
@@ -3842,16 +3925,25 @@ var quarantine = (function (exports) {
           return subject;
       }
       function dragStarted() {
-          event.subject.fx = event.subject.x;
-          event.subject.fy = event.subject.y;
+          if (game.toolbeltMode == "select-mode") {
+              event.subject.fx = event.subject.x;
+              event.subject.fy = event.subject.y;
+          }
       }
       function dragDragged() {
-          event.subject.fx = event.x;
-          event.subject.fy = event.y;
+          if (game.toolbeltMode == "select-mode") {
+              event.subject.fx = event.x;
+              event.subject.fy = event.y;
+          }
+          else if (game.toolbeltMode == "wall-mode") {
+              event.subject.push([event.x, event.y]);
+          }
       }
       function dragEnded() {
-          event.subject.fx = null;
-          event.subject.fy = null;
+          if (game.toolbeltMode == "select-mode") {
+              event.subject.fx = null;
+              event.subject.fy = null;
+          }
       }
       // Start simulation.
       game.simulation.alphaTarget(0.3).restart();

@@ -35,6 +35,9 @@ export class Game {
   recentTicksPerSecondIndex = 0;
 
   paused = false;
+  toolbeltMode = "select-mode";
+
+  strokes = [];
 
   constructor() {
     this.canvas = document.querySelector("canvas");
@@ -82,7 +85,7 @@ export class Game {
         )
           .iterations(5)
           .interaction("collision", collisionInteraction)
-          .interaction("contagion", function (node1, node2) {
+          .interaction("contagion", (node1, node2) => {
             if (
               Math.random() < 0.002 &&
               node1.type == "creature" &&
@@ -178,6 +181,20 @@ export class Game {
       }.bind(this)
     );
 
+    for (const stroke of this.strokes) {
+      context.beginPath();
+      const curve = d3.curveBasis(context);
+      curve.lineStart();
+      for (const point of stroke) {
+        curve.point(point[0], point[1]);
+      }
+      if (stroke.length === 1) curve.point(stroke[0][0], stroke[0][1]);
+      curve.lineEnd();
+      context.lineWidth = 2;
+      context.strokeStyle = "red";
+      context.stroke();
+    }
+
     // Print indicators when score increases.
     context.fillStyle = "#0a6b24";
     context.font = "bold 10px sans-serif";
@@ -232,7 +249,19 @@ window.onload = function () {
       .on("end", dragEnded)
   );
 
+  d3.selectAll<HTMLInputElement, undefined>("[name=toolbelt]").on(
+    "click",
+    function () {
+      game.toolbeltMode = this.value;
+    }
+  );
+
   function dragSubject() {
+    if (game.toolbeltMode == "wall-mode") {
+      game.strokes.push([d3.event.x, d3.event.y]);
+      return game.strokes[game.strokes.length - 1];
+    }
+
     let subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
     if (!subject) {
       subject = {
@@ -254,18 +283,26 @@ window.onload = function () {
   }
 
   function dragStarted() {
-    d3.event.subject.fx = d3.event.subject.x;
-    d3.event.subject.fy = d3.event.subject.y;
+    if (game.toolbeltMode == "select-mode") {
+      d3.event.subject.fx = d3.event.subject.x;
+      d3.event.subject.fy = d3.event.subject.y;
+    }
   }
 
   function dragDragged() {
-    d3.event.subject.fx = d3.event.x;
-    d3.event.subject.fy = d3.event.y;
+    if (game.toolbeltMode == "select-mode") {
+      d3.event.subject.fx = d3.event.x;
+      d3.event.subject.fy = d3.event.y;
+    } else if (game.toolbeltMode == "wall-mode") {
+      d3.event.subject.push([d3.event.x, d3.event.y]);
+    }
   }
 
   function dragEnded() {
-    d3.event.subject.fx = null;
-    d3.event.subject.fy = null;
+    if (game.toolbeltMode == "select-mode") {
+      d3.event.subject.fx = null;
+      d3.event.subject.fy = null;
+    }
   }
 
   // Start simulation.
