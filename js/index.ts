@@ -7,9 +7,8 @@ import { collisionInteraction } from "./collide.js";
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
 declare global {
   interface Window {
-    logRecentTickCount: any;
-    simulation: any;
     game: Game;
+    d3: any;
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -18,6 +17,11 @@ function squaredDistance(p1: Point, p2: Point): number {
   const dx = p1.x - p2.x,
     dy = p1.y - p2.y;
   return dx * dx + dy * dy;
+}
+
+class Wall {
+  points: Array<Point> = [];
+  state: "provisional";
 }
 
 // Not sure if a class is really the best way to organize this code...
@@ -37,7 +41,9 @@ export class Game {
   paused = false;
   toolbeltMode = "select-mode";
 
-  strokes = [];
+  walls: Array<Wall> = [];
+
+  WALL_WIDTH = 5;
 
   constructor() {
     this.canvas = document.querySelector("canvas");
@@ -159,7 +165,7 @@ export class Game {
     // Draw nodes.
     this.nodes.forEach(
       function (d) {
-        if (d.type == "dead") return;
+        if (d.type == "dead" || d.type == "wall2") return;
 
         context.beginPath();
         context.moveTo(d.x + d.r, d.y);
@@ -181,17 +187,18 @@ export class Game {
       }.bind(this)
     );
 
-    for (const stroke of this.strokes) {
+    for (const wall of this.walls) {
       context.beginPath();
-      const curve = d3.curveBasis(context);
+      const curve = d3.curveLinear(context);
       curve.lineStart();
-      for (const point of stroke) {
-        curve.point(point[0], point[1]);
+      for (const point of wall.points) {
+        curve.point(point.x, point.y);
       }
-      if (stroke.length === 1) curve.point(stroke[0][0], stroke[0][1]);
+      if (wall.points.length === 1)
+        curve.point(wall.points[0].x, wall.points[0].y);
       curve.lineEnd();
-      context.lineWidth = 2;
-      context.strokeStyle = "red";
+      context.lineWidth = 2 * this.WALL_WIDTH;
+      context.strokeStyle = wall.state == "provisional" ? "#e6757e" : "red";
       context.stroke();
     }
 
@@ -227,6 +234,7 @@ export class Game {
 }
 
 window.onload = function () {
+  window.d3 = d3;
   window.game = new Game();
   const game = window.game;
 
@@ -240,6 +248,8 @@ window.onload = function () {
   // Dragging. Note: dragging code may have to change when upgrading to d3v6.
   // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
 
+  // TODO: instead of conditional behavior in dragSubject, dragStarted, etc.,
+  // abstract out toolbelt mode for handling drag events.
   d3.select(window.game.canvas).call(
     d3
       .drag()
@@ -258,8 +268,11 @@ window.onload = function () {
 
   function dragSubject() {
     if (game.toolbeltMode == "wall-mode") {
-      game.strokes.push([d3.event.x, d3.event.y]);
-      return game.strokes[game.strokes.length - 1];
+      game.walls.push({
+        points: [{ x: d3.event.x, y: d3.event.y }],
+        state: "provisional",
+      });
+      return game.walls[game.walls.length - 1];
     }
 
     let subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
@@ -294,7 +307,13 @@ window.onload = function () {
       d3.event.subject.fx = d3.event.x;
       d3.event.subject.fy = d3.event.y;
     } else if (game.toolbeltMode == "wall-mode") {
-      d3.event.subject.push([d3.event.x, d3.event.y]);
+      const points = d3.event.subject.points;
+      if (
+        squaredDistance(d3.event, points[points.length - 1]) >
+        game.WALL_WIDTH * game.WALL_WIDTH
+      ) {
+        points.push({ x: d3.event.x, y: d3.event.y });
+      }
     }
   }
 
@@ -302,6 +321,21 @@ window.onload = function () {
     if (game.toolbeltMode == "select-mode") {
       d3.event.subject.fx = null;
       d3.event.subject.fy = null;
+    } else if (game.toolbeltMode == "wall-mode") {
+      for (let i = 1; i < d3.event.subject.points.length - 1; i++) {
+        const point = d3.event.subject.points[i];
+        game.nodes.push({
+          r: game.WALL_WIDTH,
+          fx: point.x,
+          fy: point.y,
+          x: point.x,
+          y: point.y,
+          infected: false,
+          type: "wall2",
+        });
+      }
+      game.simulation.nodes(game.nodes);
+      d3.event.subject.state = "built";
     }
   }
 
