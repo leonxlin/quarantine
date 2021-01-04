@@ -19,9 +19,17 @@ function squaredDistance(p1: Point, p2: Point): number {
   return dx * dx + dy * dy;
 }
 
+enum WallState {
+  // Still being built. Should not cause collisions.
+  PROVISIONAL,
+
+  // Built. Impermeable.
+  BUILT
+}
+
 class Wall {
   points: Array<Point> = [];
-  state: "provisional";
+  state: WallState.PROVISIONAL;
 }
 
 // Not sure if a class is really the best way to organize this code...
@@ -202,7 +210,7 @@ export class Game {
         curve.point(wall.points[0].x, wall.points[0].y);
       curve.lineEnd();
       context.lineWidth = 2 * this.WALL_WIDTH;
-      context.strokeStyle = wall.state == "provisional" ? "#e6757e" : "red";
+      context.strokeStyle = wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
       context.stroke();
     }
 
@@ -274,7 +282,7 @@ window.onload = function () {
     if (game.toolbeltMode == "wall-mode") {
       game.walls.push({
         points: [{ x: d3.event.x, y: d3.event.y }],
-        state: "provisional",
+        state: WallState.PROVISIONAL,
       });
       return game.walls[game.walls.length - 1];
     }
@@ -326,7 +334,7 @@ window.onload = function () {
         });
       }
       game.simulation.nodes(game.nodes);
-      d3.event.subject.state = "built";
+      d3.event.subject.state = WallState.BUILT;
     }
   }
 
