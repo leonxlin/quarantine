@@ -165,25 +165,20 @@ export class Game {
     // Draw nodes.
     this.nodes.forEach(
       function (d) {
-        if (d.type == "dead" || d.type == "wall2") return;
+        if (d.type != "creature") return;
 
         context.beginPath();
         context.moveTo(d.x + d.r, d.y);
         context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
         // A range from yellow (1 health) to purple (0 health).
-        context.fillStyle =
-          d.type == "wall"
-            ? "blue"
-            : d3.interpolatePlasma(d.health * 0.8 + 0.2);
+        context.fillStyle = d3.interpolatePlasma(d.health * 0.8 + 0.2);
         context.fill();
         context.strokeStyle = "#333";
         context.stroke();
 
         // Collect score.
-        if (d.type == "creature") {
-          this.score += d.currentScore;
-          d.currentScore = 0;
-        }
+        this.score += d.currentScore;
+        d.currentScore = 0;
       }.bind(this)
     );
 
@@ -275,24 +270,11 @@ window.onload = function () {
       return game.walls[game.walls.length - 1];
     }
 
-    let subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
-    if (!subject) {
-      subject = {
-        r: 10,
-        fx: d3.event.x,
-        fy: d3.event.y,
-        x: d3.event.x,
-        y: d3.event.y,
-        infected: false,
-        type: "wall",
-      };
-      game.nodes.push(subject);
-      game.simulation.nodes(game.nodes);
-      return null;
-    } else if (subject.type != "creature") {
-      return null;
+    const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
+    if (subject.type == "creature") {
+      return subject;
     }
-    return subject;
+    return null;
   }
 
   function dragStarted() {

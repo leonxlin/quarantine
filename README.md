@@ -19,11 +19,12 @@ in the top-level directory and visit `localhost:8000`.
   - can't build walls where dead nodes are
   - I suspect interactions are being run for multiple iterations per tick,
     which is not what we want except for collision handling...
+  - wall collision
+    - use something other than circles
+    - if drawn too fast, too few circles, and people can pass through
 
-- migrate to typescript
 - clean up code
 
-  - make global `game` variable
   - separate node lists into
     - all
     - displayable
@@ -31,10 +32,8 @@ in the top-level directory and visit `localhost:8000`.
     - infectable
     - collidable
     - etc.
-  - why are there carriage returns ^M in bundle.js?
+  - factor out toolbelt mode to avoid conditional logic in dragStarted etc.
 
 - next features
-  - draw linear walls
-  - deaths should dock points
   - make interaction bonuses more visually obvious
   - level modes

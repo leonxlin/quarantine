@@ -18957,24 +18957,10 @@ var quarantine = (function (exports) {
               return game.walls[game.walls.length - 1];
           }
           var subject = game.simulation.find(event.x, event.y, 20);
-          if (!subject) {
-              subject = {
-                  r: 10,
-                  fx: event.x,
-                  fy: event.y,
-                  x: event.x,
-                  y: event.y,
-                  infected: false,
-                  type: "wall",
-              };
-              game.nodes.push(subject);
-              game.simulation.nodes(game.nodes);
-              return null;
+          if (subject.type == "creature") {
+              return subject;
           }
-          else if (subject.type != "creature") {
-              return null;
-          }
-          return subject;
+          return null;
       }
       function dragStarted() {
           if (game.toolbeltMode == "select-mode") {
