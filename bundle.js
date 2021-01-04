@@ -18771,14 +18771,16 @@ var quarantine = (function (exports) {
           this.WALL_WIDTH = 5;
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function (i) {
+              var x = Math.random() * this.canvas.width, y = Math.random() * this.canvas.height;
               return {
                   r: Math.random() * 5 + 4,
-                  x: Math.random() * this.canvas.width,
-                  y: Math.random() * this.canvas.height,
+                  x: x,
+                  y: y,
                   type: "creature",
                   infected: i == 1,
                   health: 1,
                   currentScore: 0,
+                  previousLoggedLocation: { x: x, y: y },
               };
           }.bind(this));
           var nodes = this.nodes;
@@ -18789,7 +18791,12 @@ var quarantine = (function (exports) {
               nodes.forEach(function (n) {
                   if (n.type != "creature")
                       return;
-                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
+                  var stuck = false;
+                  if (Math.random() < 0.05) {
+                      stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
+                      n.previousLoggedLocation = { x: n.x, y: n.y };
+                  }
+                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
                       n.goal = {
                           x: Math.random() * canvas.width,
                           y: Math.random() * canvas.height,
@@ -18861,24 +18868,19 @@ var quarantine = (function (exports) {
           context.save();
           // Draw nodes.
           this.nodes.forEach(function (d) {
-              if (d.type == "dead" || d.type == "wall2")
+              if (d.type != "creature")
                   return;
               context.beginPath();
               context.moveTo(d.x + d.r, d.y);
               context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
               // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle =
-                  d.type == "wall"
-                      ? "blue"
-                      : plasma(d.health * 0.8 + 0.2);
+              context.fillStyle = plasma(d.health * 0.8 + 0.2);
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
               // Collect score.
-              if (d.type == "creature") {
-                  this.score += d.currentScore;
-                  d.currentScore = 0;
-              }
+              this.score += d.currentScore;
+              d.currentScore = 0;
           }.bind(this));
           for (var _i = 0, _a = this.walls; _i < _a.length; _i++) {
               var wall = _a[_i];

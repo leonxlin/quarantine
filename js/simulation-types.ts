@@ -7,6 +7,9 @@ export interface SNode extends d3.SimulationNodeDatum {
   health?: number;
   currentScore?: number;
   goal?: Point;
+
+  // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
+  previousLoggedLocation?: Point;
 }
 
 export interface Point {

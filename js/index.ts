@@ -49,14 +49,17 @@ export class Game {
     this.canvas = document.querySelector("canvas");
     this.nodes = d3.range(200).map(
       function (i): SNode {
+        const x = Math.random() * this.canvas.width,
+          y = Math.random() * this.canvas.height;
         return {
           r: Math.random() * 5 + 4,
-          x: Math.random() * this.canvas.width,
-          y: Math.random() * this.canvas.height,
+          x: x,
+          y: y,
           type: "creature",
           infected: i == 1,
           health: 1,
           currentScore: 0, // Reset to 0 each tick.
+          previousLoggedLocation: { x: x, y: y },
         };
       }.bind(this)
     );
@@ -71,7 +74,13 @@ export class Game {
         nodes.forEach(function (n: SNode) {
           if (n.type != "creature") return;
 
-          if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
+          let stuck = false;
+          if (Math.random() < 0.05) {
+            stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
+            n.previousLoggedLocation = { x: n.x, y: n.y };
+          }
+
+          if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
             n.goal = {
               x: Math.random() * canvas.width,
               y: Math.random() * canvas.height,
