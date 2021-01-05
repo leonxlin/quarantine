@@ -12,6 +12,18 @@ export interface SNode extends d3.SimulationNodeDatum {
   previousLoggedLocation?: Point;
 }
 
+export interface SegmentNode extends SNode {
+  // The two endpoints of the segment.
+  left?: Point;
+  right?: Point;
+
+  // Precomuptations.
+  // The vector from `left` to `right`, i.e., `right - left`.
+  vec?: Point;
+  length?: number;
+  length2?: number;
+}
+
 export interface Point {
   x?: number;
   y?: number;

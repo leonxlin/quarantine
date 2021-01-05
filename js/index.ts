@@ -1,7 +1,15 @@
 import * as d3 from "d3";
-import { SNode, Point, TempScoreIndicator } from "./simulation-types.js";
+import {
+  SNode,
+  Point,
+  TempScoreIndicator,
+  SegmentNode,
+} from "./simulation-types.js";
 import collideForce from "./collide.js";
-import { collisionInteraction } from "./collide.js";
+import {
+  collisionInteraction,
+  circleLineCollisionInteraction,
+} from "./collide.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
@@ -24,7 +32,7 @@ enum WallState {
   PROVISIONAL,
 
   // Built. Impermeable.
-  BUILT
+  BUILT,
 }
 
 class Wall {
@@ -51,7 +59,10 @@ export class Game {
 
   walls: Array<Wall> = [];
 
-  WALL_WIDTH = 5;
+  // Figure out a better place for this constant.
+  pointCircleFactor = 0.1;
+
+  WALL_HALF_WIDTH = 5;
 
   constructor() {
     this.canvas = document.querySelector("canvas");
@@ -107,7 +118,8 @@ export class Game {
           }
         )
           .iterations(5)
-          .interaction("collision", collisionInteraction)
+          .interaction("circleCircleCollision", collisionInteraction)
+          .interaction("circleLineCollision", circleLineCollisionInteraction)
           .interaction("contagion", (node1, node2) => {
             if (
               Math.random() < 0.002 &&
@@ -209,8 +221,11 @@ export class Game {
       if (wall.points.length === 1)
         curve.point(wall.points[0].x, wall.points[0].y);
       curve.lineEnd();
-      context.lineWidth = 2 * this.WALL_WIDTH;
-      context.strokeStyle = wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
+      context.lineWidth = 2 * this.WALL_HALF_WIDTH;
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      context.strokeStyle =
+        wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
       context.stroke();
     }
 
@@ -288,7 +303,7 @@ window.onload = function () {
     }
 
     const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
-    if (subject.type == "creature") {
+    if (subject && subject.type == "creature") {
       return subject;
     }
     return null;
@@ -309,7 +324,7 @@ window.onload = function () {
       const points = d3.event.subject.points;
       if (
         squaredDistance(d3.event, points[points.length - 1]) >
-        game.WALL_WIDTH * game.WALL_WIDTH
+        5 * game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH
       ) {
         points.push({ x: d3.event.x, y: d3.event.y });
       }
@@ -321,10 +336,10 @@ window.onload = function () {
       d3.event.subject.fx = null;
       d3.event.subject.fy = null;
     } else if (game.toolbeltMode == "wall-mode") {
-      for (let i = 1; i < d3.event.subject.points.length - 1; i++) {
+      for (let i = 0; i < d3.event.subject.points.length; i++) {
         const point = d3.event.subject.points[i];
         game.nodes.push({
-          r: game.WALL_WIDTH,
+          r: game.WALL_HALF_WIDTH,
           fx: point.x,
           fy: point.y,
           x: point.x,
@@ -332,6 +347,35 @@ window.onload = function () {
           infected: false,
           type: "wall2",
         });
+
+        if (i == 0) continue;
+        const prevPoint = d3.event.subject.points[i - 1];
+        const length2 = squaredDistance(point, prevPoint);
+        const segmentMid: Point = {
+          x: 0.5 * (point.x + prevPoint.x),
+          y: 0.5 * (point.y + prevPoint.y),
+        };
+        const segmentNode: SegmentNode = {
+          x: segmentMid.x,
+          y: segmentMid.y,
+          fx: segmentMid.x,
+          fy: segmentMid.y,
+          // The minimum radius from `segmentMid` within which we need to check for collisions.
+          r: Math.sqrt(
+            length2 / 4 + game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH
+          ),
+          length: Math.sqrt(length2),
+          length2: length2,
+          left: prevPoint,
+          right: point,
+          infected: false,
+          type: "wallsegment",
+          vec: {
+            x: point.x - prevPoint.x,
+            y: point.y - prevPoint.y,
+          },
+        };
+        game.nodes.push(segmentNode);
       }
       game.simulation.nodes(game.nodes);
       d3.event.subject.state = WallState.BUILT;

@@ -34,7 +34,12 @@
 // detects nearby objects on the map and handles interactions between them.
 
 import { quadtree } from "d3-quadtree";
-import { SNode, SForceCollide, Interaction } from "./simulation-types.js";
+import {
+  SNode,
+  SegmentNode,
+  SForceCollide,
+  Interaction,
+} from "./simulation-types.js";
 
 function constant(x) {
   return function () {
@@ -54,6 +59,7 @@ function y(d) {
   return d.y + d.vy;
 }
 
+// Handles collision between two circles.
 // TODO: document arguments.
 export function collisionInteraction(
   node1: SNode,
@@ -67,7 +73,13 @@ export function collisionInteraction(
   strength: number
 ): void {
   // Dead things don't collide.
-  if (node1.type == "dead" || node2.type == "dead") return;
+  if (
+    node1.type == "dead" ||
+    node2.type == "dead" ||
+    node1.type == "wallsegment" ||
+    node2.type == "wallsegment"
+  )
+    return;
 
   if (x === 0) (x = jiggle()), (l += x * x);
   if (y === 0) (y = jiggle()), (l += y * y);
@@ -76,6 +88,45 @@ export function collisionInteraction(
   node1.vy += (y *= l) * r;
   node2.vx -= x * (r = 1 - r);
   node2.vy -= y * r;
+}
+
+// Handles collision between a circle and line segment with a certain width.
+export function circleLineCollisionInteraction(
+  node1: SNode,
+  node2: SNode
+): void {
+  // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
+  const WALL_HALF_WIDTH = 5;
+  let creatureNode: SNode, segmentNode: SegmentNode;
+  if (node1.type == "wallsegment" && node2.type == "creature") {
+    creatureNode = node2;
+    segmentNode = node1;
+  } else if (node2.type == "wallsegment" && node1.type == "creature") {
+    creatureNode = node1;
+    segmentNode = node2;
+  } else {
+    return;
+  }
+
+  const a = segmentNode.vec.x,
+    b = segmentNode.vec.y;
+  const nx = creatureNode.x - segmentNode.left.x,
+    ny = creatureNode.y - segmentNode.left.y;
+  const nxpc = a * nx + b * ny;
+  // If creature is off to the "side" of the segment, we ignore.
+  if (nxpc < 0 || nxpc > segmentNode.length2) return;
+
+  const nyp = (a * ny - b * nx) / segmentNode.length;
+
+  // Min distance we need to move the creature in order to not be overlapping with this wall segment.
+  const discrepancy = WALL_HALF_WIDTH + creatureNode.r - Math.abs(nyp);
+  if (discrepancy <= 0) return;
+
+  const sign = nyp > 0 ? 1 : -1;
+  const commonFactor =
+    ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+  creatureNode.vx += -b * commonFactor;
+  creatureNode.vy += a * commonFactor;
 }
 
 // Returns the collide force.
@@ -156,7 +207,7 @@ export default function (radius: (SNode) => number): SForceCollide {
 
   /* eslint-disable @typescript-eslint/no-explicit-any -- 
     I can't figure out how to get function overloads to work with typescript without `any`. */
-
+  x;
   // Set a named interaction, or get the interaction with the given name.
   force.interaction = function (name: string, _?: Interaction): any {
     return arguments.length > 1

@@ -18649,10 +18649,14 @@ var quarantine = (function (exports) {
   function y$5(d) {
       return d.y + d.vy;
   }
+  // Handles collision between two circles.
   // TODO: document arguments.
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
       // Dead things don't collide.
-      if (node1.type == "dead" || node2.type == "dead")
+      if (node1.type == "dead" ||
+          node2.type == "dead" ||
+          node1.type == "wallsegment" ||
+          node2.type == "wallsegment")
           return;
       if (x === 0)
           (x = jiggle$1()), (l += x * x);
@@ -18663,6 +18667,38 @@ var quarantine = (function (exports) {
       node1.vy += (y *= l) * r;
       node2.vx -= x * (r = 1 - r);
       node2.vy -= y * r;
+  }
+  // Handles collision between a circle and line segment with a certain width.
+  function circleLineCollisionInteraction(node1, node2) {
+      // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
+      var WALL_HALF_WIDTH = 5;
+      var creatureNode, segmentNode;
+      if (node1.type == "wallsegment" && node2.type == "creature") {
+          creatureNode = node2;
+          segmentNode = node1;
+      }
+      else if (node2.type == "wallsegment" && node1.type == "creature") {
+          creatureNode = node1;
+          segmentNode = node2;
+      }
+      else {
+          return;
+      }
+      var a = segmentNode.vec.x, b = segmentNode.vec.y;
+      var nx = creatureNode.x - segmentNode.left.x, ny = creatureNode.y - segmentNode.left.y;
+      var nxpc = a * nx + b * ny;
+      // If creature is off to the "side" of the segment, we ignore.
+      if (nxpc < 0 || nxpc > segmentNode.length2)
+          return;
+      var nyp = (a * ny - b * nx) / segmentNode.length;
+      // Min distance we need to move the creature in order to not be overlapping with this wall segment.
+      var discrepancy = WALL_HALF_WIDTH + creatureNode.r - Math.abs(nyp);
+      if (discrepancy <= 0)
+          return;
+      var sign = nyp > 0 ? 1 : -1;
+      var commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+      creatureNode.vx += -b * commonFactor;
+      creatureNode.vy += a * commonFactor;
   }
   // Returns the collide force.
   //
@@ -18726,8 +18762,6 @@ var quarantine = (function (exports) {
           nodes = _;
           initialize();
       };
-      /* eslint-disable @typescript-eslint/no-explicit-any --
-        I can't figure out how to get function overloads to work with typescript without `any`. */
       // Set a named interaction, or get the interaction with the given name.
       force.interaction = function (name, _) {
           return arguments.length > 1
@@ -18756,6 +18790,13 @@ var quarantine = (function (exports) {
       var dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
+  var WallState;
+  (function (WallState) {
+      // Still being built. Should not cause collisions.
+      WallState[WallState["PROVISIONAL"] = 0] = "PROVISIONAL";
+      // Built. Impermeable.
+      WallState[WallState["BUILT"] = 1] = "BUILT";
+  })(WallState || (WallState = {}));
   // Not sure if a class is really the best way to organize this code...
   // TODO: revisit code organization.
   var Game = /** @class */ (function () {
@@ -18768,7 +18809,9 @@ var quarantine = (function (exports) {
           this.paused = false;
           this.toolbeltMode = "select-mode";
           this.walls = [];
-          this.WALL_WIDTH = 5;
+          // Figure out a better place for this constant.
+          this.pointCircleFactor = 0.1;
+          this.WALL_HALF_WIDTH = 5;
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function (i) {
               var x = Math.random() * this.canvas.width, y = Math.random() * this.canvas.height;
@@ -18812,7 +18855,8 @@ var quarantine = (function (exports) {
               return d.r;
           })
               .iterations(5)
-              .interaction("collision", collisionInteraction)
+              .interaction("circleCircleCollision", collisionInteraction)
+              .interaction("circleLineCollision", circleLineCollisionInteraction)
               .interaction("contagion", function (node1, node2) {
               if (Math.random() < 0.002 &&
                   node1.type == "creature" &&
@@ -18894,8 +18938,11 @@ var quarantine = (function (exports) {
               if (wall.points.length === 1)
                   curve.point(wall.points[0].x, wall.points[0].y);
               curve.lineEnd();
-              context.lineWidth = 2 * this.WALL_WIDTH;
-              context.strokeStyle = wall.state == "provisional" ? "#e6757e" : "red";
+              context.lineWidth = 2 * this.WALL_HALF_WIDTH;
+              context.lineJoin = "round";
+              context.lineCap = "round";
+              context.strokeStyle =
+                  wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
               context.stroke();
           }
           // Print indicators when score increases.
@@ -18954,12 +19001,12 @@ var quarantine = (function (exports) {
           if (game.toolbeltMode == "wall-mode") {
               game.walls.push({
                   points: [{ x: event.x, y: event.y }],
-                  state: "provisional",
+                  state: WallState.PROVISIONAL,
               });
               return game.walls[game.walls.length - 1];
           }
           var subject = game.simulation.find(event.x, event.y, 20);
-          if (subject.type == "creature") {
+          if (subject && subject.type == "creature") {
               return subject;
           }
           return null;
@@ -18978,7 +19025,7 @@ var quarantine = (function (exports) {
           else if (game.toolbeltMode == "wall-mode") {
               var points = event.subject.points;
               if (squaredDistance(event, points[points.length - 1]) >
-                  game.WALL_WIDTH * game.WALL_WIDTH) {
+                  5 * game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH) {
                   points.push({ x: event.x, y: event.y });
               }
           }
@@ -18989,10 +19036,10 @@ var quarantine = (function (exports) {
               event.subject.fy = null;
           }
           else if (game.toolbeltMode == "wall-mode") {
-              for (var i = 1; i < event.subject.points.length - 1; i++) {
+              for (var i = 0; i < event.subject.points.length; i++) {
                   var point = event.subject.points[i];
                   game.nodes.push({
-                      r: game.WALL_WIDTH,
+                      r: game.WALL_HALF_WIDTH,
                       fx: point.x,
                       fy: point.y,
                       x: point.x,
@@ -19000,9 +19047,36 @@ var quarantine = (function (exports) {
                       infected: false,
                       type: "wall2",
                   });
+                  if (i == 0)
+                      continue;
+                  var prevPoint = event.subject.points[i - 1];
+                  var length2 = squaredDistance(point, prevPoint);
+                  var segmentMid = {
+                      x: 0.5 * (point.x + prevPoint.x),
+                      y: 0.5 * (point.y + prevPoint.y),
+                  };
+                  var segmentNode = {
+                      x: segmentMid.x,
+                      y: segmentMid.y,
+                      fx: segmentMid.x,
+                      fy: segmentMid.y,
+                      // The minimum radius from `segmentMid` within which we need to check for collisions.
+                      r: Math.sqrt(length2 / 4 + game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH),
+                      length: Math.sqrt(length2),
+                      length2: length2,
+                      left: prevPoint,
+                      right: point,
+                      infected: false,
+                      type: "wallsegment",
+                      vec: {
+                          x: point.x - prevPoint.x,
+                          y: point.y - prevPoint.y,
+                      },
+                  };
+                  game.nodes.push(segmentNode);
               }
               game.simulation.nodes(game.nodes);
-              event.subject.state = "built";
+              event.subject.state = WallState.BUILT;
           }
       }
       // Start simulation.
