@@ -18696,6 +18696,7 @@ var quarantine = (function (exports) {
       if (discrepancy <= 0)
           return;
       var sign = nyp > 0 ? 1 : -1;
+      // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
       var commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
       creatureNode.vx += -b * commonFactor;
       creatureNode.vy += a * commonFactor;
@@ -18890,7 +18891,11 @@ var quarantine = (function (exports) {
               });
           })
               .nodes(nodes)
-              .on("tick", this.tick.bind(this));
+              .on("tick", this.tick.bind(this))
+              // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
+              .alphaTarget(0.3)
+              // Don't start the simulation yet.
+              .stop();
           // Record number of ticks per second.
           setInterval(function () {
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
@@ -18918,7 +18923,7 @@ var quarantine = (function (exports) {
               context.moveTo(d.x + d.r, d.y);
               context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
               // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(d.health * 0.8 + 0.2);
+              context.fillStyle = plasma(d.health * 0.6 + 0.2);
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
@@ -18965,13 +18970,19 @@ var quarantine = (function (exports) {
       };
       Game.prototype.togglePause = function () {
           if (this.paused) {
-              this.simulation.restart();
-              this.paused = false;
+              this.start();
           }
           else {
-              this.simulation.stop();
-              this.paused = true;
+              this.stop();
           }
+      };
+      Game.prototype.start = function () {
+          this.simulation.restart();
+          this.paused = false;
+      };
+      Game.prototype.stop = function () {
+          this.simulation.stop();
+          this.paused = true;
       };
       return Game;
   }());
@@ -18984,6 +18995,11 @@ var quarantine = (function (exports) {
           if (event.key == "p" || event.key == " ") {
               game.togglePause();
           }
+      });
+      // Start game button.
+      select(".start-game-button").on("click", function () {
+          select(".modal").classed("modal-active", false);
+          game.start();
       });
       // Dragging. Note: dragging code may have to change when upgrading to d3v6.
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -19079,8 +19095,6 @@ var quarantine = (function (exports) {
               event.subject.state = WallState.BUILT;
           }
       }
-      // Start simulation.
-      game.simulation.alphaTarget(0.3).restart();
   };
 
   exports.Game = Game;

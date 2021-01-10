@@ -123,6 +123,7 @@ export function circleLineCollisionInteraction(
   if (discrepancy <= 0) return;
 
   const sign = nyp > 0 ? 1 : -1;
+  // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
   const commonFactor =
     ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
   creatureNode.vx += -b * commonFactor;

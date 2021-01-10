@@ -20,6 +20,7 @@ body {
 }
 
 .left-panel {
+  position: relative;
 }
 
 .right-panel {
@@ -55,6 +56,36 @@ body {
 /* CHECKED STYLES */
 [name="toolbelt"]:checked + img {
   border: 2px solid #0d0;
+}
+
+.modal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  display: none;
+}
+
+.modal-active {
+  display: flex;
+}
+
+.modal-content {
+  min-width: 300px;
+  border: 1px solid black;
+  background-color: #690;
+  padding: 5px;
+  min-height: 300px;
+}
+
+.start-game-modal {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
 }
 
 .credits {

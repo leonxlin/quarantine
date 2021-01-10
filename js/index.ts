@@ -157,7 +157,11 @@ export class Game {
         });
       })
       .nodes(nodes)
-      .on("tick", this.tick.bind(this));
+      .on("tick", this.tick.bind(this))
+      // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
+      .alphaTarget(0.3)
+      // Don't start the simulation yet.
+      .stop();
 
     // Record number of ticks per second.
     setInterval(
@@ -200,7 +204,7 @@ export class Game {
         context.moveTo(d.x + d.r, d.y);
         context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
         // A range from yellow (1 health) to purple (0 health).
-        context.fillStyle = d3.interpolatePlasma(d.health * 0.8 + 0.2);
+        context.fillStyle = d3.interpolatePlasma(d.health * 0.6 + 0.2);
         context.fill();
         context.strokeStyle = "#333";
         context.stroke();
@@ -251,12 +255,20 @@ export class Game {
 
   togglePause(): void {
     if (this.paused) {
-      this.simulation.restart();
-      this.paused = false;
+      this.start();
     } else {
-      this.simulation.stop();
-      this.paused = true;
+      this.stop();
     }
+  }
+
+  start(): void {
+    this.simulation.restart();
+    this.paused = false;
+  }
+
+  stop(): void {
+    this.simulation.stop();
+    this.paused = true;
   }
 }
 
@@ -270,6 +282,12 @@ window.onload = function () {
     if (d3.event.key == "p" || d3.event.key == " ") {
       game.togglePause();
     }
+  });
+
+  // Start game button.
+  d3.select(".start-game-button").on("click", function () {
+    d3.select(".modal").classed("modal-active", false);
+    game.start();
   });
 
   // Dragging. Note: dragging code may have to change when upgrading to d3v6.
@@ -381,7 +399,4 @@ window.onload = function () {
       d3.event.subject.state = WallState.BUILT;
     }
   }
-
-  // Start simulation.
-  game.simulation.alphaTarget(0.3).restart();
 };
