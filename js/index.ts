@@ -166,6 +166,9 @@ export class Game {
     // Record number of ticks per second.
     setInterval(
       function () {
+        d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
+        d3.select(".num-nodes").text(this.nodes.length);
+
         this.recentTicksPerSecond[
           this.recentTicksPerSecondIndex
         ] = this.numTicksSinceLastRecord;

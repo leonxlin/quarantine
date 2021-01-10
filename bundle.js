@@ -18716,6 +18716,8 @@ var quarantine = (function (exports) {
               // For each node, visit other nodes that could collide.
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
+                  if (node.type != "creature")
+                      continue;
                   (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
                   yi = node.y + node.vy;
@@ -18725,8 +18727,10 @@ var quarantine = (function (exports) {
           function apply(quad, x0, y0, x1, y1) {
               var data = quad.data, rj = quad.r, r = ri + rj;
               if (data) {
-                  // Only process node pairs with the smaller index first.
-                  if (data.index > node.index) {
+                  // Only process pairs of creatures with the smaller index first.
+                  // Non-creature |data| nodes should always be processed since |node|
+                  // is a creature.
+                  if (data.type != "creature" || data.index > node.index) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18898,6 +18902,8 @@ var quarantine = (function (exports) {
               .stop();
           // Record number of ticks per second.
           setInterval(function () {
+              select(".frames-per-second").text(this.numTicksSinceLastRecord);
+              select(".num-nodes").text(this.nodes.length);
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
               this.recentTicksPerSecondIndex %= this.recentTicksPerSecond.length;

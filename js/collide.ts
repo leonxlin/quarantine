@@ -151,6 +151,8 @@ export default function (radius: (SNode) => number): SForceCollide {
       // For each node, visit other nodes that could collide.
       for (i = 0; i < n; ++i) {
         node = nodes[i];
+        if (node.type != "creature") continue;
+
         (ri = radii[node.index]), (ri2 = ri * ri);
         xi = node.x + node.vx;
         yi = node.y + node.vy;
@@ -163,8 +165,10 @@ export default function (radius: (SNode) => number): SForceCollide {
         rj = quad.r,
         r = ri + rj;
       if (data) {
-        // Only process node pairs with the smaller index first.
-        if (data.index > node.index) {
+        // Only process pairs of creatures with the smaller index first.
+        // Non-creature |data| nodes should always be processed since |node|
+        // is a creature.
+        if (data.type != "creature" || data.index > node.index) {
           const x = xi - data.x - data.vx,
             y = yi - data.y - data.vy,
             l = x * x + y * y;
