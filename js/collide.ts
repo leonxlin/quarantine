@@ -151,6 +151,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       // For each node, visit other nodes that could collide.
       for (i = 0; i < n; ++i) {
         node = nodes[i];
+        // Only creatures will respond to a collision (walls don't move).
         if (node.type != "creature") continue;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
