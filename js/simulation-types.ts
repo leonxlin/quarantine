@@ -3,13 +3,6 @@ import * as d3 from "d3";
 export interface SNode extends d3.SimulationNodeDatum {
   r?: number;
   type?: string;
-  infected?: boolean;
-  health?: number;
-  currentScore?: number;
-  goal?: Point;
-
-  // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
-  previousLoggedLocation?: Point;
 }
 
 export interface SegmentNode extends SNode {
@@ -22,6 +15,35 @@ export interface SegmentNode extends SNode {
   vec?: Point;
   length?: number;
   length2?: number;
+}
+
+export function isCreature(n: SNode): n is Creature {
+  return n instanceof Creature;
+}
+
+export class Creature implements SNode {
+  r: number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  type = "creature";
+  infected = false;
+  health = 1;
+  currentScore = 0;
+  goal?: Point;
+  // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
+  previousLoggedLocation: Point;
+
+  // Used by d3 simulation code.
+  index?: number;
+
+  constructor(x: number, y: number) {
+    this.r = Math.random() * 5 + 4;
+    this.x = x;
+    this.y = y;
+    this.previousLoggedLocation = { x: x, y: y };
+  }
 }
 
 export interface Point {

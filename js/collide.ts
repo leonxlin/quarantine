@@ -39,6 +39,7 @@ import {
   SegmentNode,
   SForceCollide,
   Interaction,
+  isCreature,
 } from "./simulation-types.js";
 
 function constant(x) {
@@ -152,7 +153,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       for (i = 0; i < n; ++i) {
         node = nodes[i];
         // Only creatures will respond to a collision (walls don't move).
-        if (node.type != "creature") continue;
+        if (!isCreature(node)) continue;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
         xi = node.x + node.vx;

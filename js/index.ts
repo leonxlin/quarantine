@@ -4,6 +4,8 @@ import {
   Point,
   TempScoreIndicator,
   SegmentNode,
+  Creature,
+  isCreature,
 } from "./simulation-types.js";
 import collideForce from "./collide.js";
 import {
@@ -67,21 +69,13 @@ export class Game {
   constructor() {
     this.canvas = document.querySelector("canvas");
     this.nodes = d3.range(200).map(
-      function (i): SNode {
-        const x = Math.random() * this.canvas.width,
-          y = Math.random() * this.canvas.height;
-        return {
-          r: Math.random() * 5 + 4,
-          x: x,
-          y: y,
-          type: "creature",
-          infected: i == 1,
-          health: 1,
-          currentScore: 0, // Reset to 0 each tick.
-          previousLoggedLocation: { x: x, y: y },
-        };
-      }.bind(this)
+      () =>
+        new Creature(
+          Math.random() * this.canvas.width, // x
+          Math.random() * this.canvas.height // y
+        )
     );
+    (this.nodes[0] as Creature).infected = true;
 
     const nodes = this.nodes;
     const canvas = this.canvas;
@@ -91,7 +85,7 @@ export class Game {
       .velocityDecay(0.2)
       .force("agent", function (alpha) {
         nodes.forEach(function (n: SNode) {
-          if (n.type != "creature") return;
+          if (!isCreature(n)) return;
 
           let stuck = false;
           if (Math.random() < 0.05) {
@@ -121,19 +115,15 @@ export class Game {
           .interaction("circleCircleCollision", collisionInteraction)
           .interaction("circleLineCollision", circleLineCollisionInteraction)
           .interaction("contagion", (node1, node2) => {
-            if (
-              Math.random() < 0.002 &&
-              node1.type == "creature" &&
-              node2.type == "creature"
-            )
+            if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
               node1.infected = node2.infected =
                 node1.infected || node2.infected;
           })
           .interaction("score", function (node1, node2) {
             if (
               Math.random() < 0.0005 &&
-              node1.type == "creature" &&
-              node2.type == "creature"
+              isCreature(node1) &&
+              isCreature(node2)
             ) {
               node1.currentScore += 1;
               node2.currentScore += 1;
@@ -148,7 +138,7 @@ export class Game {
       )
       .force("health", function () {
         nodes.forEach(function (n) {
-          if (!n.infected) return;
+          if (!isCreature(n) || !n.infected) return;
           n.health -= 0.0003;
           if (n.health <= 0) {
             n.type = "dead";
@@ -365,7 +355,6 @@ window.onload = function () {
           fy: point.y,
           x: point.x,
           y: point.y,
-          infected: false,
           type: "wall2",
         });
 
@@ -389,7 +378,6 @@ window.onload = function () {
           length2: length2,
           left: prevPoint,
           right: point,
-          infected: false,
           type: "wallsegment",
           vec: {
             x: point.x - prevPoint.x,

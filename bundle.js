@@ -18634,6 +18634,23 @@ var quarantine = (function (exports) {
     zoomIdentity: identity$9
   });
 
+  function isCreature(n) {
+      return n instanceof Creature;
+  }
+  var Creature = /** @class */ (function () {
+      function Creature(x, y) {
+          this.type = "creature";
+          this.infected = false;
+          this.health = 1;
+          this.currentScore = 0;
+          this.r = Math.random() * 5 + 4;
+          this.x = x;
+          this.y = y;
+          this.previousLoggedLocation = { x: x, y: y };
+      }
+      return Creature;
+  }());
+
   // The code in this file is adapted
   function constant$e(x) {
       return function () {
@@ -18716,7 +18733,8 @@ var quarantine = (function (exports) {
               // For each node, visit other nodes that could collide.
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
-                  if (node.type != "creature")
+                  // Only creatures will respond to a collision (walls don't move).
+                  if (!isCreature(node))
                       continue;
                   (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
@@ -18806,6 +18824,7 @@ var quarantine = (function (exports) {
   // TODO: revisit code organization.
   var Game = /** @class */ (function () {
       function Game() {
+          var _this = this;
           this.score = 0;
           this.tempScoreIndicators = [];
           this.numTicksSinceLastRecord = 0;
@@ -18818,26 +18837,19 @@ var quarantine = (function (exports) {
           this.pointCircleFactor = 0.1;
           this.WALL_HALF_WIDTH = 5;
           this.canvas = document.querySelector("canvas");
-          this.nodes = sequence(200).map(function (i) {
-              var x = Math.random() * this.canvas.width, y = Math.random() * this.canvas.height;
-              return {
-                  r: Math.random() * 5 + 4,
-                  x: x,
-                  y: y,
-                  type: "creature",
-                  infected: i == 1,
-                  health: 1,
-                  currentScore: 0,
-                  previousLoggedLocation: { x: x, y: y },
-              };
-          }.bind(this));
+          this.nodes = sequence(200).map(function () {
+              return new Creature(Math.random() * _this.canvas.width, // x
+              Math.random() * _this.canvas.height // y
+              );
+          });
+          this.nodes[0].infected = true;
           var nodes = this.nodes;
           var canvas = this.canvas;
           this.simulation = simulation()
               .velocityDecay(0.2)
               .force("agent", function (alpha) {
               nodes.forEach(function (n) {
-                  if (n.type != "creature")
+                  if (!isCreature(n))
                       return;
                   var stuck = false;
                   if (Math.random() < 0.05) {
@@ -18863,16 +18875,14 @@ var quarantine = (function (exports) {
               .interaction("circleCircleCollision", collisionInteraction)
               .interaction("circleLineCollision", circleLineCollisionInteraction)
               .interaction("contagion", function (node1, node2) {
-              if (Math.random() < 0.002 &&
-                  node1.type == "creature" &&
-                  node2.type == "creature")
+              if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
                   node1.infected = node2.infected =
                       node1.infected || node2.infected;
           })
               .interaction("score", function (node1, node2) {
               if (Math.random() < 0.0005 &&
-                  node1.type == "creature" &&
-                  node2.type == "creature") {
+                  isCreature(node1) &&
+                  isCreature(node2)) {
                   node1.currentScore += 1;
                   node2.currentScore += 1;
                   window.game.tempScoreIndicators.push({
@@ -18885,7 +18895,7 @@ var quarantine = (function (exports) {
           }))
               .force("health", function () {
               nodes.forEach(function (n) {
-                  if (!n.infected)
+                  if (!isCreature(n) || !n.infected)
                       return;
                   n.health -= 0.0003;
                   if (n.health <= 0) {
@@ -19066,7 +19076,6 @@ var quarantine = (function (exports) {
                       fy: point.y,
                       x: point.x,
                       y: point.y,
-                      infected: false,
                       type: "wall2",
                   });
                   if (i == 0)
@@ -19088,7 +19097,6 @@ var quarantine = (function (exports) {
                       length2: length2,
                       left: prevPoint,
                       right: point,
-                      infected: false,
                       type: "wallsegment",
                       vec: {
                           x: point.x - prevPoint.x,
