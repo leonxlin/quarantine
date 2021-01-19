@@ -18,7 +18,7 @@ in the top-level directory and visit `localhost:8000`.
 
   - I suspect interactions are being run for multiple iterations per tick,
     which is not what we want except for collision handling...
-  
+
 - clean up code
 
   - separate node lists into

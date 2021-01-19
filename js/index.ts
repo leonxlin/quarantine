@@ -46,9 +46,11 @@ export class Game {
   score = 0;
   tempScoreIndicators: TempScoreIndicator[] = [];
 
+  // Some crude performance monitoring.
   numTicksSinceLastRecord = 0;
   recentTicksPerSecond: number[] = new Array(20);
   recentTicksPerSecondIndex = 0;
+  recentCollisionForceRuntime: number[] = [];
 
   paused = false;
   toolbeltMode = "select-mode";
@@ -151,6 +153,13 @@ export class Game {
       function () {
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
         d3.select(".num-nodes").text(this.nodes.length);
+        // Print the average.
+        d3.select(".collision-force-runtime").text(
+          this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
+            this.recentCollisionForceRuntime.length
+        );
+
+        this.recentCollisionForceRuntime = [];
 
         this.recentTicksPerSecond[
           this.recentTicksPerSecondIndex

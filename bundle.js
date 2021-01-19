@@ -18764,6 +18764,7 @@ var quarantine = (function (exports) {
       // Named interactions between pairs of nodes.
       var interactions = new Map();
       function force() {
+          var startTime = Date.now();
           var n = nodes.length;
           var i, tree, node, xi, yi, ri, ri2;
           for (var k = 0; k < iterations; ++k) {
@@ -18787,6 +18788,7 @@ var quarantine = (function (exports) {
                   // Non-creature |data| nodes should always be processed since |node|
                   // is a creature.
                   if (!isLiveCreature(data) || data.index > node.index) {
+                      //if (data.index > node.index) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18800,6 +18802,7 @@ var quarantine = (function (exports) {
               // Return true if there is no need to visit the children of `quad`.
               return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
           }
+          window.game.recentCollisionForceRuntime.push(Date.now() - startTime);
       }
       function prepare(quad) {
           if (quad.data)
@@ -18864,6 +18867,7 @@ var quarantine = (function (exports) {
           this.numTicksSinceLastRecord = 0;
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
+          this.recentCollisionForceRuntime = [];
           this.paused = false;
           this.toolbeltMode = "select-mode";
           this.walls = [];
@@ -18947,6 +18951,10 @@ var quarantine = (function (exports) {
           setInterval(function () {
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
               select(".num-nodes").text(this.nodes.length);
+              // Print the average.
+              select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce(function (a, b) { return a + b; }) /
+                  this.recentCollisionForceRuntime.length);
+              this.recentCollisionForceRuntime = [];
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
               this.recentTicksPerSecondIndex %= this.recentTicksPerSecond.length;

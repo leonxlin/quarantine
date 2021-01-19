@@ -163,6 +163,8 @@ export default function (radius: (SNode) => number): SForceCollide {
   const interactions = new Map<string, Interaction>();
 
   function force() {
+    const startTime = Date.now();
+
     const n = nodes.length;
     let i, tree, node, xi, yi, ri, ri2;
 
@@ -173,6 +175,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       for (i = 0; i < n; ++i) {
         node = nodes[i];
         // Only creatures will respond to a collision (walls don't move).
+
         if (!isLiveCreature(node)) continue;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
@@ -207,6 +210,8 @@ export default function (radius: (SNode) => number): SForceCollide {
       // Return true if there is no need to visit the children of `quad`.
       return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
     }
+
+    window.game.recentCollisionForceRuntime.push(Date.now() - startTime);
   }
 
   function prepare(quad) {
