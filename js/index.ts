@@ -60,7 +60,7 @@ export class Game {
   parties: Array<Party> = [];
 
   // Figure out a better place for this constant.
-  pointCircleFactor = 0.1;
+  pointCircleFactor = 0.5;
 
   WALL_HALF_WIDTH = 5;
 
@@ -109,23 +109,22 @@ export class Game {
             return d.r;
           }
         )
-          .iterations(5)
           .interaction("collision", collisionInteraction)
           .interaction("party", (creature, party) => {
             if (!(party instanceof Party && isLiveCreature(creature))) return;
             if (party.expired()) return;
-            if (Math.random() < 0.002) {
+            if (Math.random() < 0.01) {
               creature.goal = { x: party.x, y: party.y };
             }
           })
           .interaction("contagion", (node1, node2) => {
-            if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
+            if (Math.random() < 0.01 && isCreature(node1) && isCreature(node2))
               node1.infected = node2.infected =
                 node1.infected || node2.infected;
           })
           .interaction("score", function (node1, node2) {
             if (
-              Math.random() < 0.0005 &&
+              Math.random() < 0.002 &&
               isLiveCreature(node1) &&
               isLiveCreature(node2)
             ) {

@@ -5224,12 +5224,12 @@ var quarantine = (function (exports) {
     map.set(key, value);
   }
 
-  function Set$1() {}
+  function Set() {}
 
   var proto = map$1.prototype;
 
-  Set$1.prototype = set$2.prototype = {
-    constructor: Set$1,
+  Set.prototype = set$2.prototype = {
+    constructor: Set,
     has: proto.has,
     add: function(value) {
       value += "";
@@ -5245,10 +5245,10 @@ var quarantine = (function (exports) {
   };
 
   function set$2(object, f) {
-    var set = new Set$1;
+    var set = new Set;
 
     // Copy constructor.
-    if (object instanceof Set$1) object.each(function(value) { set.add(value); });
+    if (object instanceof Set) object.each(function(value) { set.add(value); });
 
     // Otherwise, assume it’s an array.
     else if (object) {
@@ -18695,7 +18695,6 @@ var quarantine = (function (exports) {
           this.age = 0;
           this.r = 80;
           this.visibleR = 50;
-          this.processedCreatures = new Set();
       }
       Party.prototype.expired = function () {
           return this.age > 1000;
@@ -18887,7 +18886,7 @@ var quarantine = (function (exports) {
           this.walls = [];
           this.parties = [];
           // Figure out a better place for this constant.
-          this.pointCircleFactor = 0.1;
+          this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function () {
@@ -18924,28 +18923,23 @@ var quarantine = (function (exports) {
           /* radius */ function (d) {
               return d.r;
           })
-              .iterations(5)
               .interaction("collision", collisionInteraction)
               .interaction("party", function (creature, party) {
               if (!(party instanceof Party && isLiveCreature(creature)))
                   return;
               if (party.expired())
                   return;
-              if (Math.random() < 0.002) {
+              if (Math.random() < 0.01) {
                   creature.goal = { x: party.x, y: party.y };
               }
-              // if (!party.processedCreatures.has(creature)) {
-              //   creature.goal = { x: party.x, y: party.y };
-              //   party.processedCreatures.add(creature);
-              // }
           })
               .interaction("contagion", function (node1, node2) {
-              if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
+              if (Math.random() < 0.01 && isCreature(node1) && isCreature(node2))
                   node1.infected = node2.infected =
                       node1.infected || node2.infected;
           })
               .interaction("score", function (node1, node2) {
-              if (Math.random() < 0.0005 &&
+              if (Math.random() < 0.002 &&
                   isLiveCreature(node1) &&
                   isLiveCreature(node2)) {
                   node1.currentScore += 1;
