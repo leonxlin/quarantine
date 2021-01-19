@@ -110,6 +110,31 @@ export class SegmentNode implements SNode {
   }
 }
 
+export class Party implements SNode {
+  // For SNode.
+  r: number;
+  x?: number;
+  y?: number;
+  fx?: number;
+  fy?: number;
+  index?: number;
+
+  age: number;
+  visibleR: number;
+
+  constructor(x: number, y: number) {
+    this.fx = this.x = x;
+    this.fy = this.y = y;
+    this.age = 0;
+    this.r = 80;
+    this.visibleR = 50;
+  }
+
+  expired(): boolean {
+    return this.age > 1000;
+  }
+}
+
 export type Interaction = (
   node1: SNode,
   node2: SNode,

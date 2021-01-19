@@ -6,6 +6,7 @@ import {
   SegmentNode,
   WallJoint,
   Creature,
+  Party,
   isCreature,
   isLiveCreature,
   squaredDistance,
@@ -56,6 +57,7 @@ export class Game {
   toolbeltMode = "select-mode";
 
   walls: Array<Wall> = [];
+  parties: Array<Party> = [];
 
   // Figure out a better place for this constant.
   pointCircleFactor = 0.1;
@@ -108,7 +110,12 @@ export class Game {
           }
         )
           .iterations(5)
-          .interaction("circleCircleCollision", collisionInteraction)
+          .interaction("collision", collisionInteraction)
+          .interaction("party", (creature, party) => {
+            if (!(party instanceof Party && isLiveCreature(creature))) return;
+            if (party.expired()) return;
+            creature.goal = { x: party.x, y: party.y };
+          })
           .interaction("contagion", (node1, node2) => {
             if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
               node1.infected = node2.infected =
@@ -139,6 +146,11 @@ export class Game {
             n.dead = true;
             n.health = 0;
           }
+        });
+      })
+      .force("party-expiration", () => {
+        this.parties.forEach((p) => {
+          p.age++;
         });
       })
       .nodes(nodes)
@@ -189,6 +201,16 @@ export class Game {
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
+
+    // Draw parties.
+    this.parties.forEach(function (d) {
+      if (d.expired()) return;
+      context.beginPath();
+      context.moveTo(d.x + d.visibleR, d.y);
+      context.arc(d.x, d.y, d.visibleR, 0, 2 * Math.PI);
+      context.fillStyle = "pink";
+      context.fill();
+    });
 
     // Draw nodes.
     this.nodes.forEach(
@@ -313,11 +335,16 @@ window.onload = function () {
         state: WallState.PROVISIONAL,
       });
       return game.walls[game.walls.length - 1];
-    }
-
-    const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
-    if (isLiveCreature(subject)) {
-      return subject;
+    } else if (game.toolbeltMode == "select-mode") {
+      const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
+      if (isLiveCreature(subject)) {
+        return subject;
+      }
+    } else if (game.toolbeltMode == "party-mode") {
+      const party = new Party(d3.event.x, d3.event.y);
+      game.parties.push(party);
+      game.nodes.push(party);
+      game.simulation.nodes(game.nodes);
     }
     return null;
   }

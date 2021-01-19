@@ -18688,6 +18688,19 @@ var quarantine = (function (exports) {
       }
       return SegmentNode;
   }());
+  var Party = /** @class */ (function () {
+      function Party(x, y) {
+          this.fx = this.x = x;
+          this.fy = this.y = y;
+          this.age = 0;
+          this.r = 80;
+          this.visibleR = 50;
+      }
+      Party.prototype.expired = function () {
+          return this.age > 1000;
+      };
+      return Party;
+  }());
 
   // The code in this file is adapted
   function constant$e(x) {
@@ -18788,7 +18801,6 @@ var quarantine = (function (exports) {
                   // Non-creature |data| nodes should always be processed since |node|
                   // is a creature.
                   if (!isLiveCreature(data) || data.index > node.index) {
-                      //if (data.index > node.index) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18864,6 +18876,7 @@ var quarantine = (function (exports) {
           var _this = this;
           this.score = 0;
           this.tempScoreIndicators = [];
+          // Some crude performance monitoring.
           this.numTicksSinceLastRecord = 0;
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
@@ -18871,6 +18884,7 @@ var quarantine = (function (exports) {
           this.paused = false;
           this.toolbeltMode = "select-mode";
           this.walls = [];
+          this.parties = [];
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.1;
           this.WALL_HALF_WIDTH = 5;
@@ -18910,7 +18924,14 @@ var quarantine = (function (exports) {
               return d.r;
           })
               .iterations(5)
-              .interaction("circleCircleCollision", collisionInteraction)
+              .interaction("collision", collisionInteraction)
+              .interaction("party", function (creature, party) {
+              if (!(party instanceof Party && isLiveCreature(creature)))
+                  return;
+              if (party.expired())
+                  return;
+              creature.goal = { x: party.x, y: party.y };
+          })
               .interaction("contagion", function (node1, node2) {
               if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
                   node1.infected = node2.infected =
@@ -18939,6 +18960,11 @@ var quarantine = (function (exports) {
                       n.dead = true;
                       n.health = 0;
                   }
+              });
+          })
+              .force("party-expiration", function () {
+              _this.parties.forEach(function (p) {
+                  p.age++;
               });
           })
               .nodes(nodes)
@@ -18972,6 +18998,16 @@ var quarantine = (function (exports) {
           this.numTicksSinceLastRecord += 1;
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
+          // Draw parties.
+          this.parties.forEach(function (d) {
+              if (d.expired())
+                  return;
+              context.beginPath();
+              context.moveTo(d.x + d.visibleR, d.y);
+              context.arc(d.x, d.y, d.visibleR, 0, 2 * Math.PI);
+              context.fillStyle = "pink";
+              context.fill();
+          });
           // Draw nodes.
           this.nodes.forEach(function (d) {
               if (!isLiveCreature(d))
@@ -19078,9 +19114,17 @@ var quarantine = (function (exports) {
               });
               return game.walls[game.walls.length - 1];
           }
-          var subject = game.simulation.find(event.x, event.y, 20);
-          if (isLiveCreature(subject)) {
-              return subject;
+          else if (game.toolbeltMode == "select-mode") {
+              var subject = game.simulation.find(event.x, event.y, 20);
+              if (isLiveCreature(subject)) {
+                  return subject;
+              }
+          }
+          else if (game.toolbeltMode == "party-mode") {
+              var party = new Party(event.x, event.y);
+              game.parties.push(party);
+              game.nodes.push(party);
+              game.simulation.nodes(game.nodes);
           }
           return null;
       }
