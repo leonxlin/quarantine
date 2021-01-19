@@ -18734,7 +18734,7 @@ var quarantine = (function (exports) {
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
                   // Only creatures will respond to a collision (walls don't move).
-                  if (!isCreature(node))
+                  if (!isCreature(node) || node.type == "dead")
                       continue;
                   (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
@@ -18748,7 +18748,8 @@ var quarantine = (function (exports) {
                   // Only process pairs of creatures with the smaller index first.
                   // Non-creature |data| nodes should always be processed since |node|
                   // is a creature.
-                  if (data.type != "creature" || data.index > node.index) {
+                  if (data.type != "creature" ||
+                      (data.index > node.index && data.type != "dead")) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18849,7 +18850,7 @@ var quarantine = (function (exports) {
               .velocityDecay(0.2)
               .force("agent", function (alpha) {
               nodes.forEach(function (n) {
-                  if (!isCreature(n))
+                  if (!isCreature(n) || n.type == "dead")
                       return;
                   var stuck = false;
                   if (Math.random() < 0.05) {
@@ -18882,7 +18883,9 @@ var quarantine = (function (exports) {
               .interaction("score", function (node1, node2) {
               if (Math.random() < 0.0005 &&
                   isCreature(node1) &&
-                  isCreature(node2)) {
+                  isCreature(node2) &&
+                  node1.type != "dead" &&
+                  node2.type != "dead") {
                   node1.currentScore += 1;
                   node2.currentScore += 1;
                   window.game.tempScoreIndicators.push({

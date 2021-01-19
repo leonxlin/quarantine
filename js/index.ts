@@ -6,6 +6,7 @@ import {
   SegmentNode,
   Creature,
   isCreature,
+  squaredDistance,
 } from "./simulation-types.js";
 import collideForce from "./collide.js";
 import {
@@ -22,12 +23,6 @@ declare global {
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
-
-function squaredDistance(p1: Point, p2: Point): number {
-  const dx = p1.x - p2.x,
-    dy = p1.y - p2.y;
-  return dx * dx + dy * dy;
-}
 
 enum WallState {
   // Still being built. Should not cause collisions.
@@ -85,7 +80,7 @@ export class Game {
       .velocityDecay(0.2)
       .force("agent", function (alpha) {
         nodes.forEach(function (n: SNode) {
-          if (!isCreature(n)) return;
+          if (!isCreature(n) || n.type == "dead") return;
 
           let stuck = false;
           if (Math.random() < 0.05) {
@@ -123,7 +118,9 @@ export class Game {
             if (
               Math.random() < 0.0005 &&
               isCreature(node1) &&
-              isCreature(node2)
+              isCreature(node2) &&
+              node1.type != "dead" &&
+              node2.type != "dead"
             ) {
               node1.currentScore += 1;
               node2.currentScore += 1;
@@ -360,31 +357,7 @@ window.onload = function () {
 
         if (i == 0) continue;
         const prevPoint = d3.event.subject.points[i - 1];
-        const length2 = squaredDistance(point, prevPoint);
-        const segmentMid: Point = {
-          x: 0.5 * (point.x + prevPoint.x),
-          y: 0.5 * (point.y + prevPoint.y),
-        };
-        const segmentNode: SegmentNode = {
-          x: segmentMid.x,
-          y: segmentMid.y,
-          fx: segmentMid.x,
-          fy: segmentMid.y,
-          // The minimum radius from `segmentMid` within which we need to check for collisions.
-          r: Math.sqrt(
-            length2 / 4 + game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH
-          ),
-          length: Math.sqrt(length2),
-          length2: length2,
-          left: prevPoint,
-          right: point,
-          type: "wallsegment",
-          vec: {
-            x: point.x - prevPoint.x,
-            y: point.y - prevPoint.y,
-          },
-        };
-        game.nodes.push(segmentNode);
+        game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH));
       }
       game.simulation.nodes(game.nodes);
       d3.event.subject.state = WallState.BUILT;

@@ -153,7 +153,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       for (i = 0; i < n; ++i) {
         node = nodes[i];
         // Only creatures will respond to a collision (walls don't move).
-        if (!isCreature(node)) continue;
+        if (!isCreature(node) || node.type == "dead") continue;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
         xi = node.x + node.vx;
@@ -170,7 +170,10 @@ export default function (radius: (SNode) => number): SForceCollide {
         // Only process pairs of creatures with the smaller index first.
         // Non-creature |data| nodes should always be processed since |node|
         // is a creature.
-        if (data.type != "creature" || data.index > node.index) {
+        if (
+          data.type != "creature" ||
+          (data.index > node.index && data.type != "dead")
+        ) {
           const x = xi - data.x - data.vx,
             y = yi - data.y - data.vy,
             l = x * x + y * y;
