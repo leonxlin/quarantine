@@ -1,6 +1,5 @@
 import * as d3 from "d3";
 
-
 export function squaredDistance(p1: Point, p2: Point): number {
   const dx = p1.x - p2.x,
     dy = p1.y - p2.y;
@@ -8,10 +7,8 @@ export function squaredDistance(p1: Point, p2: Point): number {
 }
 
 export interface SNode extends d3.SimulationNodeDatum {
-  r?: number;
-  type?: string;
+  r: number;
 }
-
 
 export interface Point {
   x?: number;
@@ -24,11 +21,11 @@ export class Creature implements SNode {
   y?: number;
   vx?: number;
   vy?: number;
-  type = "creature";
   infected = false;
   health = 1;
   currentScore = 0;
   goal?: Point;
+  dead: boolean;
   // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
   previousLoggedLocation: Point;
 
@@ -40,6 +37,7 @@ export class Creature implements SNode {
     this.x = x;
     this.y = y;
     this.previousLoggedLocation = { x: x, y: y };
+    this.dead = false;
   }
 }
 
@@ -47,9 +45,35 @@ export function isCreature(n: SNode): n is Creature {
   return n instanceof Creature;
 }
 
-export class SegmentNode implements SNode {
-  type: "wallsegment";
+export function isLiveCreature(n: SNode): n is Creature {
+  return isCreature(n) && !n.dead;
+}
 
+export class WallJoint implements SNode {
+  // Fields required for d3.SimulationNodeDatum.
+  r: number;
+  x?: number;
+  y?: number;
+  fx?: number;
+  fy?: number;
+  index?: number;
+
+  constructor(x: number, y: number, r: number) {
+    this.fx = this.x = x;
+    this.fy = this.y = y;
+    this.r = r;
+  }
+}
+
+export function isImpassableCircle(n: SNode): boolean {
+  return isLiveCreature(n) || n instanceof WallJoint;
+}
+
+export function isImpassableSegment(n: SNode): n is SegmentNode {
+  return n instanceof SegmentNode;
+}
+
+export class SegmentNode implements SNode {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;
@@ -70,22 +94,19 @@ export class SegmentNode implements SNode {
   length?: number;
   length2?: number;
 
-  constructor(left:Point, right:Point, half_width:number) {
-
+  constructor(left: Point, right: Point, half_width: number) {
     this.left = left;
     this.right = right;
-        this.length2 = squaredDistance(left, right);
-          this.fx = this.x = 0.5 * (left.x + right.x);
-          this.fy = this.y = 0.5 * (left.y + right.y);
-          // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
-          this.r = Math.sqrt(
-            this.length2 / 4 + half_width * half_width
-          );
-          this.length = Math.sqrt(this.length2);
-          this.vec = {
-            x: right.x - left.x,
-            y: right.y - left.y,
-          };
+    this.length2 = squaredDistance(left, right);
+    this.fx = this.x = 0.5 * (left.x + right.x);
+    this.fy = this.y = 0.5 * (left.y + right.y);
+    // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
+    this.r = Math.sqrt(this.length2 / 4 + half_width * half_width);
+    this.length = Math.sqrt(this.length2);
+    this.vec = {
+      x: right.x - left.x,
+      y: right.y - left.y,
+    };
   }
 }
 

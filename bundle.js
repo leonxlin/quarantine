@@ -18634,12 +18634,12 @@ var quarantine = (function (exports) {
     zoomIdentity: identity$9
   });
 
-  function isCreature(n) {
-      return n instanceof Creature;
+  function squaredDistance(p1, p2) {
+      var dx = p1.x - p2.x, dy = p1.y - p2.y;
+      return dx * dx + dy * dy;
   }
   var Creature = /** @class */ (function () {
       function Creature(x, y) {
-          this.type = "creature";
           this.infected = false;
           this.health = 1;
           this.currentScore = 0;
@@ -18647,8 +18647,46 @@ var quarantine = (function (exports) {
           this.x = x;
           this.y = y;
           this.previousLoggedLocation = { x: x, y: y };
+          this.dead = false;
       }
       return Creature;
+  }());
+  function isCreature(n) {
+      return n instanceof Creature;
+  }
+  function isLiveCreature(n) {
+      return isCreature(n) && !n.dead;
+  }
+  var WallJoint = /** @class */ (function () {
+      function WallJoint(x, y, r) {
+          this.fx = this.x = x;
+          this.fy = this.y = y;
+          this.r = r;
+      }
+      return WallJoint;
+  }());
+  function isImpassableCircle(n) {
+      return isLiveCreature(n) || n instanceof WallJoint;
+  }
+  function isImpassableSegment(n) {
+      return n instanceof SegmentNode;
+  }
+  var SegmentNode = /** @class */ (function () {
+      function SegmentNode(left, right, half_width) {
+          this.left = left;
+          this.right = right;
+          this.length2 = squaredDistance(left, right);
+          this.fx = this.x = 0.5 * (left.x + right.x);
+          this.fy = this.y = 0.5 * (left.y + right.y);
+          // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
+          this.r = Math.sqrt(this.length2 / 4 + half_width * half_width);
+          this.length = Math.sqrt(this.length2);
+          this.vec = {
+              x: right.x - left.x,
+              y: right.y - left.y,
+          };
+      }
+      return SegmentNode;
   }());
 
   // The code in this file is adapted
@@ -18666,15 +18704,26 @@ var quarantine = (function (exports) {
   function y$5(d) {
       return d.y + d.vy;
   }
-  // Handles collision between two circles.
+  // Handles collision between two nodes.
   // TODO: document arguments.
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
-      // Dead things don't collide.
-      if (node1.type == "dead" ||
-          node2.type == "dead" ||
-          node1.type == "wallsegment" ||
-          node2.type == "wallsegment")
-          return;
+      if (isImpassableCircle(node1)) {
+          if (isImpassableCircle(node2)) {
+              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength);
+          }
+          else if (isImpassableSegment(node2)) {
+              circleLineCollisionInteraction(node1, node2);
+          }
+      }
+      else if (isImpassableSegment(node1)) {
+          if (isImpassableCircle(node2)) {
+              circleLineCollisionInteraction(node2, node1);
+          }
+      }
+  }
+  // Handles collision between two circles.
+  // TODO: document arguments.
+  function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
       if (x === 0)
           (x = jiggle$1()), (l += x * x);
       if (y === 0)
@@ -18686,37 +18735,26 @@ var quarantine = (function (exports) {
       node2.vy -= y * r;
   }
   // Handles collision between a circle and line segment with a certain width.
-  function circleLineCollisionInteraction(node1, node2) {
+  // The segment is assumed to be immovable.
+  function circleLineCollisionInteraction(circleNode, segmentNode) {
       // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
       var WALL_HALF_WIDTH = 5;
-      var creatureNode, segmentNode;
-      if (node1.type == "wallsegment" && node2.type == "creature") {
-          creatureNode = node2;
-          segmentNode = node1;
-      }
-      else if (node2.type == "wallsegment" && node1.type == "creature") {
-          creatureNode = node1;
-          segmentNode = node2;
-      }
-      else {
-          return;
-      }
       var a = segmentNode.vec.x, b = segmentNode.vec.y;
-      var nx = creatureNode.x - segmentNode.left.x, ny = creatureNode.y - segmentNode.left.y;
+      var nx = circleNode.x - segmentNode.left.x, ny = circleNode.y - segmentNode.left.y;
       var nxpc = a * nx + b * ny;
       // If creature is off to the "side" of the segment, we ignore.
       if (nxpc < 0 || nxpc > segmentNode.length2)
           return;
       var nyp = (a * ny - b * nx) / segmentNode.length;
       // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-      var discrepancy = WALL_HALF_WIDTH + creatureNode.r - Math.abs(nyp);
+      var discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
       if (discrepancy <= 0)
           return;
       var sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
       var commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
-      creatureNode.vx += -b * commonFactor;
-      creatureNode.vy += a * commonFactor;
+      circleNode.vx += -b * commonFactor;
+      circleNode.vy += a * commonFactor;
   }
   // Returns the collide force.
   //
@@ -18734,7 +18772,7 @@ var quarantine = (function (exports) {
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
                   // Only creatures will respond to a collision (walls don't move).
-                  if (!isCreature(node) || node.type == "dead")
+                  if (!isLiveCreature(node))
                       continue;
                   (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
@@ -18748,8 +18786,7 @@ var quarantine = (function (exports) {
                   // Only process pairs of creatures with the smaller index first.
                   // Non-creature |data| nodes should always be processed since |node|
                   // is a creature.
-                  if (data.type != "creature" ||
-                      (data.index > node.index && data.type != "dead")) {
+                  if (!isLiveCreature(data) || data.index > node.index) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18810,10 +18847,6 @@ var quarantine = (function (exports) {
   }
 
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  function squaredDistance(p1, p2) {
-      var dx = p1.x - p2.x, dy = p1.y - p2.y;
-      return dx * dx + dy * dy;
-  }
   var WallState;
   (function (WallState) {
       // Still being built. Should not cause collisions.
@@ -18850,7 +18883,7 @@ var quarantine = (function (exports) {
               .velocityDecay(0.2)
               .force("agent", function (alpha) {
               nodes.forEach(function (n) {
-                  if (!isCreature(n) || n.type == "dead")
+                  if (!isLiveCreature(n))
                       return;
                   var stuck = false;
                   if (Math.random() < 0.05) {
@@ -18874,7 +18907,6 @@ var quarantine = (function (exports) {
           })
               .iterations(5)
               .interaction("circleCircleCollision", collisionInteraction)
-              .interaction("circleLineCollision", circleLineCollisionInteraction)
               .interaction("contagion", function (node1, node2) {
               if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
                   node1.infected = node2.infected =
@@ -18882,10 +18914,8 @@ var quarantine = (function (exports) {
           })
               .interaction("score", function (node1, node2) {
               if (Math.random() < 0.0005 &&
-                  isCreature(node1) &&
-                  isCreature(node2) &&
-                  node1.type != "dead" &&
-                  node2.type != "dead") {
+                  isLiveCreature(node1) &&
+                  isLiveCreature(node2)) {
                   node1.currentScore += 1;
                   node2.currentScore += 1;
                   window.game.tempScoreIndicators.push({
@@ -18902,7 +18932,7 @@ var quarantine = (function (exports) {
                       return;
                   n.health -= 0.0003;
                   if (n.health <= 0) {
-                      n.type = "dead";
+                      n.dead = true;
                       n.health = 0;
                   }
               });
@@ -18936,7 +18966,7 @@ var quarantine = (function (exports) {
           context.save();
           // Draw nodes.
           this.nodes.forEach(function (d) {
-              if (d.type != "creature")
+              if (!isLiveCreature(d))
                   return;
               context.beginPath();
               context.moveTo(d.x + d.r, d.y);
@@ -19041,7 +19071,7 @@ var quarantine = (function (exports) {
               return game.walls[game.walls.length - 1];
           }
           var subject = game.simulation.find(event.x, event.y, 20);
-          if (subject && subject.type == "creature") {
+          if (isLiveCreature(subject)) {
               return subject;
           }
           return null;
@@ -19073,40 +19103,11 @@ var quarantine = (function (exports) {
           else if (game.toolbeltMode == "wall-mode") {
               for (var i = 0; i < event.subject.points.length; i++) {
                   var point = event.subject.points[i];
-                  game.nodes.push({
-                      r: game.WALL_HALF_WIDTH,
-                      fx: point.x,
-                      fy: point.y,
-                      x: point.x,
-                      y: point.y,
-                      type: "wall2",
-                  });
+                  game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH));
                   if (i == 0)
                       continue;
                   var prevPoint = event.subject.points[i - 1];
-                  var length2 = squaredDistance(point, prevPoint);
-                  var segmentMid = {
-                      x: 0.5 * (point.x + prevPoint.x),
-                      y: 0.5 * (point.y + prevPoint.y),
-                  };
-                  var segmentNode = {
-                      x: segmentMid.x,
-                      y: segmentMid.y,
-                      fx: segmentMid.x,
-                      fy: segmentMid.y,
-                      // The minimum radius from `segmentMid` within which we need to check for collisions.
-                      r: Math.sqrt(length2 / 4 + game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH),
-                      length: Math.sqrt(length2),
-                      length2: length2,
-                      left: prevPoint,
-                      right: point,
-                      type: "wallsegment",
-                      vec: {
-                          x: point.x - prevPoint.x,
-                          y: point.y - prevPoint.y,
-                      },
-                  };
-                  game.nodes.push(segmentNode);
+                  game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH));
               }
               game.simulation.nodes(game.nodes);
               event.subject.state = WallState.BUILT;

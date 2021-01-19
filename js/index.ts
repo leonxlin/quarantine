@@ -4,15 +4,14 @@ import {
   Point,
   TempScoreIndicator,
   SegmentNode,
+  WallJoint,
   Creature,
   isCreature,
+  isLiveCreature,
   squaredDistance,
 } from "./simulation-types.js";
 import collideForce from "./collide.js";
-import {
-  collisionInteraction,
-  circleLineCollisionInteraction,
-} from "./collide.js";
+import { collisionInteraction } from "./collide.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
@@ -76,11 +75,11 @@ export class Game {
     const canvas = this.canvas;
 
     this.simulation = d3
-      .forceSimulation()
+      .forceSimulation<SNode, undefined>()
       .velocityDecay(0.2)
       .force("agent", function (alpha) {
         nodes.forEach(function (n: SNode) {
-          if (!isCreature(n) || n.type == "dead") return;
+          if (!isLiveCreature(n)) return;
 
           let stuck = false;
           if (Math.random() < 0.05) {
@@ -108,7 +107,6 @@ export class Game {
         )
           .iterations(5)
           .interaction("circleCircleCollision", collisionInteraction)
-          .interaction("circleLineCollision", circleLineCollisionInteraction)
           .interaction("contagion", (node1, node2) => {
             if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
               node1.infected = node2.infected =
@@ -117,10 +115,8 @@ export class Game {
           .interaction("score", function (node1, node2) {
             if (
               Math.random() < 0.0005 &&
-              isCreature(node1) &&
-              isCreature(node2) &&
-              node1.type != "dead" &&
-              node2.type != "dead"
+              isLiveCreature(node1) &&
+              isLiveCreature(node2)
             ) {
               node1.currentScore += 1;
               node2.currentScore += 1;
@@ -138,7 +134,7 @@ export class Game {
           if (!isCreature(n) || !n.infected) return;
           n.health -= 0.0003;
           if (n.health <= 0) {
-            n.type = "dead";
+            n.dead = true;
             n.health = 0;
           }
         });
@@ -188,7 +184,7 @@ export class Game {
     // Draw nodes.
     this.nodes.forEach(
       function (d) {
-        if (d.type != "creature") return;
+        if (!isLiveCreature(d)) return;
 
         context.beginPath();
         context.moveTo(d.x + d.r, d.y);
@@ -311,7 +307,7 @@ window.onload = function () {
     }
 
     const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
-    if (subject && subject.type == "creature") {
+    if (isLiveCreature(subject)) {
       return subject;
     }
     return null;
@@ -346,18 +342,13 @@ window.onload = function () {
     } else if (game.toolbeltMode == "wall-mode") {
       for (let i = 0; i < d3.event.subject.points.length; i++) {
         const point = d3.event.subject.points[i];
-        game.nodes.push({
-          r: game.WALL_HALF_WIDTH,
-          fx: point.x,
-          fy: point.y,
-          x: point.x,
-          y: point.y,
-          type: "wall2",
-        });
+        game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH));
 
         if (i == 0) continue;
         const prevPoint = d3.event.subject.points[i - 1];
-        game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH));
+        game.nodes.push(
+          new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH)
+        );
       }
       game.simulation.nodes(game.nodes);
       d3.event.subject.state = WallState.BUILT;

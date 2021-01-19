@@ -39,7 +39,9 @@ import {
   SegmentNode,
   SForceCollide,
   Interaction,
-  isCreature,
+  isImpassableCircle,
+  isImpassableSegment,
+  isLiveCreature,
 } from "./simulation-types.js";
 
 function constant(x) {
@@ -60,7 +62,7 @@ function y(d) {
   return d.y + d.vy;
 }
 
-// Handles collision between two circles.
+// Handles collision between two nodes.
 // TODO: document arguments.
 export function collisionInteraction(
   node1: SNode,
@@ -73,15 +75,42 @@ export function collisionInteraction(
   rj: number,
   strength: number
 ): void {
-  // Dead things don't collide.
-  if (
-    node1.type == "dead" ||
-    node2.type == "dead" ||
-    node1.type == "wallsegment" ||
-    node2.type == "wallsegment"
-  )
-    return;
+  if (isImpassableCircle(node1)) {
+    if (isImpassableCircle(node2)) {
+      circleCircleCollisionInteraction(
+        node1,
+        node2,
+        x,
+        y,
+        l,
+        r,
+        ri2,
+        rj,
+        strength
+      );
+    } else if (isImpassableSegment(node2)) {
+      circleLineCollisionInteraction(node1, node2);
+    }
+  } else if (isImpassableSegment(node1)) {
+    if (isImpassableCircle(node2)) {
+      circleLineCollisionInteraction(node2, node1);
+    }
+  }
+}
 
+// Handles collision between two circles.
+// TODO: document arguments.
+function circleCircleCollisionInteraction(
+  node1: SNode,
+  node2: SNode,
+  x: number,
+  y: number,
+  l: number,
+  r: number,
+  ri2: number,
+  rj: number,
+  strength: number
+): void {
   if (x === 0) (x = jiggle()), (l += x * x);
   if (y === 0) (y = jiggle()), (l += y * y);
   l = ((r - (l = Math.sqrt(l))) / l) * strength;
@@ -92,27 +121,18 @@ export function collisionInteraction(
 }
 
 // Handles collision between a circle and line segment with a certain width.
-export function circleLineCollisionInteraction(
-  node1: SNode,
-  node2: SNode
+// The segment is assumed to be immovable.
+function circleLineCollisionInteraction(
+  circleNode: SNode,
+  segmentNode: SegmentNode
 ): void {
   // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
   const WALL_HALF_WIDTH = 5;
-  let creatureNode: SNode, segmentNode: SegmentNode;
-  if (node1.type == "wallsegment" && node2.type == "creature") {
-    creatureNode = node2;
-    segmentNode = node1;
-  } else if (node2.type == "wallsegment" && node1.type == "creature") {
-    creatureNode = node1;
-    segmentNode = node2;
-  } else {
-    return;
-  }
 
   const a = segmentNode.vec.x,
     b = segmentNode.vec.y;
-  const nx = creatureNode.x - segmentNode.left.x,
-    ny = creatureNode.y - segmentNode.left.y;
+  const nx = circleNode.x - segmentNode.left.x,
+    ny = circleNode.y - segmentNode.left.y;
   const nxpc = a * nx + b * ny;
   // If creature is off to the "side" of the segment, we ignore.
   if (nxpc < 0 || nxpc > segmentNode.length2) return;
@@ -120,15 +140,15 @@ export function circleLineCollisionInteraction(
   const nyp = (a * ny - b * nx) / segmentNode.length;
 
   // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-  const discrepancy = WALL_HALF_WIDTH + creatureNode.r - Math.abs(nyp);
+  const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
   if (discrepancy <= 0) return;
 
   const sign = nyp > 0 ? 1 : -1;
   // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
   const commonFactor =
     ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
-  creatureNode.vx += -b * commonFactor;
-  creatureNode.vy += a * commonFactor;
+  circleNode.vx += -b * commonFactor;
+  circleNode.vy += a * commonFactor;
 }
 
 // Returns the collide force.
@@ -153,7 +173,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       for (i = 0; i < n; ++i) {
         node = nodes[i];
         // Only creatures will respond to a collision (walls don't move).
-        if (!isCreature(node) || node.type == "dead") continue;
+        if (!isLiveCreature(node)) continue;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
         xi = node.x + node.vx;
@@ -170,10 +190,7 @@ export default function (radius: (SNode) => number): SForceCollide {
         // Only process pairs of creatures with the smaller index first.
         // Non-creature |data| nodes should always be processed since |node|
         // is a creature.
-        if (
-          data.type != "creature" ||
-          (data.index > node.index && data.type != "dead")
-        ) {
+        if (!isLiveCreature(data) || data.index > node.index) {
           const x = xi - data.x - data.vx,
             y = yi - data.y - data.vy,
             l = x * x + y * y;
