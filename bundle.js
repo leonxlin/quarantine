@@ -5224,12 +5224,12 @@ var quarantine = (function (exports) {
     map.set(key, value);
   }
 
-  function Set() {}
+  function Set$1() {}
 
   var proto = map$1.prototype;
 
-  Set.prototype = set$2.prototype = {
-    constructor: Set,
+  Set$1.prototype = set$2.prototype = {
+    constructor: Set$1,
     has: proto.has,
     add: function(value) {
       value += "";
@@ -5245,10 +5245,10 @@ var quarantine = (function (exports) {
   };
 
   function set$2(object, f) {
-    var set = new Set;
+    var set = new Set$1;
 
     // Copy constructor.
-    if (object instanceof Set) object.each(function(value) { set.add(value); });
+    if (object instanceof Set$1) object.each(function(value) { set.add(value); });
 
     // Otherwise, assume it’s an array.
     else if (object) {
@@ -18695,6 +18695,7 @@ var quarantine = (function (exports) {
           this.age = 0;
           this.r = 80;
           this.visibleR = 50;
+          this.processedCreatures = new Set();
       }
       Party.prototype.expired = function () {
           return this.age > 1000;
@@ -18930,7 +18931,13 @@ var quarantine = (function (exports) {
                   return;
               if (party.expired())
                   return;
-              creature.goal = { x: party.x, y: party.y };
+              if (Math.random() < 0.002) {
+                  creature.goal = { x: party.x, y: party.y };
+              }
+              // if (!party.processedCreatures.has(creature)) {
+              //   creature.goal = { x: party.x, y: party.y };
+              //   party.processedCreatures.add(creature);
+              // }
           })
               .interaction("contagion", function (node1, node2) {
               if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))

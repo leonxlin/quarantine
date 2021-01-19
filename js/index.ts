@@ -114,7 +114,9 @@ export class Game {
           .interaction("party", (creature, party) => {
             if (!(party instanceof Party && isLiveCreature(creature))) return;
             if (party.expired()) return;
-            creature.goal = { x: party.x, y: party.y };
+            if (Math.random() < 0.002) {
+              creature.goal = { x: party.x, y: party.y };
+            }
           })
           .interaction("contagion", (node1, node2) => {
             if (Math.random() < 0.002 && isCreature(node1) && isCreature(node2))
