@@ -33,3 +33,4 @@ in the top-level directory and visit `localhost:8000`.
 - next features
   - make interaction bonuses more visually obvious
   - level modes
+  - try path planning with a potential function 
