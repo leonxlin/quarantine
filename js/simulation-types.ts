@@ -19,6 +19,8 @@ export class Creature implements SNode {
   r: number;
   x?: number;
   y?: number;
+  fx?: number;
+  fy?: number;
   vx?: number;
   vy?: number;
   // Used by d3 simulation code.
@@ -28,6 +30,7 @@ export class Creature implements SNode {
   health = 1;
   goal?: Point;
   dead: boolean;
+  ticksSinceDeath?: number;
 
   // Whether the creature is currently in a scoring "state".
   scoring: boolean;
@@ -158,6 +161,6 @@ export interface SForceCollide extends d3.ForceCollide<SNode> {
 export interface TempScoreIndicator {
   x?: number;
   y?: number;
-  ticksRemaining?: number;
   text?: string;
+  color: string;
 }

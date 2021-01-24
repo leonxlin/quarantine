@@ -45,7 +45,7 @@ export class Game {
   simulation: d3.Simulation<SNode, undefined>;
 
   score = 0;
-  tempScoreIndicators: TempScoreIndicator[] = [];
+  tempScoreIndicators: Set<TempScoreIndicator>;
 
   // Some crude performance monitoring.
   numTicksSinceLastRecord = 0;
@@ -65,6 +65,7 @@ export class Game {
   WALL_HALF_WIDTH = 5;
 
   constructor() {
+    this.tempScoreIndicators = new Set<TempScoreIndicator>();
     this.canvas = document.querySelector("canvas");
     this.nodes = d3.range(200).map(
       () =>
@@ -144,13 +145,19 @@ export class Game {
             node2.ticksLeftInScoringState = 60;
           })
       )
-      .force("health", function () {
-        nodes.forEach(function (n) {
+      .force("health", () => {
+        nodes.forEach((n) => {
           if (!isCreature(n) || !n.infected) return;
-          n.health -= 0.0003;
-          if (n.health <= 0) {
-            n.dead = true;
-            n.health = 0;
+          if (!n.dead) {
+            n.health -= 0.0003;
+            if (n.health <= 0) {
+              n.dead = true;
+              n.ticksSinceDeath = 0;
+              n.health = 0;
+              this.score -= 200;
+            }
+          } else {
+            n.ticksSinceDeath++;
           }
         });
       })
@@ -230,25 +237,6 @@ export class Game {
       context.fill();
     });
 
-    // Draw nodes.
-    const scoringNodes: Creature[] = [];
-    this.nodes.forEach((d) => {
-      if (!isLiveCreature(d)) return;
-      if (d.scoring) {
-        scoringNodes.push(d);
-        return;
-      }
-
-      context.beginPath();
-      context.moveTo(d.x + d.r, d.y);
-      context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-      // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(d.health * 0.6 + 0.2);
-      context.fill();
-      context.strokeStyle = "#333";
-      context.stroke();
-    });
-
     // Draw walls.
     context.lineJoin = "round";
     context.lineCap = "round";
@@ -269,6 +257,55 @@ export class Game {
     }
     context.lineWidth = 1;
 
+    // Draw nodes.
+    const scoringNodes: Creature[] = [];
+    const recentlyDeadNodes: Creature[] = [];
+    this.nodes.forEach((n) => {
+      if (!isCreature(n)) return;
+      if (n.dead) {
+        if (n.ticksSinceDeath < 60) recentlyDeadNodes.push(n);
+        return;
+      }
+
+      if (n.scoring) {
+        scoringNodes.push(n);
+        return;
+      }
+
+      context.beginPath();
+      context.moveTo(n.x + n.r, n.y);
+      context.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+      // A range from yellow (1 health) to purple (0 health).
+      context.fillStyle = d3.interpolatePlasma(n.health * 0.6 + 0.2);
+      context.fill();
+      context.strokeStyle = "#333";
+      context.stroke();
+    });
+
+    // Draw recently dead nodes.
+    for (const n of recentlyDeadNodes) {
+      const t = n.ticksSinceDeath / 60;
+      const y = d3.interpolateNumber(n.y, n.y - 15)(t);
+      context.globalAlpha = d3.interpolateNumber(1, 0)(t);
+
+      context.beginPath();
+      context.moveTo(n.x + n.r, y);
+      context.arc(n.x, y, n.r, 0, 2 * Math.PI);
+      // A range from yellow (1 health) to purple (0 health).
+      context.fillStyle = d3.interpolatePlasma(n.health * 0.6 + 0.2);
+      context.fill();
+      context.strokeStyle = "#333";
+      context.stroke();
+
+      this.tempScoreIndicators.add({
+        x: n.x,
+        y: n.y - 15,
+        text: "-200",
+        color: "#900",
+      });
+    }
+    context.globalAlpha = 1.0;
+
     // Draw scoring nodes.
     context.shadowBlur = 80;
     context.shadowColor = "#009933";
@@ -284,23 +321,24 @@ export class Game {
       context.strokeStyle = "#333";
       context.stroke();
 
-      // Add temp score indicator. This ends up
-      this.tempScoreIndicators.push({
+      // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
+      this.tempScoreIndicators.add({
         text: "+10",
         x: 0.5 * (node.x + node.scoringPartner.x),
-        y: 0.5 * (node.y + node.scoringPartner.y),
+        y: 0.5 * (node.y + node.scoringPartner.y) - 15,
+        color: "#336633",
       });
     }
     context.shadowBlur = undefined;
     context.shadowColor = undefined;
 
     // Print indicators when score increases.
-    context.fillStyle = "#0a6b24";
     context.font = "bold 20px sans-serif";
-    this.tempScoreIndicators.forEach(function (indicator) {
+    this.tempScoreIndicators.forEach((indicator) => {
+      context.fillStyle = indicator.color;
       context.fillText(indicator.text, indicator.x, indicator.y);
     });
-    this.tempScoreIndicators = [];
+    this.tempScoreIndicators.clear();
 
     // Print score in the top-right corner.
     context.fillStyle = "#000";

@@ -5224,12 +5224,12 @@ var quarantine = (function (exports) {
     map.set(key, value);
   }
 
-  function Set() {}
+  function Set$1() {}
 
   var proto = map$1.prototype;
 
-  Set.prototype = set$2.prototype = {
-    constructor: Set,
+  Set$1.prototype = set$2.prototype = {
+    constructor: Set$1,
     has: proto.has,
     add: function(value) {
       value += "";
@@ -5245,10 +5245,10 @@ var quarantine = (function (exports) {
   };
 
   function set$2(object, f) {
-    var set = new Set;
+    var set = new Set$1;
 
     // Copy constructor.
-    if (object instanceof Set) object.each(function(value) { set.add(value); });
+    if (object instanceof Set$1) object.each(function(value) { set.add(value); });
 
     // Otherwise, assume it’s an array.
     else if (object) {
@@ -18877,7 +18877,6 @@ var quarantine = (function (exports) {
       function Game() {
           var _this = this;
           this.score = 0;
-          this.tempScoreIndicators = [];
           // Some crude performance monitoring.
           this.numTicksSinceLastRecord = 0;
           this.recentTicksPerSecond = new Array(20);
@@ -18890,6 +18889,7 @@ var quarantine = (function (exports) {
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
+          this.tempScoreIndicators = new Set();
           this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(function () {
               return new Creature(Math.random() * _this.canvas.width, // x
@@ -18962,10 +18962,17 @@ var quarantine = (function (exports) {
               nodes.forEach(function (n) {
                   if (!isCreature(n) || !n.infected)
                       return;
-                  n.health -= 0.0003;
-                  if (n.health <= 0) {
-                      n.dead = true;
-                      n.health = 0;
+                  if (!n.dead) {
+                      n.health -= 0.0003;
+                      if (n.health <= 0) {
+                          n.dead = true;
+                          n.ticksSinceDeath = 0;
+                          n.health = 0;
+                          _this.score -= 200;
+                      }
+                  }
+                  else {
+                      n.ticksSinceDeath++;
                   }
               });
           })
@@ -19027,24 +19034,6 @@ var quarantine = (function (exports) {
               context.fillStyle = "pink";
               context.fill();
           });
-          // Draw nodes.
-          var scoringNodes = [];
-          this.nodes.forEach(function (d) {
-              if (!isLiveCreature(d))
-                  return;
-              if (d.scoring) {
-                  scoringNodes.push(d);
-                  return;
-              }
-              context.beginPath();
-              context.moveTo(d.x + d.r, d.y);
-              context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-              // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(d.health * 0.6 + 0.2);
-              context.fill();
-              context.strokeStyle = "#333";
-              context.stroke();
-          });
           // Draw walls.
           context.lineJoin = "round";
           context.lineCap = "round";
@@ -19066,11 +19055,57 @@ var quarantine = (function (exports) {
               context.stroke();
           }
           context.lineWidth = 1;
+          // Draw nodes.
+          var scoringNodes = [];
+          var recentlyDeadNodes = [];
+          this.nodes.forEach(function (n) {
+              if (!isCreature(n))
+                  return;
+              if (n.dead) {
+                  if (n.ticksSinceDeath < 60)
+                      recentlyDeadNodes.push(n);
+                  return;
+              }
+              if (n.scoring) {
+                  scoringNodes.push(n);
+                  return;
+              }
+              context.beginPath();
+              context.moveTo(n.x + n.r, n.y);
+              context.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+              // A range from yellow (1 health) to purple (0 health).
+              context.fillStyle = plasma(n.health * 0.6 + 0.2);
+              context.fill();
+              context.strokeStyle = "#333";
+              context.stroke();
+          });
+          // Draw recently dead nodes.
+          for (var _d = 0, recentlyDeadNodes_1 = recentlyDeadNodes; _d < recentlyDeadNodes_1.length; _d++) {
+              var n = recentlyDeadNodes_1[_d];
+              var t = n.ticksSinceDeath / 60;
+              var y = interpolateNumber(n.y, n.y - 15)(t);
+              context.globalAlpha = interpolateNumber(1, 0)(t);
+              context.beginPath();
+              context.moveTo(n.x + n.r, y);
+              context.arc(n.x, y, n.r, 0, 2 * Math.PI);
+              // A range from yellow (1 health) to purple (0 health).
+              context.fillStyle = plasma(n.health * 0.6 + 0.2);
+              context.fill();
+              context.strokeStyle = "#333";
+              context.stroke();
+              this.tempScoreIndicators.add({
+                  x: n.x,
+                  y: n.y - 15,
+                  text: "-200",
+                  color: "#900",
+              });
+          }
+          context.globalAlpha = 1.0;
           // Draw scoring nodes.
           context.shadowBlur = 80;
           context.shadowColor = "#009933";
-          for (var _d = 0, scoringNodes_1 = scoringNodes; _d < scoringNodes_1.length; _d++) {
-              var node = scoringNodes_1[_d];
+          for (var _e = 0, scoringNodes_1 = scoringNodes; _e < scoringNodes_1.length; _e++) {
+              var node = scoringNodes_1[_e];
               var x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
               context.beginPath();
               context.moveTo(x + node.r, node.y);
@@ -19080,22 +19115,23 @@ var quarantine = (function (exports) {
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
-              // Add temp score indicator. This ends up
-              this.tempScoreIndicators.push({
+              // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
+              this.tempScoreIndicators.add({
                   text: "+10",
                   x: 0.5 * (node.x + node.scoringPartner.x),
-                  y: 0.5 * (node.y + node.scoringPartner.y),
+                  y: 0.5 * (node.y + node.scoringPartner.y) - 15,
+                  color: "#336633",
               });
           }
           context.shadowBlur = undefined;
           context.shadowColor = undefined;
           // Print indicators when score increases.
-          context.fillStyle = "#0a6b24";
           context.font = "bold 20px sans-serif";
           this.tempScoreIndicators.forEach(function (indicator) {
+              context.fillStyle = indicator.color;
               context.fillText(indicator.text, indicator.x, indicator.y);
           });
-          this.tempScoreIndicators = [];
+          this.tempScoreIndicators.clear();
           // Print score in the top-right corner.
           context.fillStyle = "#000";
           context.font = "20px sans-serif";
