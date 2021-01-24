@@ -113,7 +113,7 @@ export class Game {
           .interaction("party", (creature, party) => {
             if (!(party instanceof Party && isLiveCreature(creature))) return;
             if (party.expired()) return;
-            if (Math.random() < 0.01) {
+            if (Math.random() < 0.02) {
               creature.goal = { x: party.x, y: party.y };
             }
           })
@@ -122,21 +122,26 @@ export class Game {
               node1.infected = node2.infected =
                 node1.infected || node2.infected;
           })
-          .interaction("score", function (node1, node2) {
+          .interaction("score", (node1: SNode, node2: SNode) => {
             if (
-              Math.random() < 0.002 &&
-              isLiveCreature(node1) &&
-              isLiveCreature(node2)
-            ) {
-              node1.currentScore += 1;
-              node2.currentScore += 1;
-              window.game.tempScoreIndicators.push({
-                x: 0.5 * (node1.x + node2.x),
-                y: 0.5 * (node1.y + node2.y),
-                text: "+2",
-                ticksRemaining: 60,
-              });
-            }
+              !isLiveCreature(node1) ||
+              !isLiveCreature(node2) ||
+              (node1.scoring && node2.scoring) ||
+              Math.random() > 0.0002
+            )
+              return;
+
+            this.score += 10;
+            node1.fx = node1.x;
+            node1.fy = node1.y;
+            node2.fx = node2.x;
+            node2.fy = node2.y;
+            node1.scoring = true;
+            node2.scoring = true;
+            node1.scoringPartner = node2;
+            node2.scoringPartner = node1;
+            node1.ticksLeftInScoringState = 60;
+            node2.ticksLeftInScoringState = 60;
           })
       )
       .force("health", function () {
@@ -146,6 +151,18 @@ export class Game {
           if (n.health <= 0) {
             n.dead = true;
             n.health = 0;
+          }
+        });
+      })
+      .force("scoring-state", () => {
+        nodes.forEach((n) => {
+          if (!isLiveCreature(n) || !n.scoring) return;
+
+          n.ticksLeftInScoringState--;
+          if (n.ticksLeftInScoringState <= 0) {
+            n.scoring = false;
+            n.fx = null;
+            n.fy = null;
           }
         });
       })
@@ -214,25 +231,28 @@ export class Game {
     });
 
     // Draw nodes.
-    this.nodes.forEach(
-      function (d) {
-        if (!isLiveCreature(d)) return;
+    const scoringNodes: Creature[] = [];
+    this.nodes.forEach((d) => {
+      if (!isLiveCreature(d)) return;
+      if (d.scoring) {
+        scoringNodes.push(d);
+        return;
+      }
 
-        context.beginPath();
-        context.moveTo(d.x + d.r, d.y);
-        context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
-        // A range from yellow (1 health) to purple (0 health).
-        context.fillStyle = d3.interpolatePlasma(d.health * 0.6 + 0.2);
-        context.fill();
-        context.strokeStyle = "#333";
-        context.stroke();
+      context.beginPath();
+      context.moveTo(d.x + d.r, d.y);
+      context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+      // A range from yellow (1 health) to purple (0 health).
+      context.fillStyle = d3.interpolatePlasma(d.health * 0.6 + 0.2);
+      context.fill();
+      context.strokeStyle = "#333";
+      context.stroke();
+    });
 
-        // Collect score.
-        this.score += d.currentScore;
-        d.currentScore = 0;
-      }.bind(this)
-    );
-
+    // Draw walls.
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.lineWidth = 2 * this.WALL_HALF_WIDTH;
     for (const wall of this.walls) {
       context.beginPath();
       const curve = d3.curveLinear(context);
@@ -243,24 +263,44 @@ export class Game {
       if (wall.points.length === 1)
         curve.point(wall.points[0].x, wall.points[0].y);
       curve.lineEnd();
-      context.lineWidth = 2 * this.WALL_HALF_WIDTH;
-      context.lineJoin = "round";
-      context.lineCap = "round";
       context.strokeStyle =
         wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
       context.stroke();
     }
+    context.lineWidth = 1;
+
+    // Draw scoring nodes.
+    context.shadowBlur = 80;
+    context.shadowColor = "#009933";
+    for (const node of scoringNodes) {
+      const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
+
+      context.beginPath();
+      context.moveTo(x + node.r, node.y);
+      context.arc(x, node.y, node.r, 0, 2 * Math.PI);
+      // A range from yellow (1 health) to purple (0 health).
+      context.fillStyle = d3.interpolatePlasma(node.health * 0.6 + 0.2);
+      context.fill();
+      context.strokeStyle = "#333";
+      context.stroke();
+
+      // Add temp score indicator. This ends up
+      this.tempScoreIndicators.push({
+        text: "+10",
+        x: 0.5 * (node.x + node.scoringPartner.x),
+        y: 0.5 * (node.y + node.scoringPartner.y),
+      });
+    }
+    context.shadowBlur = undefined;
+    context.shadowColor = undefined;
 
     // Print indicators when score increases.
     context.fillStyle = "#0a6b24";
-    context.font = "bold 10px sans-serif";
-    let numExpiring = 0;
+    context.font = "bold 20px sans-serif";
     this.tempScoreIndicators.forEach(function (indicator) {
       context.fillText(indicator.text, indicator.x, indicator.y);
-      indicator.ticksRemaining -= 1;
-      if (indicator.ticksRemaining == 0) numExpiring++;
     });
-    this.tempScoreIndicators.splice(0, numExpiring);
+    this.tempScoreIndicators = [];
 
     // Print score in the top-right corner.
     context.fillStyle = "#000";

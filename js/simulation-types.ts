@@ -21,16 +21,21 @@ export class Creature implements SNode {
   y?: number;
   vx?: number;
   vy?: number;
-  infected = false;
-  health = 1;
-  currentScore = 0;
-  goal?: Point;
-  dead: boolean;
-  // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
-  previousLoggedLocation: Point;
-
   // Used by d3 simulation code.
   index?: number;
+
+  infected = false;
+  health = 1;
+  goal?: Point;
+  dead: boolean;
+
+  // Whether the creature is currently in a scoring "state".
+  scoring: boolean;
+  scoringPartner: SNode | null;
+  ticksLeftInScoringState: number;
+
+  // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
+  previousLoggedLocation: Point;
 
   constructor(x: number, y: number) {
     this.r = Math.random() * 5 + 4;
@@ -38,6 +43,10 @@ export class Creature implements SNode {
     this.y = y;
     this.previousLoggedLocation = { x: x, y: y };
     this.dead = false;
+
+    this.scoring = false;
+    this.scoringPartner = null;
+    this.ticksLeftInScoringState = 0;
   }
 }
 
