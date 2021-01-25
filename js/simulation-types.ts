@@ -15,6 +15,45 @@ export interface Point {
   y?: number;
 }
 
+export class CursorNode implements SNode {
+  r: number;
+  x?: number;
+  y?: number;
+  // Used by d3 simulation code.
+  fx?: number;
+  fy?: number;
+  vx?: number;
+  vy?: number;
+  index?: number;
+
+  // The SNode that would be interacted with if the user clicked.
+  target: SNode | null;
+  // Squared distance to the target.
+  targetDistanceSq?: number;
+
+  constructor() {
+    this.r = 4;
+    this.x = this.y = this.fx = this.fy = this.vx = this.vy = 0;
+    this.target = null;
+  }
+
+  setLocation(x: number, y: number): void {
+    this.x = this.fx = x;
+    this.y = this.fy = y;
+  }
+
+  reportPotentialTarget(n: SNode, distanceSq: number): void {
+    if (this.target == null || distanceSq < this.targetDistanceSq) {
+      this.target = n;
+      this.targetDistanceSq = distanceSq;
+    }
+  }
+}
+
+export function isCursorNode(n: SNode): n is CursorNode {
+  return n instanceof CursorNode;
+}
+
 export class Creature implements SNode {
   r: number;
   x?: number;

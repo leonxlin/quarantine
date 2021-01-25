@@ -18638,6 +18638,27 @@ var quarantine = (function (exports) {
       var dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
+  var CursorNode = /** @class */ (function () {
+      function CursorNode() {
+          this.r = 4;
+          this.x = this.y = this.fx = this.fy = this.vx = this.vy = 0;
+          this.target = null;
+      }
+      CursorNode.prototype.setLocation = function (x, y) {
+          this.x = this.fx = x;
+          this.y = this.fy = y;
+      };
+      CursorNode.prototype.reportPotentialTarget = function (n, distanceSq) {
+          if (this.target == null || distanceSq < this.targetDistanceSq) {
+              this.target = n;
+              this.targetDistanceSq = distanceSq;
+          }
+      };
+      return CursorNode;
+  }());
+  function isCursorNode(n) {
+      return n instanceof CursorNode;
+  }
   var Creature = /** @class */ (function () {
       function Creature(x, y) {
           this.infected = false;
@@ -18735,6 +18756,14 @@ var quarantine = (function (exports) {
               circleLineCollisionInteraction(node2, node1);
           }
       }
+      else if (isCursorNode(node1)) {
+          if (isImpassableCircle(node2)) {
+              node1.reportPotentialTarget(node2, l);
+          }
+          else if (isImpassableSegment(node2)) {
+              circleLineCollisionInteraction(node1, node2);
+          }
+      }
   }
   // Handles collision between two circles.
   // TODO: document arguments.
@@ -18765,6 +18794,10 @@ var quarantine = (function (exports) {
       var discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
       if (discrepancy <= 0)
           return;
+      if (isCursorNode(circleNode)) {
+          circleNode.reportPotentialTarget(segmentNode, 0);
+          return;
+      }
       var sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
       var commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
@@ -18787,9 +18820,11 @@ var quarantine = (function (exports) {
               // For each node, visit other nodes that could collide.
               for (i = 0; i < n; ++i) {
                   node = nodes[i];
-                  // Only creatures will respond to a collision (walls don't move).
-                  if (!isLiveCreature(node))
+                  // Only loop through nodes that might need to respond to a collision.
+                  if (!(isLiveCreature(node) || isCursorNode(node)))
                       continue;
+                  if (isCursorNode(node))
+                      node.target = null;
                   (ri = radii[node.index]), (ri2 = ri * ri);
                   xi = node.x + node.vx;
                   yi = node.y + node.vy;
@@ -18802,7 +18837,11 @@ var quarantine = (function (exports) {
                   // Only process pairs of creatures with the smaller index first.
                   // Non-creature |data| nodes should always be processed since |node|
                   // is a creature.
-                  if (!isLiveCreature(data) || data.index > node.index) {
+                  if (isCursorNode(data))
+                      return;
+                  if (!isLiveCreature(data) ||
+                      data.index > node.index ||
+                      isCursorNode(node)) {
                       var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
                       if (l_1 < r * r) {
                           // Execute registered interactions for (node, data).
@@ -18897,6 +18936,8 @@ var quarantine = (function (exports) {
               );
           });
           this.nodes[0].infected = true;
+          this.cursorNode = new CursorNode();
+          this.nodes.push(this.cursorNode);
           var nodes = this.nodes;
           var canvas = this.canvas;
           this.simulation = simulation()
@@ -18993,6 +19034,17 @@ var quarantine = (function (exports) {
                   p.age++;
               });
           })
+              .force("cursor", function () {
+              if (_this.toolbeltMode != "select-mode") {
+                  _this.canvas.style.cursor = "default";
+              }
+              else if (_this.cursorNode.target != null) {
+                  _this.canvas.style.cursor = "pointer";
+              }
+              else {
+                  _this.canvas.style.cursor = "default";
+              }
+          })
               .nodes(nodes)
               .on("tick", this.tick.bind(this))
               // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
@@ -19004,8 +19056,10 @@ var quarantine = (function (exports) {
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
               select(".num-nodes").text(this.nodes.length);
               // Print the average.
-              select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce(function (a, b) { return a + b; }) /
-                  this.recentCollisionForceRuntime.length);
+              if (this.recentCollisionForceRuntime.length > 0) {
+                  select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce(function (a, b) { return a + b; }) /
+                      this.recentCollisionForceRuntime.length);
+              }
               this.recentCollisionForceRuntime = [];
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
@@ -19176,11 +19230,21 @@ var quarantine = (function (exports) {
       // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
       // TODO: instead of conditional behavior in dragSubject, dragStarted, etc.,
       // abstract out toolbelt mode for handling drag events.
-      select(window.game.canvas).call(drag()
+      select(window.game.canvas)
+          .call(drag()
           .subject(dragSubject)
           .on("start", dragStarted)
           .on("drag", dragDragged)
-          .on("end", dragEnded));
+          .on("end", dragEnded))
+          .on("mousemove", function () {
+          if (game.toolbeltMode != "select-mode")
+              return;
+          // Apparently we have to correct for the canvas position in order to get
+          // the correct mouse position. I'm not sure why this correct is not needed
+          // for the drag use cases below.
+          var rect = game.canvas.getBoundingClientRect();
+          game.cursorNode.setLocation(event.x - rect.left, event.y - rect.top);
+      });
       selectAll("[name=toolbelt]").on("click", function () {
           game.toolbeltMode = this.value;
       });
@@ -19193,10 +19257,9 @@ var quarantine = (function (exports) {
               return game.walls[game.walls.length - 1];
           }
           else if (game.toolbeltMode == "select-mode") {
-              var subject = game.simulation.find(event.x, event.y, 20);
-              if (isLiveCreature(subject)) {
-                  return subject;
-              }
+              return isLiveCreature(game.cursorNode.target)
+                  ? game.cursorNode.target
+                  : null;
           }
           else if (game.toolbeltMode == "party-mode") {
               var party = new Party(event.x, event.y);

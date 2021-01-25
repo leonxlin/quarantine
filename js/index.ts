@@ -1,6 +1,7 @@
 import * as d3 from "d3";
 import {
   SNode,
+  CursorNode,
   Point,
   TempScoreIndicator,
   SegmentNode,
@@ -43,6 +44,7 @@ export class Game {
   canvas;
   nodes: SNode[];
   simulation: d3.Simulation<SNode, undefined>;
+  cursorNode: CursorNode;
 
   score = 0;
   tempScoreIndicators: Set<TempScoreIndicator>;
@@ -75,6 +77,9 @@ export class Game {
         )
     );
     (this.nodes[0] as Creature).infected = true;
+
+    this.cursorNode = new CursorNode();
+    this.nodes.push(this.cursorNode);
 
     const nodes = this.nodes;
     const canvas = this.canvas;
@@ -178,6 +183,15 @@ export class Game {
           p.age++;
         });
       })
+      .force("cursor", () => {
+        if (this.toolbeltMode != "select-mode") {
+          this.canvas.style.cursor = "default";
+        } else if (this.cursorNode.target != null) {
+          this.canvas.style.cursor = "pointer";
+        } else {
+          this.canvas.style.cursor = "default";
+        }
+      })
       .nodes(nodes)
       .on("tick", this.tick.bind(this))
       // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
@@ -191,10 +205,12 @@ export class Game {
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
         d3.select(".num-nodes").text(this.nodes.length);
         // Print the average.
-        d3.select(".collision-force-runtime").text(
-          this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
-            this.recentCollisionForceRuntime.length
-        );
+        if (this.recentCollisionForceRuntime.length > 0) {
+          d3.select(".collision-force-runtime").text(
+            this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
+              this.recentCollisionForceRuntime.length
+          );
+        }
 
         this.recentCollisionForceRuntime = [];
 
@@ -391,14 +407,26 @@ window.onload = function () {
 
   // TODO: instead of conditional behavior in dragSubject, dragStarted, etc.,
   // abstract out toolbelt mode for handling drag events.
-  d3.select(window.game.canvas).call(
-    d3
-      .drag()
-      .subject(dragSubject)
-      .on("start", dragStarted)
-      .on("drag", dragDragged)
-      .on("end", dragEnded)
-  );
+  d3.select(window.game.canvas)
+    .call(
+      d3
+        .drag()
+        .subject(dragSubject)
+        .on("start", dragStarted)
+        .on("drag", dragDragged)
+        .on("end", dragEnded)
+    )
+    .on("mousemove", () => {
+      if (game.toolbeltMode != "select-mode") return;
+      // Apparently we have to correct for the canvas position in order to get
+      // the correct mouse position. I'm not sure why this correct is not needed
+      // for the drag use cases below.
+      const rect = game.canvas.getBoundingClientRect();
+      game.cursorNode.setLocation(
+        d3.event.x - rect.left,
+        d3.event.y - rect.top
+      );
+    });
 
   d3.selectAll<HTMLInputElement, undefined>("[name=toolbelt]").on(
     "click",
@@ -415,10 +443,9 @@ window.onload = function () {
       });
       return game.walls[game.walls.length - 1];
     } else if (game.toolbeltMode == "select-mode") {
-      const subject: SNode = game.simulation.find(d3.event.x, d3.event.y, 20);
-      if (isLiveCreature(subject)) {
-        return subject;
-      }
+      return isLiveCreature(game.cursorNode.target)
+        ? game.cursorNode.target
+        : null;
     } else if (game.toolbeltMode == "party-mode") {
       const party = new Party(d3.event.x, d3.event.y);
       game.parties.push(party);

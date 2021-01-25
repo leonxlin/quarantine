@@ -40,6 +40,7 @@ import {
   SForceCollide,
   Interaction,
   isImpassableCircle,
+  isCursorNode,
   isImpassableSegment,
   isLiveCreature,
 } from "./simulation-types.js";
@@ -95,6 +96,12 @@ export function collisionInteraction(
     if (isImpassableCircle(node2)) {
       circleLineCollisionInteraction(node2, node1);
     }
+  } else if (isCursorNode(node1)) {
+    if (isImpassableCircle(node2)) {
+      node1.reportPotentialTarget(node2, l);
+    } else if (isImpassableSegment(node2)) {
+      circleLineCollisionInteraction(node1, node2);
+    }
   }
 }
 
@@ -143,6 +150,11 @@ function circleLineCollisionInteraction(
   const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
   if (discrepancy <= 0) return;
 
+  if (isCursorNode(circleNode)) {
+    circleNode.reportPotentialTarget(segmentNode, 0);
+    return;
+  }
+
   const sign = nyp > 0 ? 1 : -1;
   // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
   const commonFactor =
@@ -174,9 +186,9 @@ export default function (radius: (SNode) => number): SForceCollide {
       // For each node, visit other nodes that could collide.
       for (i = 0; i < n; ++i) {
         node = nodes[i];
-        // Only creatures will respond to a collision (walls don't move).
-
-        if (!isLiveCreature(node)) continue;
+        // Only loop through nodes that might need to respond to a collision.
+        if (!(isLiveCreature(node) || isCursorNode(node))) continue;
+        if (isCursorNode(node)) node.target = null;
 
         (ri = radii[node.index]), (ri2 = ri * ri);
         xi = node.x + node.vx;
@@ -193,7 +205,12 @@ export default function (radius: (SNode) => number): SForceCollide {
         // Only process pairs of creatures with the smaller index first.
         // Non-creature |data| nodes should always be processed since |node|
         // is a creature.
-        if (!isLiveCreature(data) || data.index > node.index) {
+        if (isCursorNode(data)) return;
+        if (
+          !isLiveCreature(data) ||
+          data.index > node.index ||
+          isCursorNode(node)
+        ) {
           const x = xi - data.x - data.vx,
             y = yi - data.y - data.vy,
             l = x * x + y * y;
