@@ -2,12 +2,15 @@ import * as d3 from "d3";
 import {
   SNode,
   CursorNode,
-  Point,
   TempScoreIndicator,
   SegmentNode,
+  Wall,
+  WallState,
   WallJoint,
+  isWallComponent,
   Creature,
   Party,
+  Selectable,
   isCreature,
   isLiveCreature,
   squaredDistance,
@@ -24,19 +27,6 @@ declare global {
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
-
-enum WallState {
-  // Still being built. Should not cause collisions.
-  PROVISIONAL,
-
-  // Built. Impermeable.
-  BUILT,
-}
-
-class Wall {
-  points: Array<Point> = [];
-  state: WallState.PROVISIONAL;
-}
 
 // Not sure if a class is really the best way to organize this code...
 // TODO: revisit code organization.
@@ -60,6 +50,8 @@ export class Game {
 
   walls: Array<Wall> = [];
   parties: Array<Party> = [];
+
+  selectedObject: Selectable = null;
 
   // Figure out a better place for this constant.
   pointCircleFactor = 0.5;
@@ -253,26 +245,6 @@ export class Game {
       context.fill();
     });
 
-    // Draw walls.
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    context.lineWidth = 2 * this.WALL_HALF_WIDTH;
-    for (const wall of this.walls) {
-      context.beginPath();
-      const curve = d3.curveLinear(context);
-      curve.lineStart();
-      for (const point of wall.points) {
-        curve.point(point.x, point.y);
-      }
-      if (wall.points.length === 1)
-        curve.point(wall.points[0].x, wall.points[0].y);
-      curve.lineEnd();
-      context.strokeStyle =
-        wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
-      context.stroke();
-    }
-    context.lineWidth = 1;
-
     // Draw nodes.
     const scoringNodes: Creature[] = [];
     const recentlyDeadNodes: Creature[] = [];
@@ -297,6 +269,33 @@ export class Game {
       context.strokeStyle = "#333";
       context.stroke();
     });
+
+    // Draw walls.
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.lineWidth = 2 * this.WALL_HALF_WIDTH;
+    function drawWall(wall: Wall, color: string) {
+      context.beginPath();
+      const curve = d3.curveLinear(context);
+      curve.lineStart();
+      for (const point of wall.points) {
+        curve.point(point.x, point.y);
+      }
+      if (wall.points.length === 1)
+        curve.point(wall.points[0].x, wall.points[0].y);
+      curve.lineEnd();
+      context.strokeStyle = color;
+      context.stroke();
+    }
+    for (const wall of this.walls) {
+      // We want to draw the selected wall on top, so skip it here.
+      if (wall === this.selectedObject) continue;
+      drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
+    }
+    if (this.selectedObject instanceof Wall) {
+      drawWall(this.selectedObject, "#999900");
+    }
+    context.lineWidth = 1;
 
     // Draw recently dead nodes.
     for (const n of recentlyDeadNodes) {
@@ -432,20 +431,28 @@ window.onload = function () {
     "click",
     function () {
       game.toolbeltMode = this.value;
+      if (game.toolbeltMode != "select-mode") {
+        game.selectedObject = null;
+      }
     }
   );
 
   function dragSubject() {
     if (game.toolbeltMode == "wall-mode") {
-      game.walls.push({
-        points: [{ x: d3.event.x, y: d3.event.y }],
-        state: WallState.PROVISIONAL,
-      });
-      return game.walls[game.walls.length - 1];
+      const wall = new Wall();
+      wall.points = [{ x: d3.event.x, y: d3.event.y }];
+      wall.state = WallState.PROVISIONAL;
+      game.walls.push(wall);
+      return wall;
     } else if (game.toolbeltMode == "select-mode") {
-      return isLiveCreature(game.cursorNode.target)
-        ? game.cursorNode.target
-        : null;
+      if (isWallComponent(game.cursorNode.target)) {
+        game.selectedObject = game.cursorNode.target.wall;
+      } else if (isLiveCreature(game.cursorNode.target)) {
+        game.selectedObject = game.cursorNode.target;
+      } else {
+        game.selectedObject = null;
+      }
+      return game.selectedObject;
     } else if (game.toolbeltMode == "party-mode") {
       const party = new Party(d3.event.x, d3.event.y);
       game.parties.push(party);
@@ -457,8 +464,11 @@ window.onload = function () {
 
   function dragStarted() {
     if (game.toolbeltMode == "select-mode") {
-      d3.event.subject.fx = d3.event.subject.x;
-      d3.event.subject.fy = d3.event.subject.y;
+      if (isLiveCreature(d3.event.subject)) {
+        d3.event.subject.fx = d3.event.subject.x;
+        d3.event.subject.fy = d3.event.subject.y;
+        game.selectedObject = d3.event.subject;
+      }
     }
   }
 
@@ -484,12 +494,24 @@ window.onload = function () {
     } else if (game.toolbeltMode == "wall-mode") {
       for (let i = 0; i < d3.event.subject.points.length; i++) {
         const point = d3.event.subject.points[i];
-        game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH));
+        game.nodes.push(
+          new WallJoint(
+            point.x,
+            point.y,
+            game.WALL_HALF_WIDTH,
+            d3.event.subject
+          )
+        );
 
         if (i == 0) continue;
         const prevPoint = d3.event.subject.points[i - 1];
         game.nodes.push(
-          new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH)
+          new SegmentNode(
+            prevPoint,
+            point,
+            game.WALL_HALF_WIDTH,
+            d3.event.subject
+          )
         );
       }
       game.simulation.nodes(game.nodes);

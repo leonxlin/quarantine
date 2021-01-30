@@ -18680,11 +18680,28 @@ var quarantine = (function (exports) {
   function isLiveCreature(n) {
       return isCreature(n) && !n.dead;
   }
+  var WallState;
+  (function (WallState) {
+      // Still being built. Should not cause collisions.
+      WallState[WallState["PROVISIONAL"] = 0] = "PROVISIONAL";
+      // Built. Impermeable.
+      WallState[WallState["BUILT"] = 1] = "BUILT";
+  })(WallState || (WallState = {}));
+  var Wall = /** @class */ (function () {
+      function Wall() {
+          this.points = [];
+      }
+      return Wall;
+  }());
+  function isWallComponent(n) {
+      return n instanceof WallJoint || n instanceof SegmentNode;
+  }
   var WallJoint = /** @class */ (function () {
-      function WallJoint(x, y, r) {
+      function WallJoint(x, y, r, wall) {
           this.fx = this.x = x;
           this.fy = this.y = y;
           this.r = r;
+          this.wall = wall;
       }
       return WallJoint;
   }());
@@ -18694,8 +18711,9 @@ var quarantine = (function (exports) {
   function isImpassableSegment(n) {
       return n instanceof SegmentNode;
   }
+  // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
   var SegmentNode = /** @class */ (function () {
-      function SegmentNode(left, right, half_width) {
+      function SegmentNode(left, right, half_width, wall) {
           this.left = left;
           this.right = right;
           this.length2 = squaredDistance(left, right);
@@ -18708,6 +18726,7 @@ var quarantine = (function (exports) {
               x: right.x - left.x,
               y: right.y - left.y,
           };
+          this.wall = wall;
       }
       return SegmentNode;
   }());
@@ -18903,13 +18922,6 @@ var quarantine = (function (exports) {
   }
 
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  var WallState;
-  (function (WallState) {
-      // Still being built. Should not cause collisions.
-      WallState[WallState["PROVISIONAL"] = 0] = "PROVISIONAL";
-      // Built. Impermeable.
-      WallState[WallState["BUILT"] = 1] = "BUILT";
-  })(WallState || (WallState = {}));
   // Not sure if a class is really the best way to organize this code...
   // TODO: revisit code organization.
   var Game = /** @class */ (function () {
@@ -18925,6 +18937,7 @@ var quarantine = (function (exports) {
           this.toolbeltMode = "select-mode";
           this.walls = [];
           this.parties = [];
+          this.selectedObject = null;
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
@@ -19088,27 +19101,6 @@ var quarantine = (function (exports) {
               context.fillStyle = "pink";
               context.fill();
           });
-          // Draw walls.
-          context.lineJoin = "round";
-          context.lineCap = "round";
-          context.lineWidth = 2 * this.WALL_HALF_WIDTH;
-          for (var _i = 0, _a = this.walls; _i < _a.length; _i++) {
-              var wall = _a[_i];
-              context.beginPath();
-              var curve = curveLinear(context);
-              curve.lineStart();
-              for (var _b = 0, _c = wall.points; _b < _c.length; _b++) {
-                  var point = _c[_b];
-                  curve.point(point.x, point.y);
-              }
-              if (wall.points.length === 1)
-                  curve.point(wall.points[0].x, wall.points[0].y);
-              curve.lineEnd();
-              context.strokeStyle =
-                  wall.state == WallState.PROVISIONAL ? "#e6757e" : "red";
-              context.stroke();
-          }
-          context.lineWidth = 1;
           // Draw nodes.
           var scoringNodes = [];
           var recentlyDeadNodes = [];
@@ -19133,9 +19125,38 @@ var quarantine = (function (exports) {
               context.strokeStyle = "#333";
               context.stroke();
           });
+          // Draw walls.
+          context.lineJoin = "round";
+          context.lineCap = "round";
+          context.lineWidth = 2 * this.WALL_HALF_WIDTH;
+          function drawWall(wall, color) {
+              context.beginPath();
+              var curve = curveLinear(context);
+              curve.lineStart();
+              for (var _i = 0, _a = wall.points; _i < _a.length; _i++) {
+                  var point = _a[_i];
+                  curve.point(point.x, point.y);
+              }
+              if (wall.points.length === 1)
+                  curve.point(wall.points[0].x, wall.points[0].y);
+              curve.lineEnd();
+              context.strokeStyle = color;
+              context.stroke();
+          }
+          for (var _i = 0, _a = this.walls; _i < _a.length; _i++) {
+              var wall = _a[_i];
+              // We want to draw the selected wall on top, so skip it here.
+              if (wall === this.selectedObject)
+                  continue;
+              drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
+          }
+          if (this.selectedObject instanceof Wall) {
+              drawWall(this.selectedObject, "#999900");
+          }
+          context.lineWidth = 1;
           // Draw recently dead nodes.
-          for (var _d = 0, recentlyDeadNodes_1 = recentlyDeadNodes; _d < recentlyDeadNodes_1.length; _d++) {
-              var n = recentlyDeadNodes_1[_d];
+          for (var _b = 0, recentlyDeadNodes_1 = recentlyDeadNodes; _b < recentlyDeadNodes_1.length; _b++) {
+              var n = recentlyDeadNodes_1[_b];
               var t = n.ticksSinceDeath / 60;
               var y = interpolateNumber(n.y, n.y - 15)(t);
               context.globalAlpha = interpolateNumber(1, 0)(t);
@@ -19158,8 +19179,8 @@ var quarantine = (function (exports) {
           // Draw scoring nodes.
           context.shadowBlur = 80;
           context.shadowColor = "#009933";
-          for (var _e = 0, scoringNodes_1 = scoringNodes; _e < scoringNodes_1.length; _e++) {
-              var node = scoringNodes_1[_e];
+          for (var _c = 0, scoringNodes_1 = scoringNodes; _c < scoringNodes_1.length; _c++) {
+              var node = scoringNodes_1[_c];
               var x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
               context.beginPath();
               context.moveTo(x + node.r, node.y);
@@ -19247,19 +19268,29 @@ var quarantine = (function (exports) {
       });
       selectAll("[name=toolbelt]").on("click", function () {
           game.toolbeltMode = this.value;
+          if (game.toolbeltMode != "select-mode") {
+              game.selectedObject = null;
+          }
       });
       function dragSubject() {
           if (game.toolbeltMode == "wall-mode") {
-              game.walls.push({
-                  points: [{ x: event.x, y: event.y }],
-                  state: WallState.PROVISIONAL,
-              });
-              return game.walls[game.walls.length - 1];
+              var wall = new Wall();
+              wall.points = [{ x: event.x, y: event.y }];
+              wall.state = WallState.PROVISIONAL;
+              game.walls.push(wall);
+              return wall;
           }
           else if (game.toolbeltMode == "select-mode") {
-              return isLiveCreature(game.cursorNode.target)
-                  ? game.cursorNode.target
-                  : null;
+              if (isWallComponent(game.cursorNode.target)) {
+                  game.selectedObject = game.cursorNode.target.wall;
+              }
+              else if (isLiveCreature(game.cursorNode.target)) {
+                  game.selectedObject = game.cursorNode.target;
+              }
+              else {
+                  game.selectedObject = null;
+              }
+              return game.selectedObject;
           }
           else if (game.toolbeltMode == "party-mode") {
               var party = new Party(event.x, event.y);
@@ -19271,8 +19302,11 @@ var quarantine = (function (exports) {
       }
       function dragStarted() {
           if (game.toolbeltMode == "select-mode") {
-              event.subject.fx = event.subject.x;
-              event.subject.fy = event.subject.y;
+              if (isLiveCreature(event.subject)) {
+                  event.subject.fx = event.subject.x;
+                  event.subject.fy = event.subject.y;
+                  game.selectedObject = event.subject;
+              }
           }
       }
       function dragDragged() {
@@ -19296,11 +19330,11 @@ var quarantine = (function (exports) {
           else if (game.toolbeltMode == "wall-mode") {
               for (var i = 0; i < event.subject.points.length; i++) {
                   var point = event.subject.points[i];
-                  game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH));
+                  game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH, event.subject));
                   if (i == 0)
                       continue;
                   var prevPoint = event.subject.points[i - 1];
-                  game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH));
+                  game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH, event.subject));
               }
               game.simulation.nodes(game.nodes);
               event.subject.state = WallState.BUILT;

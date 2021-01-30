@@ -10,6 +10,8 @@ export interface SNode extends d3.SimulationNodeDatum {
   r: number;
 }
 
+export type Selectable = Wall | Creature;
+
 export interface Point {
   x?: number;
   y?: number;
@@ -100,7 +102,28 @@ export function isLiveCreature(n: SNode): n is Creature {
   return isCreature(n) && !n.dead;
 }
 
-export class WallJoint implements SNode {
+export enum WallState {
+  // Still being built. Should not cause collisions.
+  PROVISIONAL,
+
+  // Built. Impermeable.
+  BUILT,
+}
+
+export class Wall {
+  points: Array<Point> = [];
+  state: WallState.PROVISIONAL;
+}
+
+export interface WallComponent extends SNode {
+  wall: Wall;
+}
+
+export function isWallComponent(n: SNode): n is WallComponent {
+  return n instanceof WallJoint || n instanceof SegmentNode;
+}
+
+export class WallJoint implements SNode, WallComponent {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;
@@ -108,11 +131,13 @@ export class WallJoint implements SNode {
   fx?: number;
   fy?: number;
   index?: number;
+  wall: Wall;
 
-  constructor(x: number, y: number, r: number) {
+  constructor(x: number, y: number, r: number, wall: Wall) {
     this.fx = this.x = x;
     this.fy = this.y = y;
     this.r = r;
+    this.wall = wall;
   }
 }
 
@@ -124,7 +149,8 @@ export function isImpassableSegment(n: SNode): n is SegmentNode {
   return n instanceof SegmentNode;
 }
 
-export class SegmentNode implements SNode {
+// TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
+export class SegmentNode implements SNode, WallComponent {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;
@@ -145,7 +171,9 @@ export class SegmentNode implements SNode {
   length?: number;
   length2?: number;
 
-  constructor(left: Point, right: Point, half_width: number) {
+  wall: Wall;
+
+  constructor(left: Point, right: Point, half_width: number, wall: Wall) {
     this.left = left;
     this.right = right;
     this.length2 = squaredDistance(left, right);
@@ -158,6 +186,7 @@ export class SegmentNode implements SNode {
       x: right.x - left.x,
       y: right.y - left.y,
     };
+    this.wall = wall;
   }
 }
 
