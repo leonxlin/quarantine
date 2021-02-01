@@ -19230,6 +19230,10 @@ var quarantine = (function (exports) {
           this.simulation.stop();
           this.paused = true;
       };
+      Game.prototype.deselectAll = function () {
+          this.selectedObject = null;
+          select(".delete-wall").style("display", "none");
+      };
       return Game;
   }());
   window.onload = function () {
@@ -19269,8 +19273,41 @@ var quarantine = (function (exports) {
       selectAll("[name=toolbelt]").on("click", function () {
           game.toolbeltMode = this.value;
           if (game.toolbeltMode != "select-mode") {
-              game.selectedObject = null;
+              game.deselectAll();
           }
+      });
+      select(".delete-wall").on("click", function () {
+          // TODO: represent game.walls and game.nodes as Sets perhaps to make this less crappy.
+          // Delete selected wall.
+          var i = -1;
+          for (i = 0; i < game.walls.length; i++) {
+              if (game.walls[i] === game.selectedObject) {
+                  break;
+              }
+          }
+          if (i >= 0)
+              game.walls.splice(i, 1);
+          // Delete wall components from game.nodes.
+          var numNodesToRemove = 0;
+          function swap(arr, a, b) {
+              var temp = arr[a];
+              arr[a] = arr[b];
+              arr[b] = temp;
+          }
+          for (i = 0; i < game.nodes.length; i++) {
+              var n = void 0;
+              while (isWallComponent((n = game.nodes[i])) &&
+                  n.wall === game.selectedObject &&
+                  i + numNodesToRemove < game.nodes.length) {
+                  swap(game.nodes, i, game.nodes.length - numNodesToRemove - 1);
+                  numNodesToRemove++;
+              }
+          }
+          if (numNodesToRemove > 0) {
+              game.nodes.splice(-numNodesToRemove);
+          }
+          game.simulation.nodes(game.nodes);
+          game.deselectAll();
       });
       function dragSubject() {
           if (game.toolbeltMode == "wall-mode") {
@@ -19283,12 +19320,16 @@ var quarantine = (function (exports) {
           else if (game.toolbeltMode == "select-mode") {
               if (isWallComponent(game.cursorNode.target)) {
                   game.selectedObject = game.cursorNode.target.wall;
+                  var s = select(".delete-wall");
+                  s.style("display", "inline");
+                  s.style("left", event.x + "px");
+                  s.style("top", event.y + "px");
               }
               else if (isLiveCreature(game.cursorNode.target)) {
                   game.selectedObject = game.cursorNode.target;
               }
               else {
-                  game.selectedObject = null;
+                  game.deselectAll();
               }
               return game.selectedObject;
           }

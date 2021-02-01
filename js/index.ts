@@ -381,6 +381,11 @@ export class Game {
     this.simulation.stop();
     this.paused = true;
   }
+
+  deselectAll(): void {
+    this.selectedObject = null;
+    d3.select(".delete-wall").style("display", "none");
+  }
 }
 
 window.onload = function () {
@@ -432,10 +437,48 @@ window.onload = function () {
     function () {
       game.toolbeltMode = this.value;
       if (game.toolbeltMode != "select-mode") {
-        game.selectedObject = null;
+        game.deselectAll();
       }
     }
   );
+
+  d3.select(".delete-wall").on("click", function () {
+    // TODO: represent game.walls and game.nodes as Sets perhaps to make this less crappy.
+
+    // Delete selected wall.
+    let i = -1;
+    for (i = 0; i < game.walls.length; i++) {
+      if (game.walls[i] === game.selectedObject) {
+        break;
+      }
+    }
+    if (i >= 0) game.walls.splice(i, 1);
+
+    // Delete wall components from game.nodes.
+    let numNodesToRemove = 0;
+    function swap(arr, a: number, b: number): void {
+      const temp = arr[a];
+      arr[a] = arr[b];
+      arr[b] = temp;
+    }
+    for (i = 0; i < game.nodes.length; i++) {
+      let n: SNode;
+      while (
+        isWallComponent((n = game.nodes[i])) &&
+        n.wall === game.selectedObject &&
+        i + numNodesToRemove < game.nodes.length
+      ) {
+        swap(game.nodes, i, game.nodes.length - numNodesToRemove - 1);
+        numNodesToRemove++;
+      }
+    }
+    if (numNodesToRemove > 0) {
+      game.nodes.splice(-numNodesToRemove);
+    }
+    game.simulation.nodes(game.nodes);
+
+    game.deselectAll();
+  });
 
   function dragSubject() {
     if (game.toolbeltMode == "wall-mode") {
@@ -447,10 +490,14 @@ window.onload = function () {
     } else if (game.toolbeltMode == "select-mode") {
       if (isWallComponent(game.cursorNode.target)) {
         game.selectedObject = game.cursorNode.target.wall;
+        const s = d3.select(".delete-wall");
+        s.style("display", "inline");
+        s.style("left", d3.event.x + "px");
+        s.style("top", d3.event.y + "px");
       } else if (isLiveCreature(game.cursorNode.target)) {
         game.selectedObject = game.cursorNode.target;
       } else {
-        game.selectedObject = null;
+        game.deselectAll();
       }
       return game.selectedObject;
     } else if (game.toolbeltMode == "party-mode") {

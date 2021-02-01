@@ -92,3 +92,10 @@ body {
   font-size: x-small;
   color: gray;
 }
+
+.delete-wall {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: none;
+}
