@@ -116,7 +116,11 @@ export class Game {
             }
           })
           .interaction("contagion", (node1, node2) => {
-            if (Math.random() < 0.01 && isCreature(node1) && isCreature(node2))
+            if (
+              Math.random() < 0.01 &&
+              isLiveCreature(node1) &&
+              isLiveCreature(node2)
+            )
               node1.infected = node2.infected =
                 node1.infected || node2.infected;
           })

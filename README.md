@@ -28,6 +28,9 @@ in the top-level directory and visit `localhost:8000`.
     - infectable
     - collidable
     - etc.
+  - break index.ts into smaller files
+  - delete expired parties
+  - make game.nodes a Set perhaps
   - factor out toolbelt mode to avoid conditional logic in dragStarted etc.
 
 - next features
