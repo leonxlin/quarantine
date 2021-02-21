@@ -18635,32 +18635,31 @@ var quarantine = (function (exports) {
   });
 
   function squaredDistance(p1, p2) {
-      var dx = p1.x - p2.x, dy = p1.y - p2.y;
+      const dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
-  var CursorNode = /** @class */ (function () {
-      function CursorNode() {
+  class CursorNode {
+      constructor() {
           this.r = 4;
           this.x = this.y = this.fx = this.fy = this.vx = this.vy = 0;
           this.target = null;
       }
-      CursorNode.prototype.setLocation = function (x, y) {
+      setLocation(x, y) {
           this.x = this.fx = x;
           this.y = this.fy = y;
-      };
-      CursorNode.prototype.reportPotentialTarget = function (n, distanceSq) {
+      }
+      reportPotentialTarget(n, distanceSq) {
           if (this.target == null || distanceSq < this.targetDistanceSq) {
               this.target = n;
               this.targetDistanceSq = distanceSq;
           }
-      };
-      return CursorNode;
-  }());
+      }
+  }
   function isCursorNode(n) {
       return n instanceof CursorNode;
   }
-  var Creature = /** @class */ (function () {
-      function Creature(x, y) {
+  class Creature {
+      constructor(x, y) {
           this.infected = false;
           this.health = 1;
           this.r = Math.random() * 5 + 4;
@@ -18672,8 +18671,7 @@ var quarantine = (function (exports) {
           this.scoringPartner = null;
           this.ticksLeftInScoringState = 0;
       }
-      return Creature;
-  }());
+  }
   function isCreature(n) {
       return n instanceof Creature;
   }
@@ -18687,24 +18685,22 @@ var quarantine = (function (exports) {
       // Built. Impermeable.
       WallState[WallState["BUILT"] = 1] = "BUILT";
   })(WallState || (WallState = {}));
-  var Wall = /** @class */ (function () {
-      function Wall() {
+  class Wall {
+      constructor() {
           this.points = [];
       }
-      return Wall;
-  }());
+  }
   function isWallComponent(n) {
       return n instanceof WallJoint || n instanceof SegmentNode;
   }
-  var WallJoint = /** @class */ (function () {
-      function WallJoint(x, y, r, wall) {
+  class WallJoint {
+      constructor(x, y, r, wall) {
           this.fx = this.x = x;
           this.fy = this.y = y;
           this.r = r;
           this.wall = wall;
       }
-      return WallJoint;
-  }());
+  }
   function isImpassableCircle(n) {
       return isLiveCreature(n) || n instanceof WallJoint;
   }
@@ -18712,8 +18708,8 @@ var quarantine = (function (exports) {
       return n instanceof SegmentNode;
   }
   // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
-  var SegmentNode = /** @class */ (function () {
-      function SegmentNode(left, right, half_width, wall) {
+  class SegmentNode {
+      constructor(left, right, half_width, wall) {
           this.left = left;
           this.right = right;
           this.length2 = squaredDistance(left, right);
@@ -18728,21 +18724,19 @@ var quarantine = (function (exports) {
           };
           this.wall = wall;
       }
-      return SegmentNode;
-  }());
-  var Party = /** @class */ (function () {
-      function Party(x, y) {
+  }
+  class Party {
+      constructor(x, y) {
           this.fx = this.x = x;
           this.fy = this.y = y;
           this.age = 0;
           this.r = 80;
           this.visibleR = 50;
       }
-      Party.prototype.expired = function () {
+      expired() {
           return this.age > 1000;
-      };
-      return Party;
-  }());
+      }
+  }
 
   // The code in this file is adapted
   function constant$e(x) {
@@ -18801,25 +18795,25 @@ var quarantine = (function (exports) {
   // The segment is assumed to be immovable.
   function circleLineCollisionInteraction(circleNode, segmentNode) {
       // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
-      var WALL_HALF_WIDTH = 5;
-      var a = segmentNode.vec.x, b = segmentNode.vec.y;
-      var nx = circleNode.x - segmentNode.left.x, ny = circleNode.y - segmentNode.left.y;
-      var nxpc = a * nx + b * ny;
+      const WALL_HALF_WIDTH = 5;
+      const a = segmentNode.vec.x, b = segmentNode.vec.y;
+      const nx = circleNode.x - segmentNode.left.x, ny = circleNode.y - segmentNode.left.y;
+      const nxpc = a * nx + b * ny;
       // If creature is off to the "side" of the segment, we ignore.
       if (nxpc < 0 || nxpc > segmentNode.length2)
           return;
-      var nyp = (a * ny - b * nx) / segmentNode.length;
+      const nyp = (a * ny - b * nx) / segmentNode.length;
       // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-      var discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
+      const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
       if (discrepancy <= 0)
           return;
       if (isCursorNode(circleNode)) {
           circleNode.reportPotentialTarget(segmentNode, 0);
           return;
       }
-      var sign = nyp > 0 ? 1 : -1;
+      const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      var commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+      const commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
       circleNode.vx += -b * commonFactor;
       circleNode.vy += a * commonFactor;
   }
@@ -18827,14 +18821,14 @@ var quarantine = (function (exports) {
   //
   // `radius` is a function that takes a node and returns a number.
   function collideForce (radius) {
-      var nodes, radii, strength = 1, iterations = 1;
+      let nodes, radii, strength = 1, iterations = 1;
       // Named interactions between pairs of nodes.
-      var interactions = new Map();
+      const interactions = new Map();
       function force() {
-          var startTime = Date.now();
-          var n = nodes.length;
-          var i, tree, node, xi, yi, ri, ri2;
-          for (var k = 0; k < iterations; ++k) {
+          const startTime = Date.now();
+          const n = nodes.length;
+          let i, tree, node, xi, yi, ri, ri2;
+          for (let k = 0; k < iterations; ++k) {
               tree = quadtree(nodes, x$5, y$5).visitAfter(prepare);
               // For each node, visit other nodes that could collide.
               for (i = 0; i < n; ++i) {
@@ -18851,7 +18845,7 @@ var quarantine = (function (exports) {
               }
           }
           function apply(quad, x0, y0, x1, y1) {
-              var data = quad.data, rj = quad.r, r = ri + rj;
+              const data = quad.data, rj = quad.r, r = ri + rj;
               if (data) {
                   // Only process pairs of creatures with the smaller index first.
                   // Non-creature |data| nodes should always be processed since |node|
@@ -18861,11 +18855,11 @@ var quarantine = (function (exports) {
                   if (!isLiveCreature(data) ||
                       data.index > node.index ||
                       isCursorNode(node)) {
-                      var x_1 = xi - data.x - data.vx, y_1 = yi - data.y - data.vy, l_1 = x_1 * x_1 + y_1 * y_1;
-                      if (l_1 < r * r) {
+                      const x = xi - data.x - data.vx, y = yi - data.y - data.vy, l = x * x + y * y;
+                      if (l < r * r) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
-                              interaction(node, data, x_1, y_1, l_1, r, ri2, rj, strength);
+                              interaction(node, data, x, y, l, r, ri2, rj, strength);
                           });
                       }
                   }
@@ -18879,7 +18873,7 @@ var quarantine = (function (exports) {
       function prepare(quad) {
           if (quad.data)
               return (quad.r = radii[quad.data.index]);
-          for (var i = (quad.r = 0); i < 4; ++i) {
+          for (let i = (quad.r = 0); i < 4; ++i) {
               if (quad[i] && quad[i].r > quad.r) {
                   quad.r = quad[i].r;
               }
@@ -18888,8 +18882,8 @@ var quarantine = (function (exports) {
       function initialize() {
           if (!nodes)
               return;
-          var i, node;
-          var n = nodes.length;
+          let i, node;
+          const n = nodes.length;
           radii = new Array(n);
           for (i = 0; i < n; ++i)
               (node = nodes[i]), (radii[node.index] = +radius(node));
@@ -18924,9 +18918,8 @@ var quarantine = (function (exports) {
   /* eslint-enable @typescript-eslint/no-explicit-any */
   // Not sure if a class is really the best way to organize this code...
   // TODO: revisit code organization.
-  var Game = /** @class */ (function () {
-      function Game() {
-          var _this = this;
+  class Game {
+      constructor() {
           this.score = 0;
           // Some crude performance monitoring.
           this.numTicksSinceLastRecord = 0;
@@ -18935,7 +18928,7 @@ var quarantine = (function (exports) {
           this.recentCollisionForceRuntime = [];
           this.paused = false;
           this.toolbeltMode = "select-mode";
-          this.walls = [];
+          this.walls = new Set();
           this.parties = [];
           this.selectedObject = null;
           // Figure out a better place for this constant.
@@ -18943,23 +18936,21 @@ var quarantine = (function (exports) {
           this.WALL_HALF_WIDTH = 5;
           this.tempScoreIndicators = new Set();
           this.canvas = document.querySelector("canvas");
-          this.nodes = sequence(200).map(function () {
-              return new Creature(Math.random() * _this.canvas.width, // x
-              Math.random() * _this.canvas.height // y
-              );
-          });
+          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.canvas.width, // x
+          Math.random() * this.canvas.height // y
+          ));
           this.nodes[0].infected = true;
           this.cursorNode = new CursorNode();
           this.nodes.push(this.cursorNode);
-          var nodes = this.nodes;
-          var canvas = this.canvas;
+          const nodes = this.nodes;
+          const canvas = this.canvas;
           this.simulation = simulation()
               .velocityDecay(0.2)
               .force("agent", function (alpha) {
               nodes.forEach(function (n) {
                   if (!isLiveCreature(n))
                       return;
-                  var stuck = false;
+                  let stuck = false;
                   if (Math.random() < 0.05) {
                       stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
                       n.previousLoggedLocation = { x: n.x, y: n.y };
@@ -18970,7 +18961,7 @@ var quarantine = (function (exports) {
                           y: Math.random() * canvas.height,
                       };
                   }
-                  var len = Math.sqrt(squaredDistance(n, n.goal));
+                  const len = Math.sqrt(squaredDistance(n, n.goal));
                   n.vx += (alpha * (n.goal.x - n.x)) / len;
                   n.vy += (alpha * (n.goal.y - n.y)) / len;
               });
@@ -18980,7 +18971,7 @@ var quarantine = (function (exports) {
               return d.r;
           })
               .interaction("collision", collisionInteraction)
-              .interaction("party", function (creature, party) {
+              .interaction("party", (creature, party) => {
               if (!(party instanceof Party && isLiveCreature(creature)))
                   return;
               if (party.expired())
@@ -18989,20 +18980,20 @@ var quarantine = (function (exports) {
                   creature.goal = { x: party.x, y: party.y };
               }
           })
-              .interaction("contagion", function (node1, node2) {
+              .interaction("contagion", (node1, node2) => {
               if (Math.random() < 0.01 &&
                   isLiveCreature(node1) &&
                   isLiveCreature(node2))
                   node1.infected = node2.infected =
                       node1.infected || node2.infected;
           })
-              .interaction("score", function (node1, node2) {
+              .interaction("score", (node1, node2) => {
               if (!isLiveCreature(node1) ||
                   !isLiveCreature(node2) ||
                   (node1.scoring && node2.scoring) ||
                   Math.random() > 0.0002)
                   return;
-              _this.score += 10;
+              this.score += 10;
               node1.fx = node1.x;
               node1.fy = node1.y;
               node2.fx = node2.x;
@@ -19014,8 +19005,8 @@ var quarantine = (function (exports) {
               node1.ticksLeftInScoringState = 60;
               node2.ticksLeftInScoringState = 60;
           }))
-              .force("health", function () {
-              nodes.forEach(function (n) {
+              .force("health", () => {
+              nodes.forEach((n) => {
                   if (!isCreature(n) || !n.infected)
                       return;
                   if (!n.dead) {
@@ -19024,7 +19015,7 @@ var quarantine = (function (exports) {
                           n.dead = true;
                           n.ticksSinceDeath = 0;
                           n.health = 0;
-                          _this.score -= 200;
+                          this.score -= 200;
                       }
                   }
                   else {
@@ -19032,8 +19023,8 @@ var quarantine = (function (exports) {
                   }
               });
           })
-              .force("scoring-state", function () {
-              nodes.forEach(function (n) {
+              .force("scoring-state", () => {
+              nodes.forEach((n) => {
                   if (!isLiveCreature(n) || !n.scoring)
                       return;
                   n.ticksLeftInScoringState--;
@@ -19044,20 +19035,20 @@ var quarantine = (function (exports) {
                   }
               });
           })
-              .force("party-expiration", function () {
-              _this.parties.forEach(function (p) {
+              .force("party-expiration", () => {
+              this.parties.forEach((p) => {
                   p.age++;
               });
           })
-              .force("cursor", function () {
-              if (_this.toolbeltMode != "select-mode") {
-                  _this.canvas.style.cursor = "default";
+              .force("cursor", () => {
+              if (this.toolbeltMode != "select-mode") {
+                  this.canvas.style.cursor = "default";
               }
-              else if (_this.cursorNode.target != null) {
-                  _this.canvas.style.cursor = "pointer";
+              else if (this.cursorNode.target != null) {
+                  this.canvas.style.cursor = "pointer";
               }
               else {
-                  _this.canvas.style.cursor = "default";
+                  this.canvas.style.cursor = "default";
               }
           })
               .nodes(nodes)
@@ -19072,7 +19063,7 @@ var quarantine = (function (exports) {
               select(".num-nodes").text(this.nodes.length);
               // Print the average.
               if (this.recentCollisionForceRuntime.length > 0) {
-                  select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce(function (a, b) { return a + b; }) /
+                  select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
                       this.recentCollisionForceRuntime.length);
               }
               this.recentCollisionForceRuntime = [];
@@ -19083,13 +19074,13 @@ var quarantine = (function (exports) {
           }.bind(this), 1000);
       }
       // Print ticks per second for the last 20 seconds.
-      Game.prototype.logRecentTickCount = function () {
+      logRecentTickCount() {
           console.log(this.recentTicksPerSecond
               .slice(this.recentTicksPerSecondIndex)
               .concat(this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)));
-      };
-      Game.prototype.tick = function () {
-          var context = this.canvas.getContext("2d");
+      }
+      tick() {
+          const context = this.canvas.getContext("2d");
           this.numTicksSinceLastRecord += 1;
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
@@ -19104,9 +19095,9 @@ var quarantine = (function (exports) {
               context.fill();
           });
           // Draw nodes.
-          var scoringNodes = [];
-          var recentlyDeadNodes = [];
-          this.nodes.forEach(function (n) {
+          const scoringNodes = [];
+          const recentlyDeadNodes = [];
+          this.nodes.forEach((n) => {
               if (!isCreature(n))
                   return;
               if (n.dead) {
@@ -19133,10 +19124,9 @@ var quarantine = (function (exports) {
           context.lineWidth = 2 * this.WALL_HALF_WIDTH;
           function drawWall(wall, color) {
               context.beginPath();
-              var curve = curveLinear(context);
+              const curve = curveLinear(context);
               curve.lineStart();
-              for (var _i = 0, _a = wall.points; _i < _a.length; _i++) {
-                  var point = _a[_i];
+              for (const point of wall.points) {
                   curve.point(point.x, point.y);
               }
               if (wall.points.length === 1)
@@ -19145,8 +19135,7 @@ var quarantine = (function (exports) {
               context.strokeStyle = color;
               context.stroke();
           }
-          for (var _i = 0, _a = this.walls; _i < _a.length; _i++) {
-              var wall = _a[_i];
+          for (const wall of this.walls) {
               // We want to draw the selected wall on top, so skip it here.
               if (wall === this.selectedObject)
                   continue;
@@ -19157,10 +19146,9 @@ var quarantine = (function (exports) {
           }
           context.lineWidth = 1;
           // Draw recently dead nodes.
-          for (var _b = 0, recentlyDeadNodes_1 = recentlyDeadNodes; _b < recentlyDeadNodes_1.length; _b++) {
-              var n = recentlyDeadNodes_1[_b];
-              var t = n.ticksSinceDeath / 60;
-              var y = interpolateNumber(n.y, n.y - 15)(t);
+          for (const n of recentlyDeadNodes) {
+              const t = n.ticksSinceDeath / 60;
+              const y = interpolateNumber(n.y, n.y - 15)(t);
               context.globalAlpha = interpolateNumber(1, 0)(t);
               context.beginPath();
               context.moveTo(n.x + n.r, y);
@@ -19181,9 +19169,8 @@ var quarantine = (function (exports) {
           // Draw scoring nodes.
           context.shadowBlur = 80;
           context.shadowColor = "#009933";
-          for (var _c = 0, scoringNodes_1 = scoringNodes; _c < scoringNodes_1.length; _c++) {
-              var node = scoringNodes_1[_c];
-              var x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
+          for (const node of scoringNodes) {
+              const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
               context.beginPath();
               context.moveTo(x + node.r, node.y);
               context.arc(x, node.y, node.r, 0, 2 * Math.PI);
@@ -19204,7 +19191,7 @@ var quarantine = (function (exports) {
           context.shadowColor = undefined;
           // Print indicators when score increases.
           context.font = "bold 20px sans-serif";
-          this.tempScoreIndicators.forEach(function (indicator) {
+          this.tempScoreIndicators.forEach((indicator) => {
               context.fillStyle = indicator.color;
               context.fillText(indicator.text, indicator.x, indicator.y);
           });
@@ -19215,33 +19202,32 @@ var quarantine = (function (exports) {
           context.textAlign = "right";
           context.fillText(String(this.score), this.canvas.width - 10, 30);
           context.restore();
-      };
-      Game.prototype.togglePause = function () {
+      }
+      togglePause() {
           if (this.paused) {
               this.start();
           }
           else {
               this.stop();
           }
-      };
-      Game.prototype.start = function () {
+      }
+      start() {
           this.simulation.restart();
           this.paused = false;
-      };
-      Game.prototype.stop = function () {
+      }
+      stop() {
           this.simulation.stop();
           this.paused = true;
-      };
-      Game.prototype.deselectAll = function () {
+      }
+      deselectAll() {
           this.selectedObject = null;
           select(".delete-wall").style("display", "none");
-      };
-      return Game;
-  }());
+      }
+  }
   window.onload = function () {
       window.d3 = d3;
       window.game = new Game();
-      var game = window.game;
+      const game = window.game;
       // Pausing and restarting by keypress.
       select("body").on("keydown", function () {
           if (event.key == "p" || event.key == " ") {
@@ -19263,13 +19249,13 @@ var quarantine = (function (exports) {
           .on("start", dragStarted)
           .on("drag", dragDragged)
           .on("end", dragEnded))
-          .on("mousemove", function () {
+          .on("mousemove", () => {
           if (game.toolbeltMode != "select-mode")
               return;
           // Apparently we have to correct for the canvas position in order to get
           // the correct mouse position. I'm not sure why this correct is not needed
           // for the drag use cases below.
-          var rect = game.canvas.getBoundingClientRect();
+          const rect = game.canvas.getBoundingClientRect();
           game.cursorNode.setLocation(event.x - rect.left, event.y - rect.top);
       });
       selectAll("[name=toolbelt]").on("click", function () {
@@ -19279,25 +19265,20 @@ var quarantine = (function (exports) {
           }
       });
       select(".delete-wall").on("click", function () {
-          // TODO: represent game.walls and game.nodes as Sets perhaps to make this less crappy.
+          if (!(game.selectedObject instanceof Wall))
+              return;
           // Delete selected wall.
-          var i = -1;
-          for (i = 0; i < game.walls.length; i++) {
-              if (game.walls[i] === game.selectedObject) {
-                  break;
-              }
-          }
-          if (i >= 0)
-              game.walls.splice(i, 1);
+          game.walls.delete(game.selectedObject);
           // Delete wall components from game.nodes.
-          var numNodesToRemove = 0;
+          // TODO: represent game.nodes as a Set perhaps to make this less crappy.
+          let numNodesToRemove = 0;
           function swap(arr, a, b) {
-              var temp = arr[a];
+              const temp = arr[a];
               arr[a] = arr[b];
               arr[b] = temp;
           }
-          for (i = 0; i < game.nodes.length; i++) {
-              var n = void 0;
+          for (let i = 0; i < game.nodes.length; i++) {
+              let n;
               while (isWallComponent((n = game.nodes[i])) &&
                   n.wall === game.selectedObject &&
                   i + numNodesToRemove < game.nodes.length) {
@@ -19313,16 +19294,16 @@ var quarantine = (function (exports) {
       });
       function dragSubject() {
           if (game.toolbeltMode == "wall-mode") {
-              var wall = new Wall();
+              const wall = new Wall();
               wall.points = [{ x: event.x, y: event.y }];
               wall.state = WallState.PROVISIONAL;
-              game.walls.push(wall);
+              game.walls.add(wall);
               return wall;
           }
           else if (game.toolbeltMode == "select-mode") {
               if (isWallComponent(game.cursorNode.target)) {
                   game.selectedObject = game.cursorNode.target.wall;
-                  var s = select(".delete-wall");
+                  const s = select(".delete-wall");
                   s.style("display", "inline");
                   s.style("left", event.x + "px");
                   s.style("top", event.y + "px");
@@ -19336,7 +19317,7 @@ var quarantine = (function (exports) {
               return game.selectedObject;
           }
           else if (game.toolbeltMode == "party-mode") {
-              var party = new Party(event.x, event.y);
+              const party = new Party(event.x, event.y);
               game.parties.push(party);
               game.nodes.push(party);
               game.simulation.nodes(game.nodes);
@@ -19358,7 +19339,7 @@ var quarantine = (function (exports) {
               event.subject.fy = event.y;
           }
           else if (game.toolbeltMode == "wall-mode") {
-              var points = event.subject.points;
+              const points = event.subject.points;
               if (squaredDistance(event, points[points.length - 1]) >
                   5 * game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH) {
                   points.push({ x: event.x, y: event.y });
@@ -19371,12 +19352,12 @@ var quarantine = (function (exports) {
               event.subject.fy = null;
           }
           else if (game.toolbeltMode == "wall-mode") {
-              for (var i = 0; i < event.subject.points.length; i++) {
-                  var point = event.subject.points[i];
+              for (let i = 0; i < event.subject.points.length; i++) {
+                  const point = event.subject.points[i];
                   game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH, event.subject));
                   if (i == 0)
                       continue;
-                  var prevPoint = event.subject.points[i - 1];
+                  const prevPoint = event.subject.points[i - 1];
                   game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH, event.subject));
               }
               game.simulation.nodes(game.nodes);

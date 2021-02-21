@@ -48,7 +48,7 @@ export class Game {
   paused = false;
   toolbeltMode = "select-mode";
 
-  walls: Array<Wall> = [];
+  walls: Set<Wall> = new Set();
   parties: Array<Party> = [];
 
   selectedObject: Selectable = null;
@@ -447,25 +447,20 @@ window.onload = function () {
   );
 
   d3.select(".delete-wall").on("click", function () {
-    // TODO: represent game.walls and game.nodes as Sets perhaps to make this less crappy.
+    if (!(game.selectedObject instanceof Wall)) return;
 
     // Delete selected wall.
-    let i = -1;
-    for (i = 0; i < game.walls.length; i++) {
-      if (game.walls[i] === game.selectedObject) {
-        break;
-      }
-    }
-    if (i >= 0) game.walls.splice(i, 1);
+    game.walls.delete(game.selectedObject);
 
     // Delete wall components from game.nodes.
+    // TODO: represent game.nodes as a Set perhaps to make this less crappy.
     let numNodesToRemove = 0;
     function swap(arr, a: number, b: number): void {
       const temp = arr[a];
       arr[a] = arr[b];
       arr[b] = temp;
     }
-    for (i = 0; i < game.nodes.length; i++) {
+    for (let i = 0; i < game.nodes.length; i++) {
       let n: SNode;
       while (
         isWallComponent((n = game.nodes[i])) &&
@@ -489,7 +484,7 @@ window.onload = function () {
       const wall = new Wall();
       wall.points = [{ x: d3.event.x, y: d3.event.y }];
       wall.state = WallState.PROVISIONAL;
-      game.walls.push(wall);
+      game.walls.add(wall);
       return wall;
     } else if (game.toolbeltMode == "select-mode") {
       if (isWallComponent(game.cursorNode.target)) {
