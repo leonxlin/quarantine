@@ -32,6 +32,8 @@ in the top-level directory and visit `localhost:8000`.
   - delete expired parties
   - make game.nodes a Set perhaps
   - factor out toolbelt mode to avoid conditional logic in dragStarted etc.
+  - redo pathing and collision handling
+    - try using potential function
 
 - next features
   - make interaction bonuses more visually obvious
