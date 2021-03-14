@@ -1,7 +1,6 @@
 canvas {
-  width: 900px;
-  height: 600px;
-  border: 1px solid black;
+  width: 100%;
+  height: 100%;
 }
 
 circle {
@@ -11,16 +10,22 @@ circle {
 body {
   display: flex;
   flex-direction: column;
+  margin: 8px;
 }
 
 .game {
-  width: 970px;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: row;
+  justify-content: center;
 }
 
 .left-panel {
   position: relative;
+  width: 900px;
+  height: 600px;
+  outline: 1px solid black;
 }
 
 .right-panel {

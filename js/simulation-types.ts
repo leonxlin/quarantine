@@ -94,11 +94,11 @@ export class Creature implements SNode {
   }
 }
 
-export function isCreature(n: SNode): n is Creature {
+export function isCreature(n: unknown): n is Creature {
   return n instanceof Creature;
 }
 
-export function isLiveCreature(n: SNode): n is Creature {
+export function isLiveCreature(n: unknown): n is Creature {
   return isCreature(n) && !n.dead;
 }
 

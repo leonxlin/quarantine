@@ -18936,20 +18936,23 @@ var quarantine = (function (exports) {
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
+          this.CANVAS_ASPECT_RATIO = 3 / 2;
           this.tempScoreIndicators = new Set();
+          this.fitCanvas();
           this.canvas = document.querySelector("canvas");
-          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.canvas.width, // x
-          Math.random() * this.canvas.height // y
+          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.width, // x
+          Math.random() * this.height // y
           ));
           this.nodes[0].infected = true;
           this.cursorNode = new CursorNode();
           this.nodes.push(this.cursorNode);
           const nodes = this.nodes;
-          const canvas = this.canvas;
+          const width = this.width;
+          const height = this.height;
           this.simulation = simulation()
               .velocityDecay(0.2)
-              .force("agent", function (alpha) {
-              nodes.forEach(function (n) {
+              .force("agent", (alpha) => {
+              nodes.forEach((n) => {
                   if (!isLiveCreature(n))
                       return;
                   let stuck = false;
@@ -18959,8 +18962,8 @@ var quarantine = (function (exports) {
                   }
                   if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
                       n.goal = {
-                          x: Math.random() * canvas.width,
-                          y: Math.random() * canvas.height,
+                          x: Math.random() * width,
+                          y: Math.random() * height,
                       };
                   }
                   const len = Math.sqrt(squaredDistance(n, n.goal));
@@ -19075,6 +19078,37 @@ var quarantine = (function (exports) {
               this.numTicksSinceLastRecord = 0;
           }.bind(this), 1000);
       }
+      fitCanvas() {
+          const canvas = document.querySelector("canvas");
+          const left_panel = document.querySelector(".left-panel");
+          const right_panel = document.querySelector(".right-panel");
+          const body = document.querySelector("body");
+          const available_width = body.clientWidth - right_panel.offsetWidth;
+          const available_height = window.innerHeight - 2 * body.getBoundingClientRect().top;
+          canvas.width = this.width = Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO);
+          canvas.style.width = left_panel.style.width = this.width + "px";
+          canvas.height = this.height = Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO);
+          canvas.style.height = left_panel.style.height = this.height + "px";
+          canvas.width = this.width = 900;
+          canvas.height = this.height = 600;
+          this.canvasClientScaleFactor = this.height / canvas.clientHeight;
+      }
+      // The following functions convert the coordinates from mouse events to canvas
+      // coordinates. Note that d3-drag will already do the shifting for you. Thus when
+      // working with coords from d3-drag, only the scaling is needed.
+      shiftAndScaleMouseCoordsToCanvasCoords(p) {
+          const rect = this.canvas.getBoundingClientRect();
+          return {
+              x: (p.x - rect.left) * this.canvasClientScaleFactor,
+              y: (p.y - rect.top) * this.canvasClientScaleFactor,
+          };
+      }
+      scaleMouseCoordsToCanvasCoords(p) {
+          return {
+              x: p.x * this.canvasClientScaleFactor,
+              y: p.y * this.canvasClientScaleFactor,
+          };
+      }
       // Print ticks per second for the last 20 seconds.
       logRecentTickCount() {
           console.log(this.recentTicksPerSecond
@@ -19084,7 +19118,7 @@ var quarantine = (function (exports) {
       tick() {
           const context = this.canvas.getContext("2d");
           this.numTicksSinceLastRecord += 1;
-          context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          context.clearRect(0, 0, this.width, this.height);
           context.save();
           // Draw parties.
           this.parties.forEach(function (d) {
@@ -19250,15 +19284,15 @@ var quarantine = (function (exports) {
           .subject(dragSubject)
           .on("start", dragStarted)
           .on("drag", dragDragged)
-          .on("end", dragEnded))
+          .on("end", dragEnded)
+          .container(function () {
+          return this;
+      }))
           .on("mousemove", () => {
           if (game.toolbeltMode != "select-mode")
               return;
-          // Apparently we have to correct for the canvas position in order to get
-          // the correct mouse position. I'm not sure why this correct is not needed
-          // for the drag use cases below.
-          const rect = game.canvas.getBoundingClientRect();
-          game.cursorNode.setLocation(event.x - rect.left, event.y - rect.top);
+          const p = game.shiftAndScaleMouseCoordsToCanvasCoords(event);
+          game.cursorNode.setLocation(p.x, p.y);
       });
       selectAll("[name=toolbelt]").on("click", function () {
           game.toolbeltMode = this.value;
@@ -19295,9 +19329,10 @@ var quarantine = (function (exports) {
           game.deselectAll();
       });
       function dragSubject() {
+          const p = game.scaleMouseCoordsToCanvasCoords(event);
           if (game.toolbeltMode == "wall-mode") {
               const wall = new Wall();
-              wall.points = [{ x: event.x, y: event.y }];
+              wall.points = [p];
               wall.state = WallState.PROVISIONAL;
               game.walls.add(wall);
               return wall;
@@ -19312,14 +19347,22 @@ var quarantine = (function (exports) {
               }
               else if (isLiveCreature(game.cursorNode.target)) {
                   game.selectedObject = game.cursorNode.target;
+                  // Hack: return an empty object without x or y properties. This is the only way
+                  // I've found to make d3-drag's event object have usable x and y coordinates. Somehow
+                  // using different coords for the canvas makes things very confusing.
+                  // TODO: revisit
+                  return {};
               }
               else {
                   game.deselectAll();
               }
+              // Note: for walls, this returns an object without `x` or `y` properties, which is
+              // not how d3.subject is meant to be used. But it works for now.
+              // TODO: revisit
               return game.selectedObject;
           }
           else if (game.toolbeltMode == "party-mode") {
-              const party = new Party(event.x, event.y);
+              const party = new Party(p.x, p.y);
               game.parties.push(party);
               game.nodes.push(party);
               game.simulation.nodes(game.nodes);
@@ -19328,30 +19371,38 @@ var quarantine = (function (exports) {
       }
       function dragStarted() {
           if (game.toolbeltMode == "select-mode") {
-              if (isLiveCreature(event.subject)) {
-                  event.subject.fx = event.subject.x;
-                  event.subject.fy = event.subject.y;
-                  game.selectedObject = event.subject;
+              if (isLiveCreature(game.selectedObject)) {
+                  // Manipulating game.selectedObject instead of `d3.event.subject` because I had trouble
+                  // getting the coords to be right in d3.event when using `d3.event.subject`.
+                  // See notes in dragSubject.
+                  game.selectedObject.fx = game.selectedObject.x;
+                  game.selectedObject.fy = game.selectedObject.y;
               }
           }
       }
       function dragDragged() {
+          const p = game.scaleMouseCoordsToCanvasCoords(event);
           if (game.toolbeltMode == "select-mode") {
-              event.subject.fx = event.x;
-              event.subject.fy = event.y;
+              if (isCreature(game.selectedObject)) {
+                  game.selectedObject.fx = p.x;
+                  game.selectedObject.fy = p.y;
+              }
           }
           else if (game.toolbeltMode == "wall-mode") {
               const points = event.subject.points;
-              if (squaredDistance(event, points[points.length - 1]) >
+              if (squaredDistance(p, points[points.length - 1]) >
                   5 * game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH) {
-                  points.push({ x: event.x, y: event.y });
+                  points.push({ x: p.x, y: p.y });
               }
           }
       }
       function dragEnded() {
           if (game.toolbeltMode == "select-mode") {
-              event.subject.fx = null;
-              event.subject.fy = null;
+              if (isLiveCreature(game.selectedObject)) {
+                  game.selectedObject.fx = null;
+                  game.selectedObject.fy = null;
+                  game.selectedObject = null;
+              }
           }
           else if (game.toolbeltMode == "wall-mode") {
               for (let i = 0; i < event.subject.points.length; i++) {
