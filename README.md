@@ -1,5 +1,7 @@
 # quarantine
 
+THIS IS THE POTENTIAL BRANCH.
+
 A game. WIP.
 
 To play, run
@@ -34,8 +36,11 @@ in the top-level directory and visit `localhost:8000`.
   - factor out toolbelt mode to avoid conditional logic in dragStarted etc.
   - redo pathing and collision handling
     - try using potential function
+    - insight: we don't actually want to use "forces" that affect acceleration; we want directly 
 
 - next features
   - make interaction bonuses more visually obvious
   - level modes
   - try path planning with a potential function
+
+
