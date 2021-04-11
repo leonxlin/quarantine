@@ -18794,7 +18794,9 @@ var quarantine = (function (exports) {
       }
   }
   function collidePotential(overlap) {
-      return (100 * Math.max(0, overlap) + Math.max(Math.min(overlap + 3, 3), 0) * 10);
+      if (overlap > 0)
+          return 2 * overlap * overlap;
+      return 0;
   }
   function computeOverlap(p1, p2, rSum) {
       return rSum - Math.sqrt(squaredDistance(p1, p2));

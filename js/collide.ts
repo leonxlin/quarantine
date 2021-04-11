@@ -113,9 +113,8 @@ export function collisionInteraction(
 }
 
 function collidePotential(overlap: number): number {
-  return (
-    100 * Math.max(0, overlap) + Math.max(Math.min(overlap + 3, 3), 0) * 10
-  );
+  if (overlap > 0) return 2 * overlap * overlap;
+  return 0;
 }
 
 function computeOverlap(p1: Point, p2: Point, rSum: number): number {
