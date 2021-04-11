@@ -7,7 +7,9 @@
     // "noImplicitAny": true,
     // "noImplicitReturns": true,
     "allowJs": false,
-    "noUnusedLocals": true
+    "noUnusedLocals": true,
+    // I don't think the following is really necessary, but ts-jest keeps recommending it.
+    "esModuleInterop": true
   },
   "include": ["js"], // path name
   "exclude": ["node_modules"]
