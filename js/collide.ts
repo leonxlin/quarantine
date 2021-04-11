@@ -43,16 +43,14 @@ import {
   isCursorNode,
   isImpassableSegment,
   isLiveCreature,
+  squaredDistance,
+  Point,
 } from "./simulation-types.js";
 
 function constant(x) {
   return function () {
     return x;
   };
-}
-
-function jiggle() {
-  return (Math.random() - 0.5) * 1e-6;
 }
 
 function x(d) {
@@ -64,7 +62,16 @@ function y(d) {
 }
 
 // Handles collision between two nodes.
-// TODO: document arguments.
+
+// TODO: make the arguments better.
+//
+// x is the delta x (node1 - node2)
+// y is the delta y (node1 - node2)
+// l is the squared distance between node1 and node2
+// r is the sum of the radii of node1 and node2
+// ri2 is the square of node1's radius
+// rj is the radius of node2
+// strength is 1
 export function collisionInteraction(
   node1: SNode,
   node2: SNode,
@@ -105,6 +112,16 @@ export function collisionInteraction(
   }
 }
 
+function collidePotential(overlap: number): number {
+  return (
+    100 * Math.max(0, overlap) + Math.max(Math.min(overlap + 3, 3), 0) * 10
+  );
+}
+
+function computeOverlap(p1: Point, p2: Point, rSum: number): number {
+  return rSum - Math.sqrt(squaredDistance(p1, p2));
+}
+
 // Handles collision between two circles.
 // TODO: document arguments.
 function circleCircleCollisionInteraction(
@@ -118,13 +135,31 @@ function circleCircleCollisionInteraction(
   rj: number,
   strength: number
 ): void {
-  if (x === 0) (x = jiggle()), (l += x * x);
-  if (y === 0) (y = jiggle()), (l += y * y);
-  l = ((r - (l = Math.sqrt(l))) / l) * strength;
-  node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-  node1.vy += (y *= l) * r;
-  node2.vx -= x * (r = 1 - r);
-  node2.vy -= y * r;
+  if (!isLiveCreature(node1) || !isLiveCreature(node2)) return;
+
+  let dp = collidePotential(
+    computeOverlap({ x: node1.x + 1, y: node1.y }, node2, r)
+  );
+  node1.potentialXHi += dp;
+  node2.potentialXLo += dp;
+
+  dp = collidePotential(
+    computeOverlap({ x: node1.x - 1, y: node1.y }, node2, r)
+  );
+  node1.potentialXLo += dp;
+  node2.potentialXHi += dp;
+
+  dp = collidePotential(
+    computeOverlap({ x: node1.x, y: node1.y + 1 }, node2, r)
+  );
+  node1.potentialYHi += dp;
+  node2.potentialYLo += dp;
+
+  dp = collidePotential(
+    computeOverlap({ x: node1.x, y: node1.y - 1 }, node2, r)
+  );
+  node1.potentialYLo += dp;
+  node2.potentialYHi += dp;
 }
 
 // Handles collision between a circle and line segment with a certain width.
@@ -199,8 +234,8 @@ export default function (radius: (SNode) => number): SForceCollide {
 
     function apply(quad, x0, y0, x1, y1) {
       const data = quad.data,
-        rj = quad.r,
-        r = ri + rj;
+        rj = quad.r;
+      let r = ri + rj;
       if (data) {
         // Only process pairs of creatures with the smaller index first.
         // Non-creature |data| nodes should always be processed since |node|
@@ -214,7 +249,7 @@ export default function (radius: (SNode) => number): SForceCollide {
           const x = xi - data.x - data.vx,
             y = yi - data.y - data.vy,
             l = x * x + y * y;
-          if (l < r * r) {
+          if (l < r * r + 2) {
             // Execute registered interactions for (node, data).
             interactions.forEach(function (interaction) {
               interaction(node, data, x, y, l, r, ri2, rj, strength);
@@ -224,6 +259,7 @@ export default function (radius: (SNode) => number): SForceCollide {
         return;
       }
 
+      r += 2;
       // Return true if there is no need to visit the children of `quad`.
       return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
     }

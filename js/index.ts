@@ -15,6 +15,8 @@ import {
   isCreature,
   isLiveCreature,
   squaredDistance,
+  // normalize,
+  clipLength,
 } from "./simulation-types.js";
 import collideForce from "./collide.js";
 import { collisionInteraction } from "./collide.js";
@@ -135,6 +137,8 @@ export class Game {
         nodes.forEach((n: SNode) => {
           if (!isLiveCreature(n)) return;
 
+          n.potentialXHi = n.potentialXLo = n.potentialYHi = n.potentialYLo = 0;
+
           let stuck = false;
           if (Math.random() < 0.05) {
             stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
@@ -147,9 +151,15 @@ export class Game {
               y: Math.random() * height,
             };
           }
-          const len = Math.sqrt(squaredDistance(n, n.goal));
-          n.vx += (alpha * (n.goal.x - n.x)) / len;
-          n.vy += (alpha * (n.goal.y - n.y)) / len;
+
+          function goalPotential(goal: Point, p: Point): number {
+            return Math.sqrt(squaredDistance(goal, p));
+          }
+
+          n.potentialXHi += goalPotential(n.goal, { x: n.x + 1, y: n.y });
+          n.potentialXLo += goalPotential(n.goal, { x: n.x - 1, y: n.y });
+          n.potentialYHi += goalPotential(n.goal, { x: n.x, y: n.y + 1 });
+          n.potentialYLo += goalPotential(n.goal, { x: n.x, y: n.y - 1 });
         });
       })
       .force(
@@ -198,6 +208,19 @@ export class Game {
             node2.ticksLeftInScoringState = 60;
           })
       )
+      .force("movement", () => {
+        nodes.forEach((n) => {
+          if (!isLiveCreature(n)) return;
+          const velocity = {
+            x: n.potentialXLo - n.potentialXHi,
+            y: n.potentialYLo - n.potentialYHi,
+          };
+          // normalize(velocity);
+          clipLength(velocity, 20);
+          n.prevVx = n.vx = velocity.x + n.prevVx * 0.3;
+          n.prevVy = n.vy = velocity.y + n.prevVy * 0.3;
+        });
+      })
       .force("health", () => {
         nodes.forEach((n) => {
           if (!isCreature(n) || !n.infected) return;

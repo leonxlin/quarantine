@@ -18638,6 +18638,14 @@ var quarantine = (function (exports) {
       const dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
+  function clipLength(p, maxLength) {
+      const length = p.x * p.x + p.y * p.y;
+      if (length > maxLength) {
+          const a = maxLength / length;
+          p.x *= a;
+          p.y *= a;
+      }
+  }
   class CursorNode {
       constructor() {
           this.r = 4;
@@ -18670,6 +18678,8 @@ var quarantine = (function (exports) {
           this.scoring = false;
           this.scoringPartner = null;
           this.ticksLeftInScoringState = 0;
+          this.potentialXHi = this.potentialXLo = this.potentialYHi = this.potentialYLo = 0;
+          this.prevVx = this.prevVy = 0;
       }
   }
   function isCreature(n) {
@@ -18744,9 +18754,6 @@ var quarantine = (function (exports) {
           return x;
       };
   }
-  function jiggle$1() {
-      return (Math.random() - 0.5) * 1e-6;
-  }
   function x$5(d) {
       return d.x + d.vx;
   }
@@ -18754,11 +18761,19 @@ var quarantine = (function (exports) {
       return d.y + d.vy;
   }
   // Handles collision between two nodes.
-  // TODO: document arguments.
+  // TODO: make the arguments better.
+  //
+  // x is the delta x (node1 - node2)
+  // y is the delta y (node1 - node2)
+  // l is the squared distance between node1 and node2
+  // r is the sum of the radii of node1 and node2
+  // ri2 is the square of node1's radius
+  // rj is the radius of node2
+  // strength is 1
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
       if (isImpassableCircle(node1)) {
           if (isImpassableCircle(node2)) {
-              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength);
+              circleCircleCollisionInteraction(node1, node2, x, y, l, r);
           }
           else if (isImpassableSegment(node2)) {
               circleLineCollisionInteraction(node1, node2);
@@ -18778,18 +18793,29 @@ var quarantine = (function (exports) {
           }
       }
   }
+  function collidePotential(overlap) {
+      return (100 * Math.max(0, overlap) + Math.max(Math.min(overlap + 3, 3), 0) * 10);
+  }
+  function computeOverlap(p1, p2, rSum) {
+      return rSum - Math.sqrt(squaredDistance(p1, p2));
+  }
   // Handles collision between two circles.
   // TODO: document arguments.
   function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
-      if (x === 0)
-          (x = jiggle$1()), (l += x * x);
-      if (y === 0)
-          (y = jiggle$1()), (l += y * y);
-      l = ((r - (l = Math.sqrt(l))) / l) * strength;
-      node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-      node1.vy += (y *= l) * r;
-      node2.vx -= x * (r = 1 - r);
-      node2.vy -= y * r;
+      if (!isLiveCreature(node1) || !isLiveCreature(node2))
+          return;
+      let dp = collidePotential(computeOverlap({ x: node1.x + 1, y: node1.y }, node2, r));
+      node1.potentialXHi += dp;
+      node2.potentialXLo += dp;
+      dp = collidePotential(computeOverlap({ x: node1.x - 1, y: node1.y }, node2, r));
+      node1.potentialXLo += dp;
+      node2.potentialXHi += dp;
+      dp = collidePotential(computeOverlap({ x: node1.x, y: node1.y + 1 }, node2, r));
+      node1.potentialYHi += dp;
+      node2.potentialYLo += dp;
+      dp = collidePotential(computeOverlap({ x: node1.x, y: node1.y - 1 }, node2, r));
+      node1.potentialYLo += dp;
+      node2.potentialYHi += dp;
   }
   // Handles collision between a circle and line segment with a certain width.
   // The segment is assumed to be immovable.
@@ -18845,7 +18871,8 @@ var quarantine = (function (exports) {
               }
           }
           function apply(quad, x0, y0, x1, y1) {
-              const data = quad.data, rj = quad.r, r = ri + rj;
+              const data = quad.data, rj = quad.r;
+              let r = ri + rj;
               if (data) {
                   // Only process pairs of creatures with the smaller index first.
                   // Non-creature |data| nodes should always be processed since |node|
@@ -18856,7 +18883,7 @@ var quarantine = (function (exports) {
                       data.index > node.index ||
                       isCursorNode(node)) {
                       const x = xi - data.x - data.vx, y = yi - data.y - data.vy, l = x * x + y * y;
-                      if (l < r * r) {
+                      if (l < r * r + 2) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
                               interaction(node, data, x, y, l, r, ri2, rj, strength);
@@ -18865,6 +18892,7 @@ var quarantine = (function (exports) {
                   }
                   return;
               }
+              r += 2;
               // Return true if there is no need to visit the children of `quad`.
               return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
           }
@@ -18955,6 +18983,7 @@ var quarantine = (function (exports) {
               nodes.forEach((n) => {
                   if (!isLiveCreature(n))
                       return;
+                  n.potentialXHi = n.potentialXLo = n.potentialYHi = n.potentialYLo = 0;
                   let stuck = false;
                   if (Math.random() < 0.05) {
                       stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
@@ -18966,9 +18995,13 @@ var quarantine = (function (exports) {
                           y: Math.random() * height,
                       };
                   }
-                  const len = Math.sqrt(squaredDistance(n, n.goal));
-                  n.vx += (alpha * (n.goal.x - n.x)) / len;
-                  n.vy += (alpha * (n.goal.y - n.y)) / len;
+                  function goalPotential(goal, p) {
+                      return Math.sqrt(squaredDistance(goal, p));
+                  }
+                  n.potentialXHi += goalPotential(n.goal, { x: n.x + 1, y: n.y });
+                  n.potentialXLo += goalPotential(n.goal, { x: n.x - 1, y: n.y });
+                  n.potentialYHi += goalPotential(n.goal, { x: n.x, y: n.y + 1 });
+                  n.potentialYLo += goalPotential(n.goal, { x: n.x, y: n.y - 1 });
               });
           })
               .force("interaction", collideForce(
@@ -19010,6 +19043,20 @@ var quarantine = (function (exports) {
               node1.ticksLeftInScoringState = 60;
               node2.ticksLeftInScoringState = 60;
           }))
+              .force("movement", () => {
+              nodes.forEach((n) => {
+                  if (!isLiveCreature(n))
+                      return;
+                  const velocity = {
+                      x: n.potentialXLo - n.potentialXHi,
+                      y: n.potentialYLo - n.potentialYHi,
+                  };
+                  // normalize(velocity);
+                  clipLength(velocity, 20);
+                  n.prevVx = n.vx = velocity.x + n.prevVx * 0.3;
+                  n.prevVy = n.vy = velocity.y + n.prevVy * 0.3;
+              });
+          })
               .force("health", () => {
               nodes.forEach((n) => {
                   if (!isCreature(n) || !n.infected)

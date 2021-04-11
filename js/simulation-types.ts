@@ -6,6 +6,23 @@ export function squaredDistance(p1: Point, p2: Point): number {
   return dx * dx + dy * dy;
 }
 
+export function normalize(p: Point): void {
+  const length = Math.sqrt(p.x * p.x + p.y * p.y);
+  if (length > 0) {
+    p.x /= length;
+    p.y /= length;
+  }
+}
+
+export function clipLength(p: Point, maxLength: number): void {
+  const length = p.x * p.x + p.y * p.y;
+  if (length > maxLength) {
+    const a = maxLength / length;
+    p.x *= a;
+    p.y *= a;
+  }
+}
+
 export interface SNode extends d3.SimulationNodeDatum {
   r: number;
 }
@@ -73,6 +90,14 @@ export class Creature implements SNode {
   dead: boolean;
   ticksSinceDeath?: number;
 
+  prevVx?: number;
+  prevVy?: number;
+
+  potentialYLo: number;
+  potentialYHi: number;
+  potentialXLo: number;
+  potentialXHi: number;
+
   // Whether the creature is currently in a scoring "state".
   scoring: boolean;
   scoringPartner: SNode | null;
@@ -91,6 +116,10 @@ export class Creature implements SNode {
     this.scoring = false;
     this.scoringPartner = null;
     this.ticksLeftInScoringState = 0;
+
+    this.potentialXHi = this.potentialXLo = this.potentialYHi = this.potentialYLo = 0;
+
+    this.prevVx = this.prevVy = 0;
   }
 }
 
