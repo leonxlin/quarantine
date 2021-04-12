@@ -44,7 +44,7 @@ import {
   isImpassableSegment,
   isLiveCreature,
 } from "./simulation-types";
-import { distanceDual } from "./geometry";
+import { distanceDual, distanceToSegmentDual } from "./geometry";
 import * as ad from "./ad";
 
 function constant(x) {
@@ -143,6 +143,7 @@ function circleLineCollisionInteraction(
   // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
   const WALL_HALF_WIDTH = 5;
 
+  // TODO: move this to a helper function.
   const a = segmentNode.vec.x,
     b = segmentNode.vec.y;
   const nx = circleNode.x - segmentNode.left.x,
@@ -151,23 +152,20 @@ function circleLineCollisionInteraction(
   // If creature is off to the "side" of the segment, we ignore.
   if (nxpc < 0 || nxpc > segmentNode.length2) return;
 
-  const nyp = (a * ny - b * nx) / segmentNode.length;
+  const discrepancy = ad.subtract(
+    WALL_HALF_WIDTH + circleNode.r,
+    distanceToSegmentDual(circleNode, segmentNode)
+  );
 
-  // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-  const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
-  if (discrepancy <= 0) return;
-
+  if (ad.val(discrepancy) <= 0) return;
   if (isCursorNode(circleNode)) {
     circleNode.reportPotentialTarget(segmentNode, 0);
     return;
   }
 
-  const sign = nyp > 0 ? 1 : -1;
-  // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-  const commonFactor =
-    ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
-  circleNode.vx += -b * commonFactor;
-  circleNode.vy += a * commonFactor;
+  const potential = ad.mult(ad.square(discrepancy), 0.2);
+  circleNode.vx -= ad.ddx(potential);
+  circleNode.vy -= ad.ddy(potential);
 }
 
 // Returns the collide force.

@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import { Point, squaredDistance } from "./geometry";
+import { Point, squaredDistance, Segment } from "./geometry";
 
 export interface SNode extends d3.SimulationNodeDatum {
   r: number;
@@ -140,7 +140,7 @@ export function isImpassableSegment(n: SNode): n is SegmentNode {
 }
 
 // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
-export class SegmentNode implements SNode, WallComponent {
+export class SegmentNode implements SNode, WallComponent, Segment {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;

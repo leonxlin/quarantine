@@ -7633,7 +7633,7 @@ var quarantine = (function (exports) {
   var degrees = 180 / pi$1;
   var radians = pi$1 / 180;
 
-  var abs$1 = Math.abs;
+  var abs$2 = Math.abs;
   var atan = Math.atan;
   var atan2$1 = Math.atan2;
   var cos$1 = Math.cos;
@@ -7884,7 +7884,7 @@ var quarantine = (function (exports) {
           sign = delta > 0 ? 1 : -1,
           lambdai = inflection[0] * degrees * sign,
           phii,
-          antimeridian = abs$1(delta) > 180;
+          antimeridian = abs$2(delta) > 180;
       if (antimeridian ^ (sign * lambda2 < lambdai && lambdai < sign * lambda)) {
         phii = inflection[1] * degrees;
         if (phii > phi1) phi1 = phii;
@@ -7934,7 +7934,7 @@ var quarantine = (function (exports) {
   function boundsRingPoint(lambda, phi) {
     if (p0) {
       var delta = lambda - lambda2;
-      deltaSum.add(abs$1(delta) > 180 ? delta + (delta > 0 ? 360 : -360) : delta);
+      deltaSum.add(abs$2(delta) > 180 ? delta + (delta > 0 ? 360 : -360) : delta);
     } else {
       lambda00$1 = lambda, phi00$1 = phi;
     }
@@ -7949,7 +7949,7 @@ var quarantine = (function (exports) {
   function boundsRingEnd() {
     boundsRingPoint(lambda00$1, phi00$1);
     areaStream$1.lineEnd();
-    if (abs$1(deltaSum) > epsilon$2) lambda0$1 = -(lambda1 = 180);
+    if (abs$2(deltaSum) > epsilon$2) lambda0$1 = -(lambda1 = 180);
     range[0] = lambda0$1, range[1] = lambda1;
     p0 = null;
   }
@@ -8163,7 +8163,7 @@ var quarantine = (function (exports) {
   }
 
   function rotationIdentity(lambda, phi) {
-    return [abs$1(lambda) > pi$1 ? lambda + Math.round(-lambda / tau$1) * tau$1 : lambda, phi];
+    return [abs$2(lambda) > pi$1 ? lambda + Math.round(-lambda / tau$1) * tau$1 : lambda, phi];
   }
 
   rotationIdentity.invert = rotationIdentity;
@@ -8328,7 +8328,7 @@ var quarantine = (function (exports) {
   }
 
   function pointEqual(a, b) {
-    return abs$1(a[0] - b[0]) < epsilon$2 && abs$1(a[1] - b[1]) < epsilon$2;
+    return abs$2(a[0] - b[0]) < epsilon$2 && abs$2(a[1] - b[1]) < epsilon$2;
   }
 
   function Intersection(point, points, other, entry) {
@@ -8435,10 +8435,10 @@ var quarantine = (function (exports) {
   var sum$1 = adder();
 
   function longitude(point) {
-    if (abs$1(point[0]) <= pi$1)
+    if (abs$2(point[0]) <= pi$1)
       return point[0];
     else
-      return sign$1(point[0]) * ((abs$1(point[0]) + pi$1) % tau$1 - pi$1);
+      return sign$1(point[0]) * ((abs$2(point[0]) + pi$1) % tau$1 - pi$1);
   }
 
   function polygonContains(polygon, point) {
@@ -8657,8 +8657,8 @@ var quarantine = (function (exports) {
       },
       point: function(lambda1, phi1) {
         var sign1 = lambda1 > 0 ? pi$1 : -pi$1,
-            delta = abs$1(lambda1 - lambda0);
-        if (abs$1(delta - pi$1) < epsilon$2) { // line crosses a pole
+            delta = abs$2(lambda1 - lambda0);
+        if (abs$2(delta - pi$1) < epsilon$2) { // line crosses a pole
           stream.point(lambda0, phi0 = (phi0 + phi1) / 2 > 0 ? halfPi$1 : -halfPi$1);
           stream.point(sign0, phi0);
           stream.lineEnd();
@@ -8667,8 +8667,8 @@ var quarantine = (function (exports) {
           stream.point(lambda1, phi0);
           clean = 0;
         } else if (sign0 !== sign1 && delta >= pi$1) { // line crosses antimeridian
-          if (abs$1(lambda0 - sign0) < epsilon$2) lambda0 -= sign0 * epsilon$2; // handle degeneracies
-          if (abs$1(lambda1 - sign1) < epsilon$2) lambda1 -= sign1 * epsilon$2;
+          if (abs$2(lambda0 - sign0) < epsilon$2) lambda0 -= sign0 * epsilon$2; // handle degeneracies
+          if (abs$2(lambda1 - sign1) < epsilon$2) lambda1 -= sign1 * epsilon$2;
           phi0 = clipAntimeridianIntersect(lambda0, phi0, lambda1, phi1);
           stream.point(sign0, phi0);
           stream.lineEnd();
@@ -8693,7 +8693,7 @@ var quarantine = (function (exports) {
     var cosPhi0,
         cosPhi1,
         sinLambda0Lambda1 = sin$1(lambda0 - lambda1);
-    return abs$1(sinLambda0Lambda1) > epsilon$2
+    return abs$2(sinLambda0Lambda1) > epsilon$2
         ? atan((sin$1(phi0) * (cosPhi1 = cos$1(phi1)) * sin$1(lambda1)
             - sin$1(phi1) * (cosPhi0 = cos$1(phi0)) * sin$1(lambda0))
             / (cosPhi0 * cosPhi1 * sinLambda0Lambda1))
@@ -8713,7 +8713,7 @@ var quarantine = (function (exports) {
       stream.point(-pi$1, -phi);
       stream.point(-pi$1, 0);
       stream.point(-pi$1, phi);
-    } else if (abs$1(from[0] - to[0]) > epsilon$2) {
+    } else if (abs$2(from[0] - to[0]) > epsilon$2) {
       var lambda = from[0] < to[0] ? pi$1 : -pi$1;
       phi = direction * lambda / 2;
       stream.point(-lambda, phi);
@@ -8728,7 +8728,7 @@ var quarantine = (function (exports) {
     var cr = cos$1(radius),
         delta = 6 * radians,
         smallRadius = cr > 0,
-        notHemisphere = abs$1(cr) > epsilon$2; // TODO optimise for this common case
+        notHemisphere = abs$2(cr) > epsilon$2; // TODO optimise for this common case
 
     function interpolate(from, to, direction, stream) {
       circleStream(stream, radius, delta, direction, from, to);
@@ -8864,7 +8864,7 @@ var quarantine = (function (exports) {
       if (lambda1 < lambda0) z = lambda0, lambda0 = lambda1, lambda1 = z;
 
       var delta = lambda1 - lambda0,
-          polar = abs$1(delta - pi$1) < epsilon$2,
+          polar = abs$2(delta - pi$1) < epsilon$2,
           meridian = polar || delta < epsilon$2;
 
       if (!polar && phi1 < phi0) z = phi0, phi0 = phi1, phi1 = z;
@@ -8872,7 +8872,7 @@ var quarantine = (function (exports) {
       // Check that the first point is between a and b.
       if (meridian
           ? polar
-            ? phi0 + phi1 > 0 ^ q[1] < (abs$1(q[0] - lambda0) < epsilon$2 ? phi0 : phi1)
+            ? phi0 + phi1 > 0 ^ q[1] < (abs$2(q[0] - lambda0) < epsilon$2 ? phi0 : phi1)
             : phi0 <= q[1] && q[1] <= phi1
           : delta > pi$1 ^ (lambda0 <= q[0] && q[0] <= lambda1)) {
         var q1 = cartesianScale(u, (-w + t) / uu);
@@ -8980,9 +8980,9 @@ var quarantine = (function (exports) {
     }
 
     function corner(p, direction) {
-      return abs$1(p[0] - x0) < epsilon$2 ? direction > 0 ? 0 : 3
-          : abs$1(p[0] - x1) < epsilon$2 ? direction > 0 ? 2 : 1
-          : abs$1(p[1] - y0) < epsilon$2 ? direction > 0 ? 1 : 0
+      return abs$2(p[0] - x0) < epsilon$2 ? direction > 0 ? 0 : 3
+          : abs$2(p[0] - x1) < epsilon$2 ? direction > 0 ? 2 : 1
+          : abs$2(p[1] - y0) < epsilon$2 ? direction > 0 ? 1 : 0
           : direction > 0 ? 3 : 2; // abs(p[1] - y1) < epsilon
     }
 
@@ -9171,7 +9171,7 @@ var quarantine = (function (exports) {
     lambda *= radians, phi *= radians;
     var sinPhi = sin$1(phi),
         cosPhi = cos$1(phi),
-        delta = abs$1(lambda - lambda0),
+        delta = abs$2(lambda - lambda0),
         cosDelta = cos$1(delta),
         sinDelta = sin$1(delta),
         x = cosPhi * sinDelta,
@@ -9314,8 +9314,8 @@ var quarantine = (function (exports) {
     function lines() {
       return sequence(ceil(X0 / DX) * DX, X1, DX).map(X)
           .concat(sequence(ceil(Y0 / DY) * DY, Y1, DY).map(Y))
-          .concat(sequence(ceil(x0 / dx) * dx, x1, dx).filter(function(x) { return abs$1(x % DX) > epsilon$2; }).map(x))
-          .concat(sequence(ceil(y0 / dy) * dy, y1, dy).filter(function(y) { return abs$1(y % DY) > epsilon$2; }).map(y));
+          .concat(sequence(ceil(x0 / dx) * dx, x1, dx).filter(function(x) { return abs$2(x % DX) > epsilon$2; }).map(x))
+          .concat(sequence(ceil(y0 / dy) * dy, y1, dy).filter(function(y) { return abs$2(y % DY) > epsilon$2; }).map(y));
     }
 
     graticule.lines = function() {
@@ -9449,7 +9449,7 @@ var quarantine = (function (exports) {
     },
     polygonEnd: function() {
       areaStream.lineStart = areaStream.lineEnd = areaStream.point = noop$1;
-      areaSum.add(abs$1(areaRingSum));
+      areaSum.add(abs$2(areaRingSum));
       areaRingSum.reset();
     },
     result: function() {
@@ -9895,7 +9895,7 @@ var quarantine = (function (exports) {
             c = c0 + c1,
             m = sqrt$3(a * a + b * b + c * c),
             phi2 = asin$1(c /= m),
-            lambda2 = abs$1(abs$1(c) - 1) < epsilon$2 || abs$1(lambda0 - lambda1) < epsilon$2 ? (lambda0 + lambda1) / 2 : atan2$1(b, a),
+            lambda2 = abs$2(abs$2(c) - 1) < epsilon$2 || abs$2(lambda0 - lambda1) < epsilon$2 ? (lambda0 + lambda1) / 2 : atan2$1(b, a),
             p = project(lambda2, phi2),
             x2 = p[0],
             y2 = p[1],
@@ -9903,7 +9903,7 @@ var quarantine = (function (exports) {
             dy2 = y2 - y0,
             dz = dy * dx2 - dx * dy2;
         if (dz * dz / d2 > delta2 // perpendicular projected distance
-            || abs$1((dx * dx2 + dy * dy2) / d2 - 0.5) > 0.3 // midpoint close to an end
+            || abs$2((dx * dx2 + dy * dy2) / d2 - 0.5) > 0.3 // midpoint close to an end
             || a0 * a1 + b0 * b1 + c0 * c1 < cosMinDistance) { // angular distance
           resampleLineTo(x0, y0, lambda0, a0, b0, c0, x2, y2, lambda2, a /= m, b /= m, c, depth, stream);
           stream.point(x2, y2);
@@ -10163,7 +10163,7 @@ var quarantine = (function (exports) {
     var sy0 = sin$1(y0), n = (sy0 + sin$1(y1)) / 2;
 
     // Are the parallels symmetrical around the Equator?
-    if (abs$1(n) < epsilon$2) return cylindricalEqualAreaRaw(y0);
+    if (abs$2(n) < epsilon$2) return cylindricalEqualAreaRaw(y0);
 
     var c = 1 + sy0 * (2 * n - sy0), r0 = sqrt$3(c) / n;
 
@@ -10174,7 +10174,7 @@ var quarantine = (function (exports) {
 
     project.invert = function(x, y) {
       var r0y = r0 - y,
-          l = atan2$1(x, abs$1(r0y)) * sign$1(r0y);
+          l = atan2$1(x, abs$2(r0y)) * sign$1(r0y);
       if (r0y * n < 0)
         l -= pi$1 * sign$1(x) * sign$1(r0y);
       return [l / n, asin$1((c - (x * x + r0y * r0y) * n * n) / (2 * n))];
@@ -10427,7 +10427,7 @@ var quarantine = (function (exports) {
 
     project.invert = function(x, y) {
       var fy = f - y, r = sign$1(n) * sqrt$3(x * x + fy * fy),
-        l = atan2$1(x, abs$1(fy)) * sign$1(fy);
+        l = atan2$1(x, abs$2(fy)) * sign$1(fy);
       if (fy * n < 0)
         l -= pi$1 * sign$1(x) * sign$1(fy);
       return [l / n, 2 * atan(pow$1(f / r, 1 / n)) - halfPi$1];
@@ -10458,7 +10458,7 @@ var quarantine = (function (exports) {
         n = y0 === y1 ? sin$1(y0) : (cy0 - cos$1(y1)) / (y1 - y0),
         g = cy0 / n + y0;
 
-    if (abs$1(n) < epsilon$2) return equirectangularRaw;
+    if (abs$2(n) < epsilon$2) return equirectangularRaw;
 
     function project(x, y) {
       var gy = g - y, nx = n * x;
@@ -10467,7 +10467,7 @@ var quarantine = (function (exports) {
 
     project.invert = function(x, y) {
       var gy = g - y,
-          l = atan2$1(x, abs$1(gy)) * sign$1(gy);
+          l = atan2$1(x, abs$2(gy)) * sign$1(gy);
       if (gy * n < 0)
         l -= pi$1 * sign$1(x) * sign$1(gy);
       return [l / n, g - sign$1(n) * sqrt$3(x * x + gy * gy)];
@@ -10503,7 +10503,7 @@ var quarantine = (function (exports) {
       fy = l * (A1 + A2 * l2 + l6 * (A3 + A4 * l2)) - y;
       fpy = A1 + 3 * A2 * l2 + l6 * (7 * A3 + 9 * A4 * l2);
       l -= delta = fy / fpy, l2 = l * l, l6 = l2 * l2 * l2;
-      if (abs$1(delta) < epsilon2$1) break;
+      if (abs$2(delta) < epsilon2$1) break;
     }
     return [
       M * x * (A1 + 3 * A2 * l2 + l6 * (7 * A3 + 9 * A4 * l2)) / cos$1(l),
@@ -10623,7 +10623,7 @@ var quarantine = (function (exports) {
       var phi2 = phi * phi, phi4 = phi2 * phi2;
       phi -= delta = (phi * (1.007226 + phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4))) - y) /
           (1.007226 + phi2 * (0.015085 * 3 + phi4 * (-0.044475 * 7 + 0.028874 * 9 * phi2 - 0.005916 * 11 * phi4)));
-    } while (abs$1(delta) > epsilon$2 && --i > 0);
+    } while (abs$2(delta) > epsilon$2 && --i > 0);
     return [
       x / (0.8707 + (phi2 = phi * phi) * (-0.131979 + phi2 * (-0.013791 + phi2 * phi2 * phi2 * (0.003971 - 0.001529 * phi2)))),
       phi
@@ -12405,7 +12405,7 @@ var quarantine = (function (exports) {
     };
   }
 
-  function copy$1(source, target) {
+  function copy$2(source, target) {
     return target
         .domain(source.domain())
         .range(source.range())
@@ -12561,7 +12561,7 @@ var quarantine = (function (exports) {
     var scale = continuous(identity$3, identity$3);
 
     scale.copy = function() {
-      return copy$1(scale, linear());
+      return copy$2(scale, linear());
     };
 
     initRange.apply(scale, arguments);
@@ -12746,7 +12746,7 @@ var quarantine = (function (exports) {
     var scale = loggish(transformer$2()).domain([1, 10]);
 
     scale.copy = function() {
-      return copy$1(scale, log()).base(scale.base());
+      return copy$2(scale, log()).base(scale.base());
     };
 
     initRange.apply(scale, arguments);
@@ -12780,7 +12780,7 @@ var quarantine = (function (exports) {
     var scale = symlogish(transformer$2());
 
     scale.copy = function() {
-      return copy$1(scale, symlog()).constant(scale.constant());
+      return copy$2(scale, symlog()).constant(scale.constant());
     };
 
     return initRange.apply(scale, arguments);
@@ -12821,7 +12821,7 @@ var quarantine = (function (exports) {
     var scale = powish(transformer$2());
 
     scale.copy = function() {
-      return copy$1(scale, pow()).exponent(scale.exponent());
+      return copy$2(scale, pow()).exponent(scale.exponent());
     };
 
     initRange.apply(scale, arguments);
@@ -14093,7 +14093,7 @@ var quarantine = (function (exports) {
     };
 
     scale.copy = function() {
-      return copy$1(scale, calendar(year, month, week, day, hour, minute, second, millisecond, format));
+      return copy$2(scale, calendar(year, month, week, day, hour, minute, second, millisecond, format));
     };
 
     return scale;
@@ -14144,7 +14144,7 @@ var quarantine = (function (exports) {
     };
   }
 
-  function copy(source, target) {
+  function copy$1(source, target) {
     return target
         .domain(source.domain())
         .interpolator(source.interpolator())
@@ -14156,7 +14156,7 @@ var quarantine = (function (exports) {
     var scale = linearish(transformer$1()(identity$3));
 
     scale.copy = function() {
-      return copy(scale, sequential());
+      return copy$1(scale, sequential());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14166,7 +14166,7 @@ var quarantine = (function (exports) {
     var scale = loggish(transformer$1()).domain([1, 10]);
 
     scale.copy = function() {
-      return copy(scale, sequentialLog()).base(scale.base());
+      return copy$1(scale, sequentialLog()).base(scale.base());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14176,7 +14176,7 @@ var quarantine = (function (exports) {
     var scale = symlogish(transformer$1());
 
     scale.copy = function() {
-      return copy(scale, sequentialSymlog()).constant(scale.constant());
+      return copy$1(scale, sequentialSymlog()).constant(scale.constant());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14186,7 +14186,7 @@ var quarantine = (function (exports) {
     var scale = powish(transformer$1());
 
     scale.copy = function() {
-      return copy(scale, sequentialPow()).exponent(scale.exponent());
+      return copy$1(scale, sequentialPow()).exponent(scale.exponent());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14267,7 +14267,7 @@ var quarantine = (function (exports) {
     var scale = linearish(transformer()(identity$3));
 
     scale.copy = function() {
-      return copy(scale, diverging$1());
+      return copy$1(scale, diverging$1());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14277,7 +14277,7 @@ var quarantine = (function (exports) {
     var scale = loggish(transformer()).domain([0.1, 1, 10]);
 
     scale.copy = function() {
-      return copy(scale, divergingLog()).base(scale.base());
+      return copy$1(scale, divergingLog()).base(scale.base());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14287,7 +14287,7 @@ var quarantine = (function (exports) {
     var scale = symlogish(transformer());
 
     scale.copy = function() {
-      return copy(scale, divergingSymlog()).constant(scale.constant());
+      return copy$1(scale, divergingSymlog()).constant(scale.constant());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14297,7 +14297,7 @@ var quarantine = (function (exports) {
     var scale = powish(transformer());
 
     scale.copy = function() {
-      return copy(scale, divergingPow()).exponent(scale.exponent());
+      return copy$1(scale, divergingPow()).exponent(scale.exponent());
     };
 
     return initInterpolator.apply(scale, arguments);
@@ -14748,7 +14748,7 @@ var quarantine = (function (exports) {
     };
   }
 
-  var abs = Math.abs;
+  var abs$1 = Math.abs;
   var atan2 = Math.atan2;
   var cos = Math.cos;
   var max = Math.max;
@@ -14858,7 +14858,7 @@ var quarantine = (function (exports) {
           r1 = +outerRadius.apply(this, arguments),
           a0 = startAngle.apply(this, arguments) - halfPi,
           a1 = endAngle.apply(this, arguments) - halfPi,
-          da = abs(a1 - a0),
+          da = abs$1(a1 - a0),
           cw = a1 > a0;
 
       if (!context) context = buffer = path();
@@ -14889,7 +14889,7 @@ var quarantine = (function (exports) {
             da1 = da,
             ap = padAngle.apply(this, arguments) / 2,
             rp = (ap > epsilon$1) && (padRadius ? +padRadius.apply(this, arguments) : sqrt$1(r0 * r0 + r1 * r1)),
-            rc = min(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
+            rc = min(abs$1(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
             rc0 = rc,
             rc1 = rc,
             t0,
@@ -18635,6 +18635,10 @@ var quarantine = (function (exports) {
   });
 
   // A simple utility for automatic differentiation by two variables x and y.
+  // Access components of Dual.
+  function val(a) {
+      return a[0];
+  }
   function ddx(a) {
       return a[1];
   }
@@ -18652,6 +18656,9 @@ var quarantine = (function (exports) {
   function y$1(c) {
       return [c, 0, 1];
   }
+  function copy(a) {
+      return a.slice();
+  }
   // Operations.
   function add(a, b) {
       if (typeof a === "number")
@@ -18667,12 +18674,27 @@ var quarantine = (function (exports) {
           b = c(b);
       return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   }
+  function neg(a) {
+      return [-a[0], -a[1], -a[2]];
+  }
   function mult(a, b) {
       if (typeof a === "number")
           a = c(a);
       if (typeof b === "number")
           b = c(b);
       return [a[0] * b[0], a[1] * b[0] + a[0] * b[1], a[2] * b[0] + a[0] * b[2]];
+  }
+  function div(a, b) {
+      if (typeof a === "number")
+          a = c(a);
+      if (typeof b === "number")
+          b = c(b);
+      const denom = b[0] * b[0];
+      return [
+          a[0] / b[0],
+          (a[1] * b[0] - a[0] * b[1]) / denom,
+          (a[2] * b[0] - a[0] * b[2]) / denom,
+      ];
   }
   function square(a) {
       return mult(a, a);
@@ -18681,6 +18703,9 @@ var quarantine = (function (exports) {
       const s = Math.sqrt(a[0]);
       const r = 0.5 / s;
       return [s, a[1] * r, a[2] * r];
+  }
+  function abs(a) {
+      return a[0] >= 0 ? copy(a) : neg(a);
   }
 
   function squaredDistance(p1, p2) {
@@ -18696,6 +18721,10 @@ var quarantine = (function (exports) {
   // Distance between `p` and `target` with derivatives with respect to `p`.
   function distanceDual(p, target) {
       return sqrt(squaredDistanceDual(p, target));
+  }
+  // Distance between `p` and `s` with derivatives with respect to `p`.
+  function distanceToSegmentDual(p, s) {
+      return div(abs(subtract(mult(s.vec.x, subtract(s.left.y, y$1(p.y))), mult(s.vec.y, subtract(s.left.x, x$1(p.x))))), s.length);
   }
 
   class CursorNode {
@@ -18841,6 +18870,7 @@ var quarantine = (function (exports) {
   // Handles collision between two circles.
   // TODO: document arguments.
   function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+      // TODO: Make this better. Maybe pass in distD directly.
       const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
       const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
       if (x === 0)
@@ -18865,20 +18895,30 @@ var quarantine = (function (exports) {
       // If creature is off to the "side" of the segment, we ignore.
       if (nxpc < 0 || nxpc > segmentNode.length2)
           return;
-      const nyp = (a * ny - b * nx) / segmentNode.length;
-      // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-      const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
-      if (discrepancy <= 0)
+      const discrepancy = subtract(WALL_HALF_WIDTH + circleNode.r, distanceToSegmentDual(circleNode, segmentNode));
+      if (val(discrepancy) <= 0)
           return;
       if (isCursorNode(circleNode)) {
           circleNode.reportPotentialTarget(segmentNode, 0);
           return;
       }
-      const sign = nyp > 0 ? 1 : -1;
-      // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      const commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
-      circleNode.vx += -b * commonFactor;
-      circleNode.vy += a * commonFactor;
+      const potential = mult(square(discrepancy), 0.2);
+      circleNode.vx -= ddx(potential);
+      circleNode.vy -= ddy(potential);
+      // const nyp = (a * ny - b * nx) / segmentNode.length;
+      // // Min distance we need to move the creature in order to not be overlapping with this wall segment.
+      // const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
+      // if (discrepancy <= 0) return;
+      // if (isCursorNode(circleNode)) {
+      //   circleNode.reportPotentialTarget(segmentNode, 0);
+      //   return;
+      // }
+      // const sign = nyp > 0 ? 1 : -1;
+      // // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
+      // const commonFactor =
+      //   ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+      // circleNode.vx += -b * commonFactor;
+      // circleNode.vy += a * commonFactor;
   }
   // Returns the collide force.
   //
@@ -19029,9 +19069,6 @@ var quarantine = (function (exports) {
                           y: Math.random() * height,
                       };
                   }
-                  // const len = Math.sqrt(squaredDistance(n, n.goal));
-                  // n.vx += (alpha * (n.goal.x - n.x)) / len;
-                  // n.vy += (alpha * (n.goal.y - n.y)) / len;
                   const distD = distanceDual(n, n.goal);
                   n.vx -= alpha * ddx(distD);
                   n.vy -= alpha * ddy(distD);
