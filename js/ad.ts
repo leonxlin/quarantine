@@ -103,3 +103,7 @@ export function min(a: Dual | number, b: Dual | number): Dual {
   if (a[0] < b[0]) return copy(a);
   return copy(b);
 }
+
+export function abs(a: Dual): Dual {
+  return a[0] >= 0 ? copy(a) : neg(a);
+}
