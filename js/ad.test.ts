@@ -47,9 +47,13 @@ test("differentiates - x^6 - 1/y", () => {
   function f(x: number, y: number): Dual {
     return subtract(neg(pow(ad.x(x), 6)), inv(ad.y(y)));
   }
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   function dfdx(x: number, y: number): number {
     return -6 * Math.pow(x, 5);
   }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+
   function dfdy(x: number, y: number): number {
     return 1 / y / y;
   }
