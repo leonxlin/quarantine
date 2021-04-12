@@ -29,6 +29,9 @@ export function x(c: number): Dual {
 export function y(c: number): Dual {
   return [c, 0, 1];
 }
+export function copy(a: Dual): Dual {
+  return a.slice() as Dual;
+}
 
 // Operations.
 
@@ -83,4 +86,20 @@ export function sqrt(a: Dual): Dual {
   const s = Math.sqrt(a[0]);
   const r = 0.5 / s;
   return [s, a[1] * r, a[2] * r];
+}
+
+export function max(a: Dual | number, b: Dual | number): Dual {
+  // Picks `b` if equal.
+  if (typeof a === "number") a = c(a);
+  if (typeof b === "number") b = c(b);
+  if (a[0] > b[0]) return copy(a);
+  return copy(b);
+}
+
+export function min(a: Dual | number, b: Dual | number): Dual {
+  // Picks `b` if equal.
+  if (typeof a === "number") a = c(a);
+  if (typeof b === "number") b = c(b);
+  if (a[0] < b[0]) return copy(a);
+  return copy(b);
 }

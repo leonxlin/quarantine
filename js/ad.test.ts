@@ -12,6 +12,8 @@ import {
   val,
   ddx,
   ddy,
+  max,
+  min,
 } from "./ad";
 import * as ad from "./ad";
 
@@ -66,4 +68,13 @@ test("differentiates - x^6 - 1/y", () => {
 
 test("differentiates 4+2", () => {
   expect(add(4, 2)).toEqual([6, 0, 0]);
+});
+
+test("differentiates max(20, min(40, (x+y)^2))", () => {
+  function f(x: number, y: number): Dual {
+    return max(20, min(40, square(add(ad.x(x), ad.y(y)))));
+  }
+  expect(f(1, 3)).toEqual([20, 0, 0]);
+  expect(f(-6, 1)).toEqual([25, -10, -10]);
+  expect(f(10, -3)).toEqual([40, 0, 0]);
 });
