@@ -6253,10 +6253,10 @@ var quarantine = (function (exports) {
   function tree_add(d) {
     var x = +this._x.call(null, d),
         y = +this._y.call(null, d);
-    return add$1(this.cover(x, y), x, y, d);
+    return add$2(this.cover(x, y), x, y, d);
   }
 
-  function add$1(tree, x, y, d) {
+  function add$2(tree, x, y, d) {
     if (isNaN(x) || isNaN(y)) return tree; // ignore invalid points
 
     var parent,
@@ -6329,7 +6329,7 @@ var quarantine = (function (exports) {
 
     // Add the new points.
     for (i = 0; i < n; ++i) {
-      add$1(this, xz[i], yz[i], data[i]);
+      add$2(this, xz[i], yz[i], data[i]);
     }
 
     return this;
@@ -6657,11 +6657,11 @@ var quarantine = (function (exports) {
   treeProto.x = tree_x;
   treeProto.y = tree_y;
 
-  function x$5(d) {
+  function x$6(d) {
     return d.x + d.vx;
   }
 
-  function y$5(d) {
+  function y$6(d) {
     return d.y + d.vy;
   }
 
@@ -6683,7 +6683,7 @@ var quarantine = (function (exports) {
           ri2;
 
       for (var k = 0; k < iterations; ++k) {
-        tree = quadtree(nodes, x$5, y$5).visitAfter(prepare);
+        tree = quadtree(nodes, x$6, y$6).visitAfter(prepare);
         for (i = 0; i < n; ++i) {
           node = nodes[i];
           ri = radii[node.index], ri2 = ri * ri;
@@ -6865,11 +6865,11 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function x$4(d) {
+  function x$5(d) {
     return d.x;
   }
 
-  function y$4(d) {
+  function y$5(d) {
     return d.y;
   }
 
@@ -7024,7 +7024,7 @@ var quarantine = (function (exports) {
         theta2 = 0.81;
 
     function force(_) {
-      var i, n = nodes.length, tree = quadtree(nodes, x$4, y$4).visitAfter(accumulate);
+      var i, n = nodes.length, tree = quadtree(nodes, x$5, y$5).visitAfter(accumulate);
       for (alpha = _, i = 0; i < n; ++i) node = nodes[i], tree.visit(apply);
     }
 
@@ -7179,7 +7179,7 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function x$3(x) {
+  function x$4(x) {
     var strength = constant$7(0.1),
         nodes,
         strengths,
@@ -7219,7 +7219,7 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function y$3(y) {
+  function y$4(y) {
     var strength = constant$7(0.1),
         nodes,
         strengths,
@@ -7604,8 +7604,8 @@ var quarantine = (function (exports) {
       this.t = 0; // exact error
     },
     add: function(y) {
-      add(temp, y, this.t);
-      add(this, temp.s, this.s);
+      add$1(temp, y, this.t);
+      add$1(this, temp.s, this.s);
       if (this.s) this.t += temp.t;
       else this.s = temp.t;
     },
@@ -7616,7 +7616,7 @@ var quarantine = (function (exports) {
 
   var temp = new Adder;
 
-  function add(adder, a, b) {
+  function add$1(adder, a, b) {
     var x = adder.s = a + b,
         bv = x - a,
         av = x - bv;
@@ -7643,7 +7643,7 @@ var quarantine = (function (exports) {
   var pow$1 = Math.pow;
   var sin$1 = Math.sin;
   var sign$1 = Math.sign || function(x) { return x > 0 ? 1 : x < 0 ? -1 : 0; };
-  var sqrt$2 = Math.sqrt;
+  var sqrt$3 = Math.sqrt;
   var tan = Math.tan;
 
   function acos$1(x) {
@@ -7828,7 +7828,7 @@ var quarantine = (function (exports) {
 
   // TODO return d
   function cartesianNormalizeInPlace(d) {
-    var l = sqrt$2(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    var l = sqrt$3(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
     d[0] /= l, d[1] /= l, d[2] /= l;
   }
 
@@ -8062,7 +8062,7 @@ var quarantine = (function (exports) {
         x = cosPhi * cos$1(lambda),
         y = cosPhi * sin$1(lambda),
         z = sin$1(phi),
-        w = atan2$1(sqrt$2((w = y0$4 * z - z0 * y) * w + (w = z0 * x - x0$4 * z) * w + (w = x0$4 * y - y0$4 * x) * w), x0$4 * x + y0$4 * y + z0 * z);
+        w = atan2$1(sqrt$3((w = y0$4 * z - z0 * y) * w + (w = z0 * x - x0$4 * z) * w + (w = x0$4 * y - y0$4 * x) * w), x0$4 * x + y0$4 * y + z0 * z);
     W1 += w;
     X1$1 += w * (x0$4 + (x0$4 = x));
     Y1$1 += w * (y0$4 + (y0$4 = y));
@@ -8105,7 +8105,7 @@ var quarantine = (function (exports) {
         cx = y0$4 * z - z0 * y,
         cy = z0 * x - x0$4 * z,
         cz = x0$4 * y - y0$4 * x,
-        m = sqrt$2(cx * cx + cy * cy + cz * cz),
+        m = sqrt$3(cx * cx + cy * cy + cz * cz),
         w = asin$1(m), // line weight = angle
         v = m && -w / m; // area weight multiplier
     X2$1 += v * cx;
@@ -8140,7 +8140,7 @@ var quarantine = (function (exports) {
       if (m < epsilon2$1) return [NaN, NaN];
     }
 
-    return [atan2$1(y, x) * degrees, asin$1(z / sqrt$2(m)) * degrees];
+    return [atan2$1(y, x) * degrees, asin$1(z / sqrt$3(m)) * degrees];
   }
 
   function constant$6(x) {
@@ -8847,7 +8847,7 @@ var quarantine = (function (exports) {
 
       if (t2 < 0) return;
 
-      var t = sqrt$2(t2),
+      var t = sqrt$3(t2),
           q = cartesianScale(u, (-w - t) / uu);
       cartesianAddInPlace(q, A);
       q = spherical(q);
@@ -9177,7 +9177,7 @@ var quarantine = (function (exports) {
         x = cosPhi * sinDelta,
         y = cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosDelta,
         z = sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosDelta;
-    lengthSum$1.add(atan2$1(sqrt$2(x * x + y * y), z));
+    lengthSum$1.add(atan2$1(sqrt$3(x * x + y * y), z));
     lambda0 = lambda, sinPhi0 = sinPhi, cosPhi0 = cosPhi;
   }
 
@@ -9406,7 +9406,7 @@ var quarantine = (function (exports) {
         ky0 = cy0 * sin$1(x0),
         kx1 = cy1 * cos$1(x1),
         ky1 = cy1 * sin$1(x1),
-        d = 2 * asin$1(sqrt$2(haversin(y1 - y0) + cy0 * cy1 * haversin(x1 - x0))),
+        d = 2 * asin$1(sqrt$3(haversin(y1 - y0) + cy0 * cy1 * haversin(x1 - x0))),
         k = sin$1(d);
 
     var interpolate = d ? function(t) {
@@ -9417,7 +9417,7 @@ var quarantine = (function (exports) {
           z = A * sy0 + B * sy1;
       return [
         atan2$1(y, x) * degrees,
-        atan2$1(z, sqrt$2(x * x + y * y)) * degrees
+        atan2$1(z, sqrt$3(x * x + y * y)) * degrees
       ];
     } : function() {
       return [x0 * degrees, y0 * degrees];
@@ -9559,7 +9559,7 @@ var quarantine = (function (exports) {
   }
 
   function centroidPointLine(x, y) {
-    var dx = x - x0$1, dy = y - y0$1, z = sqrt$2(dx * dx + dy * dy);
+    var dx = x - x0$1, dy = y - y0$1, z = sqrt$3(dx * dx + dy * dy);
     X1 += z * (x0$1 + x) / 2;
     Y1 += z * (y0$1 + y) / 2;
     Z1 += z;
@@ -9586,7 +9586,7 @@ var quarantine = (function (exports) {
   function centroidPointRing(x, y) {
     var dx = x - x0$1,
         dy = y - y0$1,
-        z = sqrt$2(dx * dx + dy * dy);
+        z = sqrt$3(dx * dx + dy * dy);
 
     X1 += z * (x0$1 + x) / 2;
     Y1 += z * (y0$1 + y) / 2;
@@ -9678,7 +9678,7 @@ var quarantine = (function (exports) {
 
   function lengthPoint(x, y) {
     x0 -= x, y0 -= y;
-    lengthSum.add(sqrt$2(x0 * x0 + y0 * y0));
+    lengthSum.add(sqrt$3(x0 * x0 + y0 * y0));
     x0 = x, y0 = y;
   }
 
@@ -9893,7 +9893,7 @@ var quarantine = (function (exports) {
         var a = a0 + a1,
             b = b0 + b1,
             c = c0 + c1,
-            m = sqrt$2(a * a + b * b + c * c),
+            m = sqrt$3(a * a + b * b + c * c),
             phi2 = asin$1(c /= m),
             lambda2 = abs$1(abs$1(c) - 1) < epsilon$2 || abs$1(lambda0 - lambda1) < epsilon$2 ? (lambda0 + lambda1) / 2 : atan2$1(b, a),
             p = project(lambda2, phi2),
@@ -10091,7 +10091,7 @@ var quarantine = (function (exports) {
     };
 
     projection.precision = function(_) {
-      return arguments.length ? (projectResample = resample(projectTransform, delta2 = _ * _), reset()) : sqrt$2(delta2);
+      return arguments.length ? (projectResample = resample(projectTransform, delta2 = _ * _), reset()) : sqrt$3(delta2);
     };
 
     projection.fitExtent = function(extent, object) {
@@ -10165,10 +10165,10 @@ var quarantine = (function (exports) {
     // Are the parallels symmetrical around the Equator?
     if (abs$1(n) < epsilon$2) return cylindricalEqualAreaRaw(y0);
 
-    var c = 1 + sy0 * (2 * n - sy0), r0 = sqrt$2(c) / n;
+    var c = 1 + sy0 * (2 * n - sy0), r0 = sqrt$3(c) / n;
 
     function project(x, y) {
-      var r = sqrt$2(c - 2 * n * sin$1(y)) / n;
+      var r = sqrt$3(c - 2 * n * sin$1(y)) / n;
       return [r * sin$1(x *= n), r0 - r * cos$1(x)];
     }
 
@@ -10319,7 +10319,7 @@ var quarantine = (function (exports) {
 
   function azimuthalInvert(angle) {
     return function(x, y) {
-      var z = sqrt$2(x * x + y * y),
+      var z = sqrt$3(x * x + y * y),
           c = angle(z),
           sc = sin$1(c),
           cc = cos$1(c);
@@ -10331,7 +10331,7 @@ var quarantine = (function (exports) {
   }
 
   var azimuthalEqualAreaRaw = azimuthalRaw(function(cxcy) {
-    return sqrt$2(2 / (1 + cxcy));
+    return sqrt$3(2 / (1 + cxcy));
   });
 
   azimuthalEqualAreaRaw.invert = azimuthalInvert(function(z) {
@@ -10426,7 +10426,7 @@ var quarantine = (function (exports) {
     }
 
     project.invert = function(x, y) {
-      var fy = f - y, r = sign$1(n) * sqrt$2(x * x + fy * fy),
+      var fy = f - y, r = sign$1(n) * sqrt$3(x * x + fy * fy),
         l = atan2$1(x, abs$1(fy)) * sign$1(fy);
       if (fy * n < 0)
         l -= pi$1 * sign$1(x) * sign$1(fy);
@@ -10470,7 +10470,7 @@ var quarantine = (function (exports) {
           l = atan2$1(x, abs$1(gy)) * sign$1(gy);
       if (gy * n < 0)
         l -= pi$1 * sign$1(x) * sign$1(gy);
-      return [l / n, g - sign$1(n) * sqrt$2(x * x + gy * gy)];
+      return [l / n, g - sign$1(n) * sqrt$3(x * x + gy * gy)];
     };
 
     return project;
@@ -10486,7 +10486,7 @@ var quarantine = (function (exports) {
       A2 = -0.081106,
       A3 = 0.000893,
       A4 = 0.003796,
-      M = sqrt$2(3) / 2,
+      M = sqrt$3(3) / 2,
       iterations = 12;
 
   function equalEarthRaw(lambda, phi) {
@@ -12829,7 +12829,7 @@ var quarantine = (function (exports) {
     return scale;
   }
 
-  function sqrt$1() {
+  function sqrt$2() {
     return pow.apply(null, arguments).exponent(0.5);
   }
 
@@ -14694,28 +14694,28 @@ var quarantine = (function (exports) {
 
   var cool = cubehelixLong(cubehelix$3(260, 0.75, 0.35), cubehelix$3(80, 1.50, 0.8));
 
-  var c$2 = cubehelix$3();
+  var c$3 = cubehelix$3();
 
   function rainbow(t) {
     if (t < 0 || t > 1) t -= Math.floor(t);
     var ts = Math.abs(t - 0.5);
-    c$2.h = 360 * t - 100;
-    c$2.s = 1.5 - 1.5 * ts;
-    c$2.l = 0.8 - 0.9 * ts;
-    return c$2 + "";
+    c$3.h = 360 * t - 100;
+    c$3.s = 1.5 - 1.5 * ts;
+    c$3.l = 0.8 - 0.9 * ts;
+    return c$3 + "";
   }
 
-  var c$1 = rgb(),
+  var c$2 = rgb(),
       pi_1_3 = Math.PI / 3,
       pi_2_3 = Math.PI * 2 / 3;
 
   function sinebow(t) {
     var x;
     t = (0.5 - t) * Math.PI;
-    c$1.r = 255 * (x = Math.sin(t)) * x;
-    c$1.g = 255 * (x = Math.sin(t + pi_1_3)) * x;
-    c$1.b = 255 * (x = Math.sin(t + pi_2_3)) * x;
-    return c$1 + "";
+    c$2.r = 255 * (x = Math.sin(t)) * x;
+    c$2.g = 255 * (x = Math.sin(t + pi_1_3)) * x;
+    c$2.b = 255 * (x = Math.sin(t + pi_2_3)) * x;
+    return c$2 + "";
   }
 
   function turbo(t) {
@@ -14754,7 +14754,7 @@ var quarantine = (function (exports) {
   var max = Math.max;
   var min = Math.min;
   var sin = Math.sin;
-  var sqrt = Math.sqrt;
+  var sqrt$1 = Math.sqrt;
 
   var epsilon$1 = 1e-12;
   var pi = Math.PI;
@@ -14803,7 +14803,7 @@ var quarantine = (function (exports) {
   function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
     var x01 = x0 - x1,
         y01 = y0 - y1,
-        lo = (cw ? rc : -rc) / sqrt(x01 * x01 + y01 * y01),
+        lo = (cw ? rc : -rc) / sqrt$1(x01 * x01 + y01 * y01),
         ox = lo * y01,
         oy = -lo * x01,
         x11 = x0 + ox,
@@ -14817,7 +14817,7 @@ var quarantine = (function (exports) {
         d2 = dx * dx + dy * dy,
         r = r1 - rc,
         D = x11 * y10 - x10 * y11,
-        d = (dy < 0 ? -1 : 1) * sqrt(max(0, r * r * d2 - D * D)),
+        d = (dy < 0 ? -1 : 1) * sqrt$1(max(0, r * r * d2 - D * D)),
         cx0 = (D * dy - dx * d) / d2,
         cy0 = (-D * dx - dy * d) / d2,
         cx1 = (D * dy + dx * d) / d2,
@@ -14888,7 +14888,7 @@ var quarantine = (function (exports) {
             da0 = da,
             da1 = da,
             ap = padAngle.apply(this, arguments) / 2,
-            rp = (ap > epsilon$1) && (padRadius ? +padRadius.apply(this, arguments) : sqrt(r0 * r0 + r1 * r1)),
+            rp = (ap > epsilon$1) && (padRadius ? +padRadius.apply(this, arguments) : sqrt$1(r0 * r0 + r1 * r1)),
             rc = min(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
             rc0 = rc,
             rc1 = rc,
@@ -14924,8 +14924,8 @@ var quarantine = (function (exports) {
                 ay = y01 - oc[1],
                 bx = x11 - oc[0],
                 by = y11 - oc[1],
-                kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt(ax * ax + ay * ay) * sqrt(bx * bx + by * by))) / 2),
-                lc = sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
+                kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2),
+                lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
             rc0 = min(rc, (r0 - lc) / (kc - 1));
             rc1 = min(rc, (r1 - lc) / (kc + 1));
           }
@@ -15059,17 +15059,17 @@ var quarantine = (function (exports) {
     return new Linear(context);
   }
 
-  function x$2(p) {
+  function x$3(p) {
     return p[0];
   }
 
-  function y$2(p) {
+  function y$3(p) {
     return p[1];
   }
 
   function line() {
-    var x = x$2,
-        y = y$2,
+    var x = x$3,
+        y = y$3,
         defined = constant$3(true),
         context = null,
         curve = curveLinear,
@@ -15119,10 +15119,10 @@ var quarantine = (function (exports) {
   }
 
   function area() {
-    var x0 = x$2,
+    var x0 = x$3,
         x1 = null,
         y0 = constant$3(0),
-        y1 = y$2,
+        y1 = y$3,
         defined = constant$3(true),
         context = null,
         curve = curveLinear,
@@ -15400,8 +15400,8 @@ var quarantine = (function (exports) {
   function link(curve) {
     var source = linkSource,
         target = linkTarget,
-        x = x$2,
-        y = y$2,
+        x = x$3,
+        y = y$3,
         context = null;
 
     function link() {
@@ -15533,7 +15533,7 @@ var quarantine = (function (exports) {
     }
   };
 
-  var square = {
+  var square$1 = {
     draw: function(context, size) {
       var w = Math.sqrt(size),
           x = -w / 2;
@@ -15553,7 +15553,7 @@ var quarantine = (function (exports) {
     }
   };
 
-  var c = -0.5,
+  var c$1 = -0.5,
       s = Math.sqrt(3) / 2,
       k = 1 / Math.sqrt(12),
       a = (k / 2 + 1) * 3;
@@ -15570,12 +15570,12 @@ var quarantine = (function (exports) {
       context.moveTo(x0, y0);
       context.lineTo(x1, y1);
       context.lineTo(x2, y2);
-      context.lineTo(c * x0 - s * y0, s * x0 + c * y0);
-      context.lineTo(c * x1 - s * y1, s * x1 + c * y1);
-      context.lineTo(c * x2 - s * y2, s * x2 + c * y2);
-      context.lineTo(c * x0 + s * y0, c * y0 - s * x0);
-      context.lineTo(c * x1 + s * y1, c * y1 - s * x1);
-      context.lineTo(c * x2 + s * y2, c * y2 - s * x2);
+      context.lineTo(c$1 * x0 - s * y0, s * x0 + c$1 * y0);
+      context.lineTo(c$1 * x1 - s * y1, s * x1 + c$1 * y1);
+      context.lineTo(c$1 * x2 - s * y2, s * x2 + c$1 * y2);
+      context.lineTo(c$1 * x0 + s * y0, c$1 * y0 - s * x0);
+      context.lineTo(c$1 * x1 + s * y1, c$1 * y1 - s * x1);
+      context.lineTo(c$1 * x2 + s * y2, c$1 * y2 - s * x2);
       context.closePath();
     }
   };
@@ -15584,7 +15584,7 @@ var quarantine = (function (exports) {
     circle,
     cross,
     diamond,
-    square,
+    square$1,
     star,
     triangle,
     wye
@@ -16635,11 +16635,11 @@ var quarantine = (function (exports) {
     };
   }
 
-  function x$1(d) {
+  function x$2(d) {
     return d[0];
   }
 
-  function y$1(d) {
+  function y$2(d) {
     return d[1];
   }
 
@@ -17572,8 +17572,8 @@ var quarantine = (function (exports) {
   };
 
   function voronoi() {
-    var x = x$1,
-        y = y$1,
+    var x = x$2,
+        y = y$2,
         extent = null;
 
     function voronoi(data) {
@@ -18264,8 +18264,8 @@ var quarantine = (function (exports) {
     forceManyBody: manyBody,
     forceRadial: radial,
     forceSimulation: simulation,
-    forceX: x$3,
-    forceY: y$3,
+    forceX: x$4,
+    forceY: y$4,
     formatDefaultLocale: defaultLocale$1,
     get format () { return format; },
     get formatPrefix () { return formatPrefix; },
@@ -18388,7 +18388,7 @@ var quarantine = (function (exports) {
     scaleOrdinal: ordinal,
     scaleImplicit: implicit,
     scalePow: pow,
-    scaleSqrt: sqrt$1,
+    scaleSqrt: sqrt$2,
     scaleQuantile: quantile,
     scaleQuantize: quantize,
     scaleThreshold: threshold,
@@ -18517,7 +18517,7 @@ var quarantine = (function (exports) {
     symbolCircle: circle,
     symbolCross: cross,
     symbolDiamond: diamond,
-    symbolSquare: square,
+    symbolSquare: square$1,
     symbolStar: star,
     symbolTriangle: triangle,
     symbolWye: wye,
@@ -18634,10 +18634,70 @@ var quarantine = (function (exports) {
     zoomIdentity: identity
   });
 
+  // A simple utility for automatic differentiation by two variables x and y.
+  function ddx(a) {
+      return a[1];
+  }
+  function ddy(a) {
+      return a[2];
+  }
+  // Create basic dual numbers.
+  // c for constant.
+  function c(c) {
+      return [c, 0, 0];
+  }
+  function x$1(c) {
+      return [c, 1, 0];
+  }
+  function y$1(c) {
+      return [c, 0, 1];
+  }
+  // Operations.
+  function add(a, b) {
+      if (typeof a === "number")
+          a = c(a);
+      if (typeof b === "number")
+          b = c(b);
+      return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  }
+  function subtract(a, b) {
+      if (typeof a === "number")
+          a = c(a);
+      if (typeof b === "number")
+          b = c(b);
+      return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  }
+  function mult(a, b) {
+      if (typeof a === "number")
+          a = c(a);
+      if (typeof b === "number")
+          b = c(b);
+      return [a[0] * b[0], a[1] * b[0] + a[0] * b[1], a[2] * b[0] + a[0] * b[2]];
+  }
+  function square(a) {
+      return mult(a, a);
+  }
+  function sqrt(a) {
+      const s = Math.sqrt(a[0]);
+      const r = 0.5 / s;
+      return [s, a[1] * r, a[2] * r];
+  }
+
   function squaredDistance(p1, p2) {
       const dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
+  // Squared distance between `p` and `target` with derivatives with respect to `p`.
+  function squaredDistanceDual(p, target) {
+      const dx = subtract(x$1(p.x), target.x);
+      const dy = subtract(y$1(p.y), target.y);
+      return add(square(dx), square(dy));
+  }
+  // Distance between `p` and `target` with derivatives with respect to `p`.
+  function distanceDual(p, target) {
+      return sqrt(squaredDistanceDual(p, target));
+  }
+
   class CursorNode {
       constructor() {
           this.r = 4;
@@ -18758,7 +18818,7 @@ var quarantine = (function (exports) {
   function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
       if (isImpassableCircle(node1)) {
           if (isImpassableCircle(node2)) {
-              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength);
+              circleCircleCollisionInteraction(node1, node2, x, y, l, r);
           }
           else if (isImpassableSegment(node2)) {
               circleLineCollisionInteraction(node1, node2);
@@ -18781,15 +18841,18 @@ var quarantine = (function (exports) {
   // Handles collision between two circles.
   // TODO: document arguments.
   function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+      const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
+      const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
       if (x === 0)
-          (x = jiggle()), (l += x * x);
+          pnode2.x += jiggle();
       if (y === 0)
-          (y = jiggle()), (l += y * y);
-      l = ((r - (l = Math.sqrt(l))) / l) * strength;
-      node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-      node1.vy += (y *= l) * r;
-      node2.vx -= x * (r = 1 - r);
-      node2.vy -= y * r;
+          pnode2.y += jiggle();
+      const distD = distanceDual(pnode1, pnode2);
+      const potential = mult(square(subtract(r, distD)), 0.2);
+      node1.vx -= ddx(potential);
+      node1.vy -= ddy(potential);
+      node2.vx += ddx(potential);
+      node2.vy += ddy(potential);
   }
   // Handles collision between a circle and line segment with a certain width.
   // The segment is assumed to be immovable.
@@ -18966,9 +19029,12 @@ var quarantine = (function (exports) {
                           y: Math.random() * height,
                       };
                   }
-                  const len = Math.sqrt(squaredDistance(n, n.goal));
-                  n.vx += (alpha * (n.goal.x - n.x)) / len;
-                  n.vy += (alpha * (n.goal.y - n.y)) / len;
+                  // const len = Math.sqrt(squaredDistance(n, n.goal));
+                  // n.vx += (alpha * (n.goal.x - n.x)) / len;
+                  // n.vy += (alpha * (n.goal.y - n.y)) / len;
+                  const distD = distanceDual(n, n.goal);
+                  n.vx -= alpha * ddx(distD);
+                  n.vy -= alpha * ddy(distD);
               });
           })
               .force("interaction", collideForce(

@@ -43,7 +43,9 @@ import {
   isCursorNode,
   isImpassableSegment,
   isLiveCreature,
-} from "./simulation-types.js";
+} from "./simulation-types";
+import { distanceDual } from "./geometry";
+import * as ad from "./ad";
 
 function constant(x) {
   return function () {
@@ -118,13 +120,18 @@ function circleCircleCollisionInteraction(
   rj: number,
   strength: number
 ): void {
-  if (x === 0) (x = jiggle()), (l += x * x);
-  if (y === 0) (y = jiggle()), (l += y * y);
-  l = ((r - (l = Math.sqrt(l))) / l) * strength;
-  node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-  node1.vy += (y *= l) * r;
-  node2.vx -= x * (r = 1 - r);
-  node2.vy -= y * r;
+  // TODO: Make this better. Maybe pass in distD directly.
+  const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
+  const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
+  if (x === 0) pnode2.x += jiggle();
+  if (y === 0) pnode2.y += jiggle();
+
+  const distD = distanceDual(pnode1, pnode2);
+  const potential = ad.mult(ad.square(ad.subtract(r, distD)), 0.2);
+  node1.vx -= ad.ddx(potential);
+  node1.vy -= ad.ddy(potential);
+  node2.vx += ad.ddx(potential);
+  node2.vy += ad.ddy(potential);
 }
 
 // Handles collision between a circle and line segment with a certain width.

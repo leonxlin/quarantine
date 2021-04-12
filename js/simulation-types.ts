@@ -1,21 +1,11 @@
 import * as d3 from "d3";
-
-export function squaredDistance(p1: Point, p2: Point): number {
-  const dx = p1.x - p2.x,
-    dy = p1.y - p2.y;
-  return dx * dx + dy * dy;
-}
+import { Point, squaredDistance } from "./geometry";
 
 export interface SNode extends d3.SimulationNodeDatum {
   r: number;
 }
 
 export type Selectable = Wall | Creature;
-
-export interface Point {
-  x?: number;
-  y?: number;
-}
 
 export class CursorNode implements SNode {
   r: number;

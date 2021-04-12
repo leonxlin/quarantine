@@ -10,14 +10,14 @@ import {
   isWallComponent,
   Creature,
   Party,
-  Point,
   Selectable,
   isCreature,
   isLiveCreature,
-  squaredDistance,
-} from "./simulation-types.js";
-import collideForce from "./collide.js";
-import { collisionInteraction } from "./collide.js";
+} from "./simulation-types";
+import collideForce from "./collide";
+import { collisionInteraction } from "./collide";
+import * as ad from "./ad";
+import { Point, squaredDistance, distanceDual } from "./geometry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
@@ -147,9 +147,10 @@ export class Game {
               y: Math.random() * height,
             };
           }
-          const len = Math.sqrt(squaredDistance(n, n.goal));
-          n.vx += (alpha * (n.goal.x - n.x)) / len;
-          n.vy += (alpha * (n.goal.y - n.y)) / len;
+
+          const distD = distanceDual(n, n.goal);
+          n.vx -= alpha * ad.ddx(distD);
+          n.vy -= alpha * ad.ddy(distD);
         });
       })
       .force(
