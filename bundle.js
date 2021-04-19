@@ -6246,7 +6246,7 @@ var quarantine = (function (exports) {
     };
   }
 
-  function jiggle$1() {
+  function jiggle$2() {
     return (Math.random() - 0.5) * 1e-6;
   }
 
@@ -6701,8 +6701,8 @@ var quarantine = (function (exports) {
                 y = yi - data.y - data.vy,
                 l = x * x + y * y;
             if (l < r * r) {
-              if (x === 0) x = jiggle$1(), l += x * x;
-              if (y === 0) y = jiggle$1(), l += y * y;
+              if (x === 0) x = jiggle$2(), l += x * x;
+              if (y === 0) y = jiggle$2(), l += y * y;
               l = (r - (l = Math.sqrt(l))) / l * strength;
               node.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
               node.vy += (y *= l) * r;
@@ -6783,8 +6783,8 @@ var quarantine = (function (exports) {
       for (var k = 0, n = links.length; k < iterations; ++k) {
         for (var i = 0, link, source, target, x, y, l, b; i < n; ++i) {
           link = links[i], source = link.source, target = link.target;
-          x = target.x + target.vx - source.x - source.vx || jiggle$1();
-          y = target.y + target.vy - source.y - source.vy || jiggle$1();
+          x = target.x + target.vx - source.x - source.vx || jiggle$2();
+          y = target.y + target.vy - source.y - source.vy || jiggle$2();
           l = Math.sqrt(x * x + y * y);
           l = (l - distances[i]) / l * alpha * strengths[i];
           x *= l, y *= l;
@@ -7073,8 +7073,8 @@ var quarantine = (function (exports) {
       // Limit forces for very close nodes; randomize direction if coincident.
       if (w * w / theta2 < l) {
         if (l < distanceMax2) {
-          if (x === 0) x = jiggle$1(), l += x * x;
-          if (y === 0) y = jiggle$1(), l += y * y;
+          if (x === 0) x = jiggle$2(), l += x * x;
+          if (y === 0) y = jiggle$2(), l += y * y;
           if (l < distanceMin2) l = Math.sqrt(distanceMin2 * l);
           node.vx += x * quad.value * alpha / l;
           node.vy += y * quad.value * alpha / l;
@@ -7087,8 +7087,8 @@ var quarantine = (function (exports) {
 
       // Limit forces for very close nodes; randomize direction if coincident.
       if (quad.data !== node || quad.next) {
-        if (x === 0) x = jiggle$1(), l += x * x;
-        if (y === 0) y = jiggle$1(), l += y * y;
+        if (x === 0) x = jiggle$2(), l += x * x;
+        if (y === 0) y = jiggle$2(), l += y * y;
         if (l < distanceMin2) l = Math.sqrt(distanceMin2 * l);
       }
 
@@ -12361,7 +12361,7 @@ var quarantine = (function (exports) {
     return x;
   }
 
-  function normalize(a, b) {
+  function normalize$1(a, b) {
     return (b -= (a = +a))
         ? function(x) { return (x - a) / b; }
         : constant$4(isNaN(b) ? NaN : 0.5);
@@ -12377,8 +12377,8 @@ var quarantine = (function (exports) {
   // interpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding range value x in [a,b].
   function bimap(domain, range, interpolate) {
     var d0 = domain[0], d1 = domain[1], r0 = range[0], r1 = range[1];
-    if (d1 < d0) d0 = normalize(d1, d0), r0 = interpolate(r1, r0);
-    else d0 = normalize(d0, d1), r0 = interpolate(r0, r1);
+    if (d1 < d0) d0 = normalize$1(d1, d0), r0 = interpolate(r1, r0);
+    else d0 = normalize$1(d0, d1), r0 = interpolate(r0, r1);
     return function(x) { return r0(d0(x)); };
   }
 
@@ -12395,7 +12395,7 @@ var quarantine = (function (exports) {
     }
 
     while (++i < j) {
-      d[i] = normalize(domain[i], domain[i + 1]);
+      d[i] = normalize$1(domain[i], domain[i + 1]);
       r[i] = interpolate(range[i], range[i + 1]);
     }
 
@@ -18726,6 +18726,20 @@ var quarantine = (function (exports) {
   function distanceToSegmentDual(p, s) {
       return div(abs(subtract(mult(s.vec.x, subtract(s.left.y, y$1(p.y))), mult(s.vec.y, subtract(s.left.x, x$1(p.x))))), s.length);
   }
+  function normalize(p) {
+      const len = Math.sqrt(p.x * p.x + p.y * p.y);
+      if (len > 0) {
+          p.x /= len;
+          p.y /= len;
+      }
+      return p;
+  }
+  function directionTo(p1, p2) {
+      return normalize({
+          x: p2.x - p1.x,
+          y: p2.y - p1.y,
+      });
+  }
 
   class CursorNode {
       constructor() {
@@ -18760,6 +18774,7 @@ var quarantine = (function (exports) {
           this.scoringPartner = null;
           this.ticksLeftInScoringState = 0;
           this.potential = [0, 0, 0];
+          this.avoidanceZones = [];
       }
       addToPotential(p) {
           this.potential = add(this.potential, p);
@@ -18837,7 +18852,7 @@ var quarantine = (function (exports) {
           return x;
       };
   }
-  function jiggle() {
+  function jiggle$1() {
       return (Math.random() - 0.5) * 1e-6;
   }
   function x(d) {
@@ -18880,9 +18895,9 @@ var quarantine = (function (exports) {
       const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
       const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
       if (x === 0)
-          pnode2.x += jiggle();
+          pnode2.x += jiggle$1();
       if (y === 0)
-          pnode2.y += jiggle();
+          pnode2.y += jiggle$1();
       const distD = distanceDual(pnode1, pnode2);
       const potential = mult(square(subtract(r, distD)), 0.2);
       if (isLiveCreature(node1))
@@ -19014,6 +19029,9 @@ var quarantine = (function (exports) {
   }
 
   /* eslint-enable @typescript-eslint/no-explicit-any */
+  function jiggle() {
+      return (Math.random() - 0.5) * 1e-2;
+  }
   // Not sure if a class is really the best way to organize this code...
   // TODO: revisit code organization.
   class Game {
@@ -19036,10 +19054,10 @@ var quarantine = (function (exports) {
           this.tempScoreIndicators = new Set();
           this.fitCanvas();
           this.canvas = document.querySelector("canvas");
-          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.width, // x
+          this.nodes = sequence(1).map(() => new Creature(Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
-          this.nodes[0].infected = true;
+          // (this.nodes[0] as Creature).infected = true;
           this.cursorNode = new CursorNode();
           this.nodes.push(this.cursorNode);
           const nodes = this.nodes;
@@ -19053,17 +19071,34 @@ var quarantine = (function (exports) {
                   if (!isLiveCreature(n))
                       return;
                   let stuck = false;
-                  if (Math.random() < 0.05) {
+                  if (Math.random() < 0.02) {
                       stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
                       n.previousLoggedLocation = { x: n.x, y: n.y };
                   }
-                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
+                  // if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
+                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
                       n.goal = {
                           x: Math.random() * width,
                           y: Math.random() * height,
                       };
+                      n.avoidanceZones = [];
+                  }
+                  if (stuck) {
+                      const heading = directionTo(n, n.goal);
+                      const r = 10 * n.avoidanceZones.length;
+                      n.avoidanceZones.push({
+                          x: n.x + heading.x + jiggle() * r,
+                          y: n.y + heading.y + jiggle() * r,
+                          r: r,
+                      });
                   }
                   n.potential = mult(distanceDual(n, n.goal), alpha);
+                  for (const zone of n.avoidanceZones) {
+                      const dist = distanceDual(n, zone);
+                      if (val(dist) > zone.r)
+                          continue;
+                      n.addToPotential(mult(square(subtract(zone.r, dist)), 0.1));
+                  }
               });
           })
               .force("interaction", collideForce(
@@ -19157,6 +19192,12 @@ var quarantine = (function (exports) {
                       return;
                   n.vx -= ddx(n.potential);
                   n.vy -= ddy(n.potential);
+                  const mag2 = n.vx * n.vx + n.vy * n.vy;
+                  if (mag2 > 10) {
+                      const mag = Math.sqrt(mag2);
+                      n.vx /= mag;
+                      n.vy /= mag;
+                  }
               });
           })
               .nodes(nodes)
@@ -19247,6 +19288,22 @@ var quarantine = (function (exports) {
               if (n.scoring) {
                   scoringNodes.push(n);
                   return;
+              }
+              for (const zone of n.avoidanceZones) {
+                  context.beginPath();
+                  context.moveTo(zone.x + zone.r, zone.y);
+                  context.arc(zone.x, zone.y, zone.r, 0, 2 * Math.PI);
+                  context.fillStyle = "pink";
+                  context.fill();
+              }
+              if ("goal" in n) {
+                  context.beginPath();
+                  context.moveTo(n.goal.x + 5, n.goal.y);
+                  context.arc(n.goal.x, n.goal.y, 5, 0, 2 * Math.PI);
+                  context.fillStyle = "green";
+                  context.fill();
+                  context.strokeStyle = "#333";
+                  context.stroke();
               }
               context.beginPath();
               context.moveTo(n.x + n.r, n.y);

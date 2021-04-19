@@ -17,7 +17,7 @@ import {
 import collideForce from "./collide";
 import { collisionInteraction } from "./collide";
 import * as ad from "./ad";
-import { Point, squaredDistance, distanceDual } from "./geometry";
+import { Point, squaredDistance, distanceDual, directionTo } from "./geometry";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
@@ -28,6 +28,10 @@ declare global {
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+function jiggle() {
+  return (Math.random() - 0.5) * 1e-2;
+}
 
 // Not sure if a class is really the best way to organize this code...
 // TODO: revisit code organization.
@@ -112,14 +116,14 @@ export class Game {
     this.tempScoreIndicators = new Set<TempScoreIndicator>();
     this.fitCanvas();
     this.canvas = document.querySelector("canvas");
-    this.nodes = d3.range(200).map(
+    this.nodes = d3.range(1).map(
       () =>
         new Creature(
           Math.random() * this.width, // x
           Math.random() * this.height // y
         )
     );
-    (this.nodes[0] as Creature).infected = true;
+    // (this.nodes[0] as Creature).infected = true;
 
     this.cursorNode = new CursorNode();
     this.nodes.push(this.cursorNode);
@@ -137,19 +141,39 @@ export class Game {
           if (!isLiveCreature(n)) return;
 
           let stuck = false;
-          if (Math.random() < 0.05) {
+          if (Math.random() < 0.02) {
             stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
             n.previousLoggedLocation = { x: n.x, y: n.y };
           }
 
-          if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
+          // if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
+          if (!("goal" in n) || squaredDistance(n, n.goal) < 10) {
             n.goal = {
               x: Math.random() * width,
               y: Math.random() * height,
             };
+
+            n.avoidanceZones = [];
+          }
+
+          if (stuck) {
+            const heading = directionTo(n, n.goal);
+            const r = 10 * n.avoidanceZones.length;
+            n.avoidanceZones.push({
+              x: n.x + heading.x + jiggle() * r,
+              y: n.y + heading.y + jiggle() * r,
+              r: r,
+            });
           }
 
           n.potential = ad.mult(distanceDual(n, n.goal), alpha);
+          for (const zone of n.avoidanceZones) {
+            const dist = distanceDual(n, zone);
+            if (ad.val(dist) > zone.r) continue;
+            n.addToPotential(
+              ad.mult(ad.square(ad.subtract(zone.r, dist)), 0.1)
+            );
+          }
         });
       })
       .force(
@@ -245,6 +269,12 @@ export class Game {
           if (!isLiveCreature(n)) return;
           n.vx -= ad.ddx(n.potential);
           n.vy -= ad.ddy(n.potential);
+          const mag2 = n.vx * n.vx + n.vy * n.vy;
+          if (mag2 > 10) {
+            const mag = Math.sqrt(mag2);
+            n.vx /= mag;
+            n.vy /= mag;
+          }
         });
       })
       .nodes(nodes)
@@ -321,6 +351,23 @@ export class Game {
       if (n.scoring) {
         scoringNodes.push(n);
         return;
+      }
+
+      for (const zone of n.avoidanceZones) {
+        context.beginPath();
+        context.moveTo(zone.x + zone.r, zone.y);
+        context.arc(zone.x, zone.y, zone.r, 0, 2 * Math.PI);
+        context.fillStyle = "pink";
+        context.fill();
+      }
+      if ("goal" in n) {
+        context.beginPath();
+        context.moveTo(n.goal.x + 5, n.goal.y);
+        context.arc(n.goal.x, n.goal.y, 5, 0, 2 * Math.PI);
+        context.fillStyle = "green";
+        context.fill();
+        context.strokeStyle = "#333";
+        context.stroke();
       }
 
       context.beginPath();

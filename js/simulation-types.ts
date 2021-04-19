@@ -47,6 +47,12 @@ export function isCursorNode(n: SNode): n is CursorNode {
   return n instanceof CursorNode;
 }
 
+export interface AvoidanceZone {
+  x: number;
+  y: number;
+  r: number;
+}
+
 export class Creature implements SNode {
   r: number;
   x?: number;
@@ -75,6 +81,8 @@ export class Creature implements SNode {
   // Potential at the current time step (used for deciding which direction to step next).
   potential: Dual;
 
+  avoidanceZones: AvoidanceZone[];
+
   constructor(x: number, y: number) {
     this.r = Math.random() * 5 + 4;
     this.x = x;
@@ -87,9 +95,11 @@ export class Creature implements SNode {
     this.ticksLeftInScoringState = 0;
 
     this.potential = [0, 0, 0];
+
+    this.avoidanceZones = [];
   }
 
-  addToPotential(p: Dual) {
+  addToPotential(p: Dual): void {
     this.potential = add(this.potential, p);
   }
 }

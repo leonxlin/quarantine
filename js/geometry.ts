@@ -47,3 +47,19 @@ export function distanceToSegmentDual(p: Point, s: Segment): ad.Dual {
     s.length
   );
 }
+
+export function normalize(p: Point): Point {
+  const len = Math.sqrt(p.x * p.x + p.y * p.y);
+  if (len > 0) {
+    p.x /= len;
+    p.y /= len;
+  }
+  return p;
+}
+
+export function directionTo(p1: Point, p2: Point): Point {
+  return normalize({
+    x: p2.x - p1.x,
+    y: p2.y - p1.y,
+  });
+}
