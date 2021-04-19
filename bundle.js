@@ -18759,6 +18759,10 @@ var quarantine = (function (exports) {
           this.scoring = false;
           this.scoringPartner = null;
           this.ticksLeftInScoringState = 0;
+          this.potential = [0, 0, 0];
+      }
+      addToPotential(p) {
+          this.potential = add(this.potential, p);
       }
   }
   function isCreature(n) {
@@ -18870,6 +18874,8 @@ var quarantine = (function (exports) {
   // Handles collision between two circles.
   // TODO: document arguments.
   function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+      // Pretending that the nodes are at their next positions for this calculation
+      // makes collisions less jittery.
       // TODO: Make this better. Maybe pass in distD directly.
       const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
       const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
@@ -18879,16 +18885,19 @@ var quarantine = (function (exports) {
           pnode2.y += jiggle();
       const distD = distanceDual(pnode1, pnode2);
       const potential = mult(square(subtract(r, distD)), 0.2);
-      node1.vx -= ddx(potential);
-      node1.vy -= ddy(potential);
-      node2.vx += ddx(potential);
-      node2.vy += ddy(potential);
+      if (isLiveCreature(node1))
+          node1.addToPotential(potential);
+      if (isLiveCreature(node2))
+          node2.addToPotential(neg(potential));
   }
   // Handles collision between a circle and line segment with a certain width.
   // The segment is assumed to be immovable.
   function circleLineCollisionInteraction(circleNode, segmentNode) {
+      if (!isLiveCreature(circleNode))
+          return;
       // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
       const WALL_HALF_WIDTH = 5;
+      // TODO: move this to a helper function.
       const a = segmentNode.vec.x, b = segmentNode.vec.y;
       const nx = circleNode.x - segmentNode.left.x, ny = circleNode.y - segmentNode.left.y;
       const nxpc = a * nx + b * ny;
@@ -18902,23 +18911,7 @@ var quarantine = (function (exports) {
           circleNode.reportPotentialTarget(segmentNode, 0);
           return;
       }
-      const potential = mult(square(discrepancy), 0.2);
-      circleNode.vx -= ddx(potential);
-      circleNode.vy -= ddy(potential);
-      // const nyp = (a * ny - b * nx) / segmentNode.length;
-      // // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-      // const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
-      // if (discrepancy <= 0) return;
-      // if (isCursorNode(circleNode)) {
-      //   circleNode.reportPotentialTarget(segmentNode, 0);
-      //   return;
-      // }
-      // const sign = nyp > 0 ? 1 : -1;
-      // // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      // const commonFactor =
-      //   ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
-      // circleNode.vx += -b * commonFactor;
-      // circleNode.vy += a * commonFactor;
+      circleNode.addToPotential(mult(square(discrepancy), 0.2));
   }
   // Returns the collide force.
   //
@@ -19052,6 +19045,7 @@ var quarantine = (function (exports) {
           const nodes = this.nodes;
           const width = this.width;
           const height = this.height;
+          // Note: forces are applied in the order they appear here. Currently the potential calculation depends on this assumption.
           this.simulation = simulation()
               .velocityDecay(0.2)
               .force("agent", (alpha) => {
@@ -19069,9 +19063,7 @@ var quarantine = (function (exports) {
                           y: Math.random() * height,
                       };
                   }
-                  const distD = distanceDual(n, n.goal);
-                  n.vx -= alpha * ddx(distD);
-                  n.vy -= alpha * ddy(distD);
+                  n.potential = mult(distanceDual(n, n.goal), alpha);
               });
           })
               .force("interaction", collideForce(
@@ -19158,6 +19150,14 @@ var quarantine = (function (exports) {
               else {
                   this.canvas.style.cursor = "default";
               }
+          })
+              .force("movement", () => {
+              nodes.forEach((n) => {
+                  if (!isLiveCreature(n))
+                      return;
+                  n.vx -= ddx(n.potential);
+                  n.vy -= ddy(n.potential);
+              });
           })
               .nodes(nodes)
               .on("tick", this.tick.bind(this))

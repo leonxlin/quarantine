@@ -128,6 +128,7 @@ export class Game {
     const width = this.width;
     const height = this.height;
 
+    // Note: forces are applied in the order they appear here. Currently the potential calculation depends on this assumption.
     this.simulation = d3
       .forceSimulation<SNode, undefined>()
       .velocityDecay(0.2)
@@ -148,9 +149,7 @@ export class Game {
             };
           }
 
-          const distD = distanceDual(n, n.goal);
-          n.vx -= alpha * ad.ddx(distD);
-          n.vy -= alpha * ad.ddy(distD);
+          n.potential = ad.mult(distanceDual(n, n.goal), alpha);
         });
       })
       .force(
@@ -240,6 +239,13 @@ export class Game {
         } else {
           this.canvas.style.cursor = "default";
         }
+      })
+      .force("movement", () => {
+        nodes.forEach((n) => {
+          if (!isLiveCreature(n)) return;
+          n.vx -= ad.ddx(n.potential);
+          n.vy -= ad.ddy(n.potential);
+        });
       })
       .nodes(nodes)
       .on("tick", this.tick.bind(this))

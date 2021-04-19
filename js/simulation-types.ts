@@ -1,5 +1,6 @@
 import * as d3 from "d3";
 import { Point, squaredDistance, Segment } from "./geometry";
+import { Dual, add } from "./ad";
 
 export interface SNode extends d3.SimulationNodeDatum {
   r: number;
@@ -71,6 +72,9 @@ export class Creature implements SNode {
   // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
   previousLoggedLocation: Point;
 
+  // Potential at the current time step (used for deciding which direction to step next).
+  potential: Dual;
+
   constructor(x: number, y: number) {
     this.r = Math.random() * 5 + 4;
     this.x = x;
@@ -81,6 +85,12 @@ export class Creature implements SNode {
     this.scoring = false;
     this.scoringPartner = null;
     this.ticksLeftInScoringState = 0;
+
+    this.potential = [0, 0, 0];
+  }
+
+  addToPotential(p: Dual) {
+    this.potential = add(this.potential, p);
   }
 }
 

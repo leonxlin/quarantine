@@ -120,6 +120,8 @@ function circleCircleCollisionInteraction(
   rj: number,
   strength: number
 ): void {
+  // Pretending that the nodes are at their next positions for this calculation
+  // makes collisions less jittery.
   // TODO: Make this better. Maybe pass in distD directly.
   const pnode1 = { x: node1.x + node1.vx, y: node1.y + node1.vy };
   const pnode2 = { x: node2.x + node2.vx, y: node2.y + node2.vy };
@@ -128,10 +130,8 @@ function circleCircleCollisionInteraction(
 
   const distD = distanceDual(pnode1, pnode2);
   const potential = ad.mult(ad.square(ad.subtract(r, distD)), 0.2);
-  node1.vx -= ad.ddx(potential);
-  node1.vy -= ad.ddy(potential);
-  node2.vx += ad.ddx(potential);
-  node2.vy += ad.ddy(potential);
+  if (isLiveCreature(node1)) node1.addToPotential(potential);
+  if (isLiveCreature(node2)) node2.addToPotential(ad.neg(potential));
 }
 
 // Handles collision between a circle and line segment with a certain width.
@@ -140,6 +140,8 @@ function circleLineCollisionInteraction(
   circleNode: SNode,
   segmentNode: SegmentNode
 ): void {
+  if (!isLiveCreature(circleNode)) return;
+
   // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
   const WALL_HALF_WIDTH = 5;
 
@@ -163,9 +165,7 @@ function circleLineCollisionInteraction(
     return;
   }
 
-  const potential = ad.mult(ad.square(discrepancy), 0.2);
-  circleNode.vx -= ad.ddx(potential);
-  circleNode.vy -= ad.ddy(potential);
+  circleNode.addToPotential(ad.mult(ad.square(discrepancy), 0.2));
 }
 
 // Returns the collide force.
