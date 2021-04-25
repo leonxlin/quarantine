@@ -18940,10 +18940,10 @@ var quarantine = (function (exports) {
           this.tempScoreIndicators = new Set();
           this.fitCanvas();
           this.canvas = document.querySelector("canvas");
-          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.width, // x
+          this.nodes = sequence(1).map(() => new Creature(Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
-          this.nodes[0].infected = true;
+          // (this.nodes[0] as Creature).infected = true;
           this.cursorNode = new CursorNode();
           this.nodes.push(this.cursorNode);
           const nodes = this.nodes;
@@ -19144,6 +19144,15 @@ var quarantine = (function (exports) {
               if (n.scoring) {
                   scoringNodes.push(n);
                   return;
+              }
+              if ("goal" in n) {
+                  context.beginPath();
+                  context.moveTo(n.goal.x + 5, n.goal.y);
+                  context.arc(n.goal.x, n.goal.y, 5, 0, 2 * Math.PI);
+                  context.fillStyle = "pink";
+                  context.fill();
+                  context.strokeStyle = "#333";
+                  context.stroke();
               }
               context.beginPath();
               context.moveTo(n.x + n.r, n.y);
