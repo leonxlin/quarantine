@@ -47,6 +47,7 @@ export class Game {
   recentTicksPerSecond: number[] = new Array(20);
   recentTicksPerSecondIndex = 0;
   recentCollisionForceRuntime: number[] = [];
+  t = 0;
 
   paused = false;
   toolbeltMode = "select-mode";
@@ -136,8 +137,9 @@ export class Game {
           if (!isLiveCreature(n)) return;
 
           let stuck = false;
-          if (Math.random() < 0.05) {
+          if (this.t > n.previousLoggedTime + 20 && Math.random() < 0.8) {
             stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
+            n.previousLoggedTime = this.t;
             n.previousLoggedLocation = { x: n.x, y: n.y };
           }
 
@@ -287,6 +289,7 @@ export class Game {
   tick(): void {
     const context = this.canvas.getContext("2d");
     this.numTicksSinceLastRecord += 1;
+    this.t += 1;
 
     context.clearRect(0, 0, this.width, this.height);
     context.save();

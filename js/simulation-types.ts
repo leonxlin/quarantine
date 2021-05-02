@@ -80,12 +80,14 @@ export class Creature implements SNode {
 
   // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
   previousLoggedLocation: Point;
+  previousLoggedTime: number;
 
   constructor(x: number, y: number) {
     this.r = Math.random() * 5 + 4;
     this.x = x;
     this.y = y;
     this.previousLoggedLocation = { x: x, y: y };
+    this.previousLoggedTime = 0;
     this.dead = false;
 
     this.scoring = false;
