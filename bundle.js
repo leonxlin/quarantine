@@ -18670,6 +18670,8 @@ var quarantine = (function (exports) {
           this.scoring = false;
           this.scoringPartner = null;
           this.ticksLeftInScoringState = 0;
+          this.goalStack = [];
+          this.turnSign = 1;
       }
   }
   function isCreature(n) {
@@ -18960,11 +18962,53 @@ var quarantine = (function (exports) {
                       stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
                       n.previousLoggedLocation = { x: n.x, y: n.y };
                   }
-                  if (!("goal" in n) || squaredDistance(n, n.goal) < 10 || stuck) {
+                  if (!("goal" in n)) {
                       n.goal = {
                           x: Math.random() * width,
                           y: Math.random() * height,
                       };
+                  }
+                  else if (squaredDistance(n, n.goal) < (n.r + 8) * (n.r + 8)) {
+                      if (n.goalStack.length > 0) {
+                          n.goal = n.goalStack.pop();
+                      }
+                      else {
+                          n.goal = {
+                              x: Math.random() * width,
+                              y: Math.random() * height,
+                          };
+                      }
+                  }
+                  else if (stuck) {
+                      if (n.goalStack.length > 15) {
+                          n.goal = n.goalStack[0];
+                          n.goalStack = [];
+                      }
+                      else {
+                          if (n.goalStack.length == 0) {
+                              n.turnSign = Math.random() < 0.5 ? -1 : 1;
+                          }
+                          n.goalStack.push(n.goal);
+                          let vec = {
+                              x: n.goal.x - n.x,
+                              y: n.goal.y - n.y,
+                          };
+                          vec = {
+                              x: vec.x * 0.6 - vec.y * 0.8 * n.turnSign,
+                              y: vec.x * 0.8 * n.turnSign + vec.y * 0.6,
+                          };
+                          const veclen = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+                          n.goal = {
+                              x: n.x + (100 * vec.x) / veclen,
+                              y: n.y + (100 * vec.y) / veclen,
+                          };
+                          if (n.goalStack.length > 4 &&
+                              squaredDistance(n, n.goal) >
+                                  10 * squaredDistance(n, n.goalStack[0])) {
+                              n.goal = n.goalStack[0];
+                              n.goalStack = [];
+                          }
+                      }
                   }
                   const len = Math.sqrt(squaredDistance(n, n.goal));
                   n.vx += (alpha * (n.goal.x - n.x)) / len;
@@ -19150,6 +19194,15 @@ var quarantine = (function (exports) {
                   context.moveTo(n.goal.x + 5, n.goal.y);
                   context.arc(n.goal.x, n.goal.y, 5, 0, 2 * Math.PI);
                   context.fillStyle = "pink";
+                  context.fill();
+                  context.strokeStyle = "#333";
+                  context.stroke();
+              }
+              for (const p of n.goalStack) {
+                  context.beginPath();
+                  context.moveTo(p.x + 5, p.y);
+                  context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+                  context.fillStyle = "green";
                   context.fill();
                   context.strokeStyle = "#333";
                   context.stroke();

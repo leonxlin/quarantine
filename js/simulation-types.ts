@@ -72,6 +72,8 @@ export class Creature implements SNode {
   goal?: Point;
   dead: boolean;
   ticksSinceDeath?: number;
+  goalStack: Point[];
+  turnSign: number; // 1 or -1, used for picking a side to turn toward when stuck.
 
   // Whether the creature is currently in a scoring "state".
   scoring: boolean;
@@ -91,6 +93,9 @@ export class Creature implements SNode {
     this.scoring = false;
     this.scoringPartner = null;
     this.ticksLeftInScoringState = 0;
+
+    this.goalStack = [];
+    this.turnSign = 1;
   }
 }
 
