@@ -18666,6 +18666,7 @@ var quarantine = (function (exports) {
           this.x = x;
           this.y = y;
           this.previousLoggedLocation = { x: x, y: y };
+          this.previousLoggedTime = 0;
           this.dead = false;
           this.scoring = false;
           this.scoringPartner = null;
@@ -18930,6 +18931,7 @@ var quarantine = (function (exports) {
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
           this.recentCollisionForceRuntime = [];
+          this.t = 0;
           this.paused = false;
           this.toolbeltMode = "select-mode";
           this.walls = new Set();
@@ -18958,8 +18960,9 @@ var quarantine = (function (exports) {
                   if (!isLiveCreature(n))
                       return;
                   let stuck = false;
-                  if (Math.random() < 0.05) {
+                  if (this.t > n.previousLoggedTime + 20 && Math.random() < 0.8) {
                       stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
+                      n.previousLoggedTime = this.t;
                       n.previousLoggedLocation = { x: n.x, y: n.y };
                   }
                   if (!("goal" in n)) {
@@ -19162,6 +19165,7 @@ var quarantine = (function (exports) {
       tick() {
           const context = this.canvas.getContext("2d");
           this.numTicksSinceLastRecord += 1;
+          this.t += 1;
           context.clearRect(0, 0, this.width, this.height);
           context.save();
           // Draw parties.
