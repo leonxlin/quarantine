@@ -14,10 +14,7 @@ in the top-level directory and visit `localhost:8000`.
 
 ## TODO
 
-- bugs
-
-  - I suspect interactions are being run for multiple iterations per tick,
-    which is not what we want except for collision handling...
+- make creatures give up on goal after some amount of time
 
 - clean up code
 
