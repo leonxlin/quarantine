@@ -15,6 +15,7 @@ in the top-level directory and visit `localhost:8000`.
 ## TODO
 
 - make creatures give up on goal after some amount of time
+- make initial speed uniform (currently creatures move faster at start)
 
 - clean up code
 
