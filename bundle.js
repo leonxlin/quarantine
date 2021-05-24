@@ -18816,14 +18816,15 @@ var quarantine = (function (exports) {
       }
       const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      const commonFactor = ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+      const commonFactor = ((sign * discrepancy) / segmentNode.length) *
+          window.game.currentLevel.pointCircleFactor;
       circleNode.vx += -b * commonFactor;
       circleNode.vy += a * commonFactor;
   }
   // Returns the collide force.
   //
   // `radius` is a function that takes a node and returns a number.
-  function collideForce (radius) {
+  function collideForce (radius, debugInfo) {
       let nodes, radii, strength = 1, iterations = 1;
       // Named interactions between pairs of nodes.
       const interactions = new Map();
@@ -18871,7 +18872,7 @@ var quarantine = (function (exports) {
               // Return true if there is no need to visit the children of `quad`.
               return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
           }
-          window.game.recentCollisionForceRuntime.push(Date.now() - startTime);
+          debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
       }
       function prepare(quad) {
           if (quad.data)
@@ -18920,30 +18921,19 @@ var quarantine = (function (exports) {
       return force;
   }
 
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-  // Not sure if a class is really the best way to organize this code...
-  // TODO: revisit code organization.
-  class Game {
-      constructor() {
+  class Level {
+      constructor(render_function, debugInfo) {
+          // TODO: Deduplicate these parameters with the equivalents in view.ts.
+          this.width = 900;
+          this.height = 600;
           this.score = 0;
-          // Some crude performance monitoring.
-          this.numTicksSinceLastRecord = 0;
-          this.recentTicksPerSecond = new Array(20);
-          this.recentTicksPerSecondIndex = 0;
-          this.recentCollisionForceRuntime = [];
           this.t = 0;
           this.paused = false;
-          this.toolbeltMode = "select-mode";
           this.walls = new Set();
           this.parties = [];
-          this.selectedObject = null;
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
-          this.CANVAS_ASPECT_RATIO = 3 / 2;
-          this.tempScoreIndicators = new Set();
-          this.fitCanvas();
-          this.canvas = document.querySelector("canvas");
           this.nodes = sequence(200).map(() => new Creature(Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
@@ -18955,6 +18945,10 @@ var quarantine = (function (exports) {
           const height = this.height;
           this.simulation = simulation()
               .velocityDecay(0.2)
+              .force("time", () => {
+              this.t += 1;
+              debugInfo.numNodes = nodes.length;
+          })
               .force("agent", (alpha) => {
               nodes.forEach((n) => {
                   if (!isLiveCreature(n))
@@ -19021,7 +19015,7 @@ var quarantine = (function (exports) {
               .force("interaction", collideForce(
           /* radius */ function (d) {
               return d.r;
-          })
+          }, debugInfo)
               .interaction("collision", collisionInteraction)
               .interaction("party", (creature, party) => {
               if (!(party instanceof Party && isLiveCreature(creature)))
@@ -19092,27 +19086,44 @@ var quarantine = (function (exports) {
                   p.age++;
               });
           })
-              .force("cursor", () => {
-              if (this.toolbeltMode != "select-mode") {
-                  this.canvas.style.cursor = "default";
-              }
-              else if (this.cursorNode.target != null) {
-                  this.canvas.style.cursor = "pointer";
-              }
-              else {
-                  this.canvas.style.cursor = "default";
-              }
-          })
               .nodes(nodes)
-              .on("tick", this.tick.bind(this))
+              .on("tick", () => {
+              render_function(this);
+          })
               // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
               .alphaTarget(0.3)
               // Don't start the simulation yet.
               .stop();
-          // Record number of ticks per second.
+      }
+      togglePause() {
+          if (this.paused) {
+              this.start();
+          }
+          else {
+              this.stop();
+          }
+      }
+      start() {
+          this.simulation.restart();
+          this.paused = false;
+      }
+      stop() {
+          this.simulation.stop();
+          this.paused = true;
+      }
+  }
+
+  class DebugInfo {
+      constructor() {
+          // Some crude performance monitoring.
+          this.numTicksSinceLastRecord = 0;
+          this.recentTicksPerSecond = new Array(20);
+          this.recentTicksPerSecondIndex = 0;
+          this.recentCollisionForceRuntime = [];
+          this.numNodes = 0;
           setInterval(function () {
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
-              select(".num-nodes").text(this.nodes.length);
+              select(".num-nodes").text(this.numNodes);
               // Print the average.
               if (this.recentCollisionForceRuntime.length > 0) {
                   select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
@@ -19125,8 +19136,27 @@ var quarantine = (function (exports) {
               this.numTicksSinceLastRecord = 0;
           }.bind(this), 1000);
       }
+      // Print ticks per second for the last 20 seconds.
+      logRecentTickCount() {
+          console.log(this.recentTicksPerSecond
+              .slice(this.recentTicksPerSecondIndex)
+              .concat(this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)));
+      }
+  }
+
+  class View {
+      constructor(debugInfo) {
+          this.CANVAS_ASPECT_RATIO = 3 / 2;
+          // TODO: revisit whether toolbeltMode belongs in View.
+          this.toolbeltMode = "select-mode";
+          this.selectedObject = null;
+          this.debugInfo = debugInfo;
+          this.tempScoreIndicators = new Set();
+          this.canvas = document.querySelector("canvas");
+          this.fitCanvas();
+      }
       fitCanvas() {
-          const canvas = document.querySelector("canvas");
+          const canvas = this.canvas;
           const left_panel = document.querySelector(".left-panel");
           const right_panel = document.querySelector(".right-panel");
           const body = document.querySelector("body");
@@ -19156,20 +19186,22 @@ var quarantine = (function (exports) {
               y: p.y * this.canvasClientScaleFactor,
           };
       }
-      // Print ticks per second for the last 20 seconds.
-      logRecentTickCount() {
-          console.log(this.recentTicksPerSecond
-              .slice(this.recentTicksPerSecondIndex)
-              .concat(this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)));
-      }
-      tick() {
+      render(level) {
+          if (this.toolbeltMode != "select-mode") {
+              this.canvas.style.cursor = "default";
+          }
+          else if (level.cursorNode.target != null) {
+              this.canvas.style.cursor = "pointer";
+          }
+          else {
+              this.canvas.style.cursor = "default";
+          }
           const context = this.canvas.getContext("2d");
-          this.numTicksSinceLastRecord += 1;
-          this.t += 1;
+          this.debugInfo.numTicksSinceLastRecord += 1;
           context.clearRect(0, 0, this.width, this.height);
           context.save();
           // Draw parties.
-          this.parties.forEach(function (d) {
+          level.parties.forEach(function (d) {
               if (d.expired())
                   return;
               context.beginPath();
@@ -19181,7 +19213,7 @@ var quarantine = (function (exports) {
           // Draw nodes.
           const scoringNodes = [];
           const recentlyDeadNodes = [];
-          this.nodes.forEach((n) => {
+          level.nodes.forEach((n) => {
               if (!isCreature(n))
                   return;
               if (n.dead) {
@@ -19193,24 +19225,6 @@ var quarantine = (function (exports) {
                   scoringNodes.push(n);
                   return;
               }
-              // if ("goal" in n) {
-              //   context.beginPath();
-              //   context.moveTo(n.goal.x + 5, n.goal.y);
-              //   context.arc(n.goal.x, n.goal.y, 5, 0, 2 * Math.PI);
-              //   context.fillStyle = "pink";
-              //   context.fill();
-              //   context.strokeStyle = "#333";
-              //   context.stroke();
-              // }
-              // for (const p of n.goalStack) {
-              //   context.beginPath();
-              //   context.moveTo(p.x + 5, p.y);
-              //   context.arc(p.x, p.y, 5, 0, 2 * Math.PI);
-              //   context.fillStyle = "green";
-              //   context.fill();
-              //   context.strokeStyle = "#333";
-              //   context.stroke();
-              // }
               context.beginPath();
               context.moveTo(n.x + n.r, n.y);
               context.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
@@ -19223,7 +19237,7 @@ var quarantine = (function (exports) {
           // Draw walls.
           context.lineJoin = "round";
           context.lineCap = "round";
-          context.lineWidth = 2 * this.WALL_HALF_WIDTH;
+          context.lineWidth = 2 * level.WALL_HALF_WIDTH;
           function drawWall(wall, color) {
               context.beginPath();
               const curve = curveLinear(context);
@@ -19237,7 +19251,7 @@ var quarantine = (function (exports) {
               context.strokeStyle = color;
               context.stroke();
           }
-          for (const wall of this.walls) {
+          for (const wall of level.walls) {
               // We want to draw the selected wall on top, so skip it here.
               if (wall === this.selectedObject)
                   continue;
@@ -19302,188 +19316,194 @@ var quarantine = (function (exports) {
           context.fillStyle = "#000";
           context.font = "20px sans-serif";
           context.textAlign = "right";
-          context.fillText(String(this.score), this.canvas.width - 10, 30);
+          context.fillText(String(level.score), this.canvas.width - 10, 30);
           context.restore();
-      }
-      togglePause() {
-          if (this.paused) {
-              this.start();
-          }
-          else {
-              this.stop();
-          }
-      }
-      start() {
-          this.simulation.restart();
-          this.paused = false;
-      }
-      stop() {
-          this.simulation.stop();
-          this.paused = true;
       }
       deselectAll() {
           this.selectedObject = null;
           select(".delete-wall").style("display", "none");
       }
   }
+
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  // Not sure if a class is really the best way to organize this code...
+  // TODO: revisit code organization.
+  class Game {
+      constructor() {
+          this.debugInfo = new DebugInfo();
+          this.view = new View(this.debugInfo);
+          this.currentLevel = new Level(this.view.render.bind(this.view), this.debugInfo);
+          this.setUpInputListeners();
+      }
+      togglePause() {
+          this.currentLevel.togglePause();
+      }
+      setUpInputListeners() {
+          // Pausing and restarting by keypress.
+          select("body").on("keydown", () => {
+              if (event.key == "p" || event.key == " ") {
+                  this.currentLevel.togglePause();
+              }
+          });
+          // Start game button.
+          select(".start-game-button").on("click", () => {
+              select(".modal").classed("modal-active", false);
+              this.currentLevel.start();
+          });
+          // Dragging. Note: dragging code may have to change when upgrading to d3v6.
+          // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
+          // TODO: instead of conditional behavior in dragSubject, dragStarted, etc.,
+          // abstract out toolbelt mode for handling drag events.
+          const view = this.view;
+          /* eslint-disable @typescript-eslint/no-this-alias */
+          const game = this;
+          /* eslint-enable @typescript-eslint/no-this-alias */
+          select(view.canvas)
+              .call(drag()
+              .subject(dragSubject.bind(null, this))
+              .on("start", dragStarted.bind(null, this))
+              .on("drag", dragDragged.bind(null, this))
+              .on("end", dragEnded.bind(null, this))
+              .container(function () {
+              // `this` is the canvas I *think*.
+              return this;
+          }))
+              .on("mousemove", () => {
+              if (view.toolbeltMode != "select-mode")
+                  return;
+              const p = view.shiftAndScaleMouseCoordsToCanvasCoords(event);
+              game.currentLevel.cursorNode.setLocation(p.x, p.y);
+          });
+          // Toolbelt mode toggling.
+          selectAll("[name=toolbelt]").on("click", function () {
+              view.toolbeltMode = this.value;
+              if (view.toolbeltMode != "select-mode") {
+                  view.deselectAll();
+              }
+          });
+          select(".delete-wall").on("click", function () {
+              if (!(view.selectedObject instanceof Wall))
+                  return;
+              // Delete selected wall.
+              game.currentLevel.walls.delete(view.selectedObject);
+              // Delete wall components from game.nodes.
+              // TODO: represent Level.nodes as a Set perhaps to make this less crappy.
+              let numNodesToRemove = 0;
+              function swap(arr, a, b) {
+                  const temp = arr[a];
+                  arr[a] = arr[b];
+                  arr[b] = temp;
+              }
+              for (let i = 0; i < game.currentLevel.nodes.length; i++) {
+                  let n;
+                  while (isWallComponent((n = game.currentLevel.nodes[i])) &&
+                      n.wall === view.selectedObject &&
+                      i + numNodesToRemove < game.currentLevel.nodes.length) {
+                      swap(game.currentLevel.nodes, i, game.currentLevel.nodes.length - numNodesToRemove - 1);
+                      numNodesToRemove++;
+                  }
+              }
+              if (numNodesToRemove > 0) {
+                  game.currentLevel.nodes.splice(-numNodesToRemove);
+              }
+              game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+              view.deselectAll();
+          });
+      }
+  }
   window.onload = function () {
       window.d3 = d3;
       window.game = new Game();
-      const game = window.game;
-      // Pausing and restarting by keypress.
-      select("body").on("keydown", function () {
-          if (event.key == "p" || event.key == " ") {
-              game.togglePause();
-          }
-      });
-      // Start game button.
-      select(".start-game-button").on("click", function () {
-          select(".modal").classed("modal-active", false);
-          game.start();
-      });
-      // Dragging. Note: dragging code may have to change when upgrading to d3v6.
-      // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
-      // TODO: instead of conditional behavior in dragSubject, dragStarted, etc.,
-      // abstract out toolbelt mode for handling drag events.
-      select(window.game.canvas)
-          .call(drag()
-          .subject(dragSubject)
-          .on("start", dragStarted)
-          .on("drag", dragDragged)
-          .on("end", dragEnded)
-          .container(function () {
-          return this;
-      }))
-          .on("mousemove", () => {
-          if (game.toolbeltMode != "select-mode")
-              return;
-          const p = game.shiftAndScaleMouseCoordsToCanvasCoords(event);
-          game.cursorNode.setLocation(p.x, p.y);
-      });
-      selectAll("[name=toolbelt]").on("click", function () {
-          game.toolbeltMode = this.value;
-          if (game.toolbeltMode != "select-mode") {
-              game.deselectAll();
-          }
-      });
-      select(".delete-wall").on("click", function () {
-          if (!(game.selectedObject instanceof Wall))
-              return;
-          // Delete selected wall.
-          game.walls.delete(game.selectedObject);
-          // Delete wall components from game.nodes.
-          // TODO: represent game.nodes as a Set perhaps to make this less crappy.
-          let numNodesToRemove = 0;
-          function swap(arr, a, b) {
-              const temp = arr[a];
-              arr[a] = arr[b];
-              arr[b] = temp;
-          }
-          for (let i = 0; i < game.nodes.length; i++) {
-              let n;
-              while (isWallComponent((n = game.nodes[i])) &&
-                  n.wall === game.selectedObject &&
-                  i + numNodesToRemove < game.nodes.length) {
-                  swap(game.nodes, i, game.nodes.length - numNodesToRemove - 1);
-                  numNodesToRemove++;
-              }
-          }
-          if (numNodesToRemove > 0) {
-              game.nodes.splice(-numNodesToRemove);
-          }
-          game.simulation.nodes(game.nodes);
-          game.deselectAll();
-      });
-      function dragSubject() {
-          const p = game.scaleMouseCoordsToCanvasCoords(event);
-          if (game.toolbeltMode == "wall-mode") {
-              const wall = new Wall();
-              wall.points = [p];
-              wall.state = WallState.PROVISIONAL;
-              game.walls.add(wall);
-              return wall;
-          }
-          else if (game.toolbeltMode == "select-mode") {
-              if (isWallComponent(game.cursorNode.target)) {
-                  game.selectedObject = game.cursorNode.target.wall;
-                  const s = select(".delete-wall");
-                  s.style("display", "inline");
-                  s.style("left", event.x + "px");
-                  s.style("top", event.y + "px");
-              }
-              else if (isLiveCreature(game.cursorNode.target)) {
-                  game.selectedObject = game.cursorNode.target;
-                  // Hack: return an empty object without x or y properties. This is the only way
-                  // I've found to make d3-drag's event object have usable x and y coordinates. Somehow
-                  // using different coords for the canvas makes things very confusing.
-                  // TODO: revisit
-                  return {};
-              }
-              else {
-                  game.deselectAll();
-              }
-              // Note: for walls, this returns an object without `x` or `y` properties, which is
-              // not how d3.subject is meant to be used. But it works for now.
-              // TODO: revisit
-              return game.selectedObject;
-          }
-          else if (game.toolbeltMode == "party-mode") {
-              const party = new Party(p.x, p.y);
-              game.parties.push(party);
-              game.nodes.push(party);
-              game.simulation.nodes(game.nodes);
-          }
-          return null;
-      }
-      function dragStarted() {
-          if (game.toolbeltMode == "select-mode") {
-              if (isLiveCreature(game.selectedObject)) {
-                  // Manipulating game.selectedObject instead of `d3.event.subject` because I had trouble
-                  // getting the coords to be right in d3.event when using `d3.event.subject`.
-                  // See notes in dragSubject.
-                  game.selectedObject.fx = game.selectedObject.x;
-                  game.selectedObject.fy = game.selectedObject.y;
-              }
-          }
-      }
-      function dragDragged() {
-          const p = game.scaleMouseCoordsToCanvasCoords(event);
-          if (game.toolbeltMode == "select-mode") {
-              if (isCreature(game.selectedObject)) {
-                  game.selectedObject.fx = p.x;
-                  game.selectedObject.fy = p.y;
-              }
-          }
-          else if (game.toolbeltMode == "wall-mode") {
-              const points = event.subject.points;
-              if (squaredDistance(p, points[points.length - 1]) >
-                  5 * game.WALL_HALF_WIDTH * game.WALL_HALF_WIDTH) {
-                  points.push({ x: p.x, y: p.y });
-              }
-          }
-      }
-      function dragEnded() {
-          if (game.toolbeltMode == "select-mode") {
-              if (isLiveCreature(game.selectedObject)) {
-                  game.selectedObject.fx = null;
-                  game.selectedObject.fy = null;
-                  game.selectedObject = null;
-              }
-          }
-          else if (game.toolbeltMode == "wall-mode") {
-              for (let i = 0; i < event.subject.points.length; i++) {
-                  const point = event.subject.points[i];
-                  game.nodes.push(new WallJoint(point.x, point.y, game.WALL_HALF_WIDTH, event.subject));
-                  if (i == 0)
-                      continue;
-                  const prevPoint = event.subject.points[i - 1];
-                  game.nodes.push(new SegmentNode(prevPoint, point, game.WALL_HALF_WIDTH, event.subject));
-              }
-              game.simulation.nodes(game.nodes);
-              event.subject.state = WallState.BUILT;
-          }
-      }
   };
+  function dragSubject(game) {
+      const p = game.view.scaleMouseCoordsToCanvasCoords(event);
+      if (game.view.toolbeltMode == "wall-mode") {
+          const wall = new Wall();
+          wall.points = [p];
+          wall.state = WallState.PROVISIONAL;
+          game.currentLevel.walls.add(wall);
+          return wall;
+      }
+      else if (game.view.toolbeltMode == "select-mode") {
+          if (isWallComponent(game.currentLevel.cursorNode.target)) {
+              game.view.selectedObject = game.currentLevel.cursorNode.target.wall;
+              const s = select(".delete-wall");
+              s.style("display", "inline");
+              s.style("left", event.x + "px");
+              s.style("top", event.y + "px");
+          }
+          else if (isLiveCreature(game.currentLevel.cursorNode.target)) {
+              game.view.selectedObject = game.currentLevel.cursorNode.target;
+              // Hack: return an empty object without x or y properties. This is the only way
+              // I've found to make d3-drag's event object have usable x and y coordinates. Somehow
+              // using different coords for the canvas makes things very confusing.
+              // TODO: revisit
+              return {};
+          }
+          else {
+              game.view.deselectAll();
+          }
+          // Note: for walls, this returns an object without `x` or `y` properties, which is
+          // not how d3.subject is meant to be used. But it works for now.
+          // TODO: revisit
+          return game.view.selectedObject;
+      }
+      else if (game.view.toolbeltMode == "party-mode") {
+          const party = new Party(p.x, p.y);
+          game.currentLevel.parties.push(party);
+          game.currentLevel.nodes.push(party);
+          game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+      }
+      return null;
+  }
+  function dragStarted(game) {
+      if (game.view.toolbeltMode == "select-mode") {
+          if (isLiveCreature(game.view.selectedObject)) {
+              // Manipulating game.selectedObject instead of `d3.event.subject` because I had trouble
+              // getting the coords to be right in d3.event when using `d3.event.subject`.
+              // See notes in dragSubject.
+              game.view.selectedObject.fx = game.view.selectedObject.x;
+              game.view.selectedObject.fy = game.view.selectedObject.y;
+          }
+      }
+  }
+  function dragDragged(game) {
+      const p = game.view.scaleMouseCoordsToCanvasCoords(event);
+      if (game.view.toolbeltMode == "select-mode") {
+          if (isCreature(game.view.selectedObject)) {
+              game.view.selectedObject.fx = p.x;
+              game.view.selectedObject.fy = p.y;
+          }
+      }
+      else if (game.view.toolbeltMode == "wall-mode") {
+          const points = event.subject.points;
+          if (squaredDistance(p, points[points.length - 1]) >
+              5 * game.currentLevel.WALL_HALF_WIDTH * game.currentLevel.WALL_HALF_WIDTH) {
+              points.push({ x: p.x, y: p.y });
+          }
+      }
+  }
+  function dragEnded(game) {
+      if (game.view.toolbeltMode == "select-mode") {
+          if (isLiveCreature(game.view.selectedObject)) {
+              game.view.selectedObject.fx = null;
+              game.view.selectedObject.fy = null;
+              game.view.selectedObject = null;
+          }
+      }
+      else if (game.view.toolbeltMode == "wall-mode") {
+          for (let i = 0; i < event.subject.points.length; i++) {
+              const point = event.subject.points[i];
+              game.currentLevel.nodes.push(new WallJoint(point.x, point.y, game.currentLevel.WALL_HALF_WIDTH, event.subject));
+              if (i == 0)
+                  continue;
+              const prevPoint = event.subject.points[i - 1];
+              game.currentLevel.nodes.push(new SegmentNode(prevPoint, point, game.currentLevel.WALL_HALF_WIDTH, event.subject));
+          }
+          game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+          event.subject.state = WallState.BUILT;
+      }
+  }
 
   exports.Game = Game;
 

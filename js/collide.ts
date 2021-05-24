@@ -43,7 +43,8 @@ import {
   isCursorNode,
   isImpassableSegment,
   isLiveCreature,
-} from "./simulation-types.js";
+} from "./simulation-types";
+import { DebugInfo } from "./debug-info";
 
 function constant(x) {
   return function () {
@@ -158,7 +159,8 @@ function circleLineCollisionInteraction(
   const sign = nyp > 0 ? 1 : -1;
   // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
   const commonFactor =
-    ((sign * discrepancy) / segmentNode.length) * window.game.pointCircleFactor;
+    ((sign * discrepancy) / segmentNode.length) *
+    window.game.currentLevel.pointCircleFactor;
   circleNode.vx += -b * commonFactor;
   circleNode.vy += a * commonFactor;
 }
@@ -166,7 +168,10 @@ function circleLineCollisionInteraction(
 // Returns the collide force.
 //
 // `radius` is a function that takes a node and returns a number.
-export default function (radius: (SNode) => number): SForceCollide {
+export default function (
+  radius: (SNode) => number,
+  debugInfo: DebugInfo
+): SForceCollide {
   let nodes,
     radii,
     strength = 1,
@@ -228,7 +233,7 @@ export default function (radius: (SNode) => number): SForceCollide {
       return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
     }
 
-    window.game.recentCollisionForceRuntime.push(Date.now() - startTime);
+    debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
   }
 
   function prepare(quad) {
