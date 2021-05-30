@@ -8,7 +8,7 @@ import {
   isCreature,
   TempScoreIndicator,
 } from "./simulation-types";
-import { Level } from "./level";
+import { World } from "./world";
 import { DebugInfo } from "./debug-info";
 
 export class View {
@@ -76,10 +76,10 @@ export class View {
     this.fitCanvas();
   }
 
-  render(level: Level): void {
+  render(world: World): void {
     if (this.toolbeltMode != "select-mode") {
       this.canvas.style.cursor = "default";
-    } else if (level.cursorNode.target != null) {
+    } else if (world.cursorNode.target != null) {
       this.canvas.style.cursor = "pointer";
     } else {
       this.canvas.style.cursor = "default";
@@ -92,7 +92,7 @@ export class View {
     context.save();
 
     // Draw parties.
-    level.parties.forEach(function (d) {
+    world.parties.forEach(function (d) {
       if (d.expired()) return;
       context.beginPath();
       context.moveTo(d.x + d.visibleR, d.y);
@@ -104,7 +104,7 @@ export class View {
     // Draw nodes.
     const scoringNodes: Creature[] = [];
     const recentlyDeadNodes: Creature[] = [];
-    level.nodes.forEach((n) => {
+    world.nodes.forEach((n) => {
       if (!isCreature(n)) return;
       if (n.dead) {
         if (n.ticksSinceDeath < 60) recentlyDeadNodes.push(n);
@@ -129,7 +129,7 @@ export class View {
     // Draw walls.
     context.lineJoin = "round";
     context.lineCap = "round";
-    context.lineWidth = 2 * level.WALL_HALF_WIDTH;
+    context.lineWidth = 2 * world.WALL_HALF_WIDTH;
     function drawWall(wall: Wall, color: string) {
       context.beginPath();
       const curve = d3.curveLinear(context);
@@ -143,7 +143,7 @@ export class View {
       context.strokeStyle = color;
       context.stroke();
     }
-    for (const wall of level.walls) {
+    for (const wall of world.walls) {
       // We want to draw the selected wall on top, so skip it here.
       if (wall === this.selectedObject) continue;
       drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
@@ -215,7 +215,7 @@ export class View {
     context.fillStyle = "#000";
     context.font = "20px sans-serif";
     context.textAlign = "right";
-    context.fillText(String(level.score), this.canvas.width - 10, 30);
+    context.fillText(String(world.score), this.canvas.width - 10, 30);
 
     context.restore();
   }

@@ -13,7 +13,7 @@ import collideForce from "./collide";
 import { collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 
-export class Level {
+export class World {
   nodes: SNode[];
   simulation: d3.Simulation<SNode, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
@@ -35,7 +35,7 @@ export class Level {
 
   WALL_HALF_WIDTH = 5;
 
-  constructor(render_function: (level: Level) => void, debugInfo: DebugInfo) {
+  constructor(render_function: (world: World) => void, debugInfo: DebugInfo) {
     this.nodes = d3.range(200).map(
       () =>
         new Creature(

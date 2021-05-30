@@ -18817,7 +18817,7 @@ var quarantine = (function (exports) {
       const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
       const commonFactor = ((sign * discrepancy) / segmentNode.length) *
-          window.game.currentLevel.pointCircleFactor;
+          window.game.world.pointCircleFactor;
       circleNode.vx += -b * commonFactor;
       circleNode.vy += a * commonFactor;
   }
@@ -18921,7 +18921,7 @@ var quarantine = (function (exports) {
       return force;
   }
 
-  class Level {
+  class World {
       constructor(render_function, debugInfo) {
           // TODO: Deduplicate these parameters with the equivalents in view.ts.
           this.width = 900;
@@ -19186,11 +19186,11 @@ var quarantine = (function (exports) {
               y: p.y * this.canvasClientScaleFactor,
           };
       }
-      render(level) {
+      render(world) {
           if (this.toolbeltMode != "select-mode") {
               this.canvas.style.cursor = "default";
           }
-          else if (level.cursorNode.target != null) {
+          else if (world.cursorNode.target != null) {
               this.canvas.style.cursor = "pointer";
           }
           else {
@@ -19201,7 +19201,7 @@ var quarantine = (function (exports) {
           context.clearRect(0, 0, this.width, this.height);
           context.save();
           // Draw parties.
-          level.parties.forEach(function (d) {
+          world.parties.forEach(function (d) {
               if (d.expired())
                   return;
               context.beginPath();
@@ -19213,7 +19213,7 @@ var quarantine = (function (exports) {
           // Draw nodes.
           const scoringNodes = [];
           const recentlyDeadNodes = [];
-          level.nodes.forEach((n) => {
+          world.nodes.forEach((n) => {
               if (!isCreature(n))
                   return;
               if (n.dead) {
@@ -19237,7 +19237,7 @@ var quarantine = (function (exports) {
           // Draw walls.
           context.lineJoin = "round";
           context.lineCap = "round";
-          context.lineWidth = 2 * level.WALL_HALF_WIDTH;
+          context.lineWidth = 2 * world.WALL_HALF_WIDTH;
           function drawWall(wall, color) {
               context.beginPath();
               const curve = curveLinear(context);
@@ -19251,7 +19251,7 @@ var quarantine = (function (exports) {
               context.strokeStyle = color;
               context.stroke();
           }
-          for (const wall of level.walls) {
+          for (const wall of world.walls) {
               // We want to draw the selected wall on top, so skip it here.
               if (wall === this.selectedObject)
                   continue;
@@ -19316,7 +19316,7 @@ var quarantine = (function (exports) {
           context.fillStyle = "#000";
           context.font = "20px sans-serif";
           context.textAlign = "right";
-          context.fillText(String(level.score), this.canvas.width - 10, 30);
+          context.fillText(String(world.score), this.canvas.width - 10, 30);
           context.restore();
       }
       deselectAll() {
@@ -19332,23 +19332,23 @@ var quarantine = (function (exports) {
       constructor() {
           this.debugInfo = new DebugInfo();
           this.view = new View(this.debugInfo);
-          this.currentLevel = new Level(this.view.render.bind(this.view), this.debugInfo);
+          this.world = new World(this.view.render.bind(this.view), this.debugInfo);
           this.setUpInputListeners();
       }
       togglePause() {
-          this.currentLevel.togglePause();
+          this.world.togglePause();
       }
       setUpInputListeners() {
           // Pausing and restarting by keypress.
           select("body").on("keydown", () => {
               if (event.key == "p" || event.key == " ") {
-                  this.currentLevel.togglePause();
+                  this.world.togglePause();
               }
           });
           // Start game button.
           select(".start-game-button").on("click", () => {
               select(".modal").classed("modal-active", false);
-              this.currentLevel.start();
+              this.world.start();
           });
           // Dragging. Note: dragging code may have to change when upgrading to d3v6.
           // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -19372,7 +19372,7 @@ var quarantine = (function (exports) {
               if (view.toolbeltMode != "select-mode")
                   return;
               const p = view.shiftAndScaleMouseCoordsToCanvasCoords(event);
-              game.currentLevel.cursorNode.setLocation(p.x, p.y);
+              game.world.cursorNode.setLocation(p.x, p.y);
           });
           // Toolbelt mode toggling.
           selectAll("[name=toolbelt]").on("click", function () {
@@ -19385,28 +19385,28 @@ var quarantine = (function (exports) {
               if (!(view.selectedObject instanceof Wall))
                   return;
               // Delete selected wall.
-              game.currentLevel.walls.delete(view.selectedObject);
+              game.world.walls.delete(view.selectedObject);
               // Delete wall components from game.nodes.
-              // TODO: represent Level.nodes as a Set perhaps to make this less crappy.
+              // TODO: represent World.nodes as a Set perhaps to make this less crappy.
               let numNodesToRemove = 0;
               function swap(arr, a, b) {
                   const temp = arr[a];
                   arr[a] = arr[b];
                   arr[b] = temp;
               }
-              for (let i = 0; i < game.currentLevel.nodes.length; i++) {
+              for (let i = 0; i < game.world.nodes.length; i++) {
                   let n;
-                  while (isWallComponent((n = game.currentLevel.nodes[i])) &&
+                  while (isWallComponent((n = game.world.nodes[i])) &&
                       n.wall === view.selectedObject &&
-                      i + numNodesToRemove < game.currentLevel.nodes.length) {
-                      swap(game.currentLevel.nodes, i, game.currentLevel.nodes.length - numNodesToRemove - 1);
+                      i + numNodesToRemove < game.world.nodes.length) {
+                      swap(game.world.nodes, i, game.world.nodes.length - numNodesToRemove - 1);
                       numNodesToRemove++;
                   }
               }
               if (numNodesToRemove > 0) {
-                  game.currentLevel.nodes.splice(-numNodesToRemove);
+                  game.world.nodes.splice(-numNodesToRemove);
               }
-              game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+              game.world.simulation.nodes(game.world.nodes);
               view.deselectAll();
           });
       }
@@ -19421,19 +19421,19 @@ var quarantine = (function (exports) {
           const wall = new Wall();
           wall.points = [p];
           wall.state = WallState.PROVISIONAL;
-          game.currentLevel.walls.add(wall);
+          game.world.walls.add(wall);
           return wall;
       }
       else if (game.view.toolbeltMode == "select-mode") {
-          if (isWallComponent(game.currentLevel.cursorNode.target)) {
-              game.view.selectedObject = game.currentLevel.cursorNode.target.wall;
+          if (isWallComponent(game.world.cursorNode.target)) {
+              game.view.selectedObject = game.world.cursorNode.target.wall;
               const s = select(".delete-wall");
               s.style("display", "inline");
               s.style("left", event.x + "px");
               s.style("top", event.y + "px");
           }
-          else if (isLiveCreature(game.currentLevel.cursorNode.target)) {
-              game.view.selectedObject = game.currentLevel.cursorNode.target;
+          else if (isLiveCreature(game.world.cursorNode.target)) {
+              game.view.selectedObject = game.world.cursorNode.target;
               // Hack: return an empty object without x or y properties. This is the only way
               // I've found to make d3-drag's event object have usable x and y coordinates. Somehow
               // using different coords for the canvas makes things very confusing.
@@ -19450,9 +19450,9 @@ var quarantine = (function (exports) {
       }
       else if (game.view.toolbeltMode == "party-mode") {
           const party = new Party(p.x, p.y);
-          game.currentLevel.parties.push(party);
-          game.currentLevel.nodes.push(party);
-          game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+          game.world.parties.push(party);
+          game.world.nodes.push(party);
+          game.world.simulation.nodes(game.world.nodes);
       }
       return null;
   }
@@ -19478,7 +19478,7 @@ var quarantine = (function (exports) {
       else if (game.view.toolbeltMode == "wall-mode") {
           const points = event.subject.points;
           if (squaredDistance(p, points[points.length - 1]) >
-              5 * game.currentLevel.WALL_HALF_WIDTH * game.currentLevel.WALL_HALF_WIDTH) {
+              5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH) {
               points.push({ x: p.x, y: p.y });
           }
       }
@@ -19494,13 +19494,13 @@ var quarantine = (function (exports) {
       else if (game.view.toolbeltMode == "wall-mode") {
           for (let i = 0; i < event.subject.points.length; i++) {
               const point = event.subject.points[i];
-              game.currentLevel.nodes.push(new WallJoint(point.x, point.y, game.currentLevel.WALL_HALF_WIDTH, event.subject));
+              game.world.nodes.push(new WallJoint(point.x, point.y, game.world.WALL_HALF_WIDTH, event.subject));
               if (i == 0)
                   continue;
               const prevPoint = event.subject.points[i - 1];
-              game.currentLevel.nodes.push(new SegmentNode(prevPoint, point, game.currentLevel.WALL_HALF_WIDTH, event.subject));
+              game.world.nodes.push(new SegmentNode(prevPoint, point, game.world.WALL_HALF_WIDTH, event.subject));
           }
-          game.currentLevel.simulation.nodes(game.currentLevel.nodes);
+          game.world.simulation.nodes(game.world.nodes);
           event.subject.state = WallState.BUILT;
       }
   }
