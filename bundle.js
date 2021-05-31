@@ -18691,16 +18691,46 @@ var quarantine = (function (exports) {
   class Wall {
       constructor() {
           this.points = [];
+          this.state = WallState.PROVISIONAL;
+          this.joints = [];
+          this.segments = [];
+          this.halfWidth = 5;
+      }
+      // Add a point to the wall. This should only be called if the wall is still in
+      // state PROVISIONAL.
+      addPoint(p) {
+          this.points.push({ x: p.x, y: p.y });
+      }
+      // Add a point to the wall if it is farther than minSquaredDist away from
+      // the current last point in the wall. This should only be called if the wall
+      // is still in state PROVISIONAL.
+      maybeAddPoint(p, minSquaredDist) {
+          if (squaredDistance(p, this.points[this.points.length - 1]) > minSquaredDist) {
+              this.addPoint(p);
+          }
+      }
+      // Construct joint and segment nodes based on the wall's points, and change the
+      // wall state to BUILT.
+      complete() {
+          for (let i = 0; i < this.points.length; i++) {
+              const point = this.points[i];
+              this.joints.push(new WallJoint(point.x, point.y, this));
+              if (i == 0)
+                  continue;
+              const prevPoint = this.points[i - 1];
+              this.segments.push(new SegmentNode(prevPoint, point, this));
+          }
+          this.state = WallState.BUILT;
       }
   }
   function isWallComponent(n) {
       return n instanceof WallJoint || n instanceof SegmentNode;
   }
   class WallJoint {
-      constructor(x, y, r, wall) {
+      constructor(x, y, wall) {
           this.fx = this.x = x;
           this.fy = this.y = y;
-          this.r = r;
+          this.r = wall.halfWidth;
           this.wall = wall;
       }
   }
@@ -18712,14 +18742,14 @@ var quarantine = (function (exports) {
   }
   // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
   class SegmentNode {
-      constructor(left, right, half_width, wall) {
+      constructor(left, right, wall) {
           this.left = left;
           this.right = right;
           this.length2 = squaredDistance(left, right);
           this.fx = this.x = 0.5 * (left.x + right.x);
           this.fy = this.y = 0.5 * (left.y + right.y);
           // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
-          this.r = Math.sqrt(this.length2 / 4 + half_width * half_width);
+          this.r = Math.sqrt(this.length2 / 4 + wall.halfWidth * wall.halfWidth);
           this.length = Math.sqrt(this.length2);
           this.vec = {
               x: right.x - left.x,
@@ -18822,8 +18852,8 @@ var quarantine = (function (exports) {
       const interactions = new Map();
       function force() {
           const startTime = Date.now();
-          let i, tree, node, xi, yi, ri, ri2;
-          tree = quadtree(world.nodes, x, y).visitAfter(prepare);
+          let i, node, xi, yi, ri, ri2;
+          const tree = quadtree(world.nodes, x, y).visitAfter(prepare);
           // For each node, visit other nodes that could collide.
           for (i = 0; i < world.nodes.length; ++i) {
               node = world.nodes[i];
@@ -19382,8 +19412,7 @@ var quarantine = (function (exports) {
       const p = game.view.scaleMouseCoordsToCanvasCoords(event);
       if (game.view.toolbeltMode == "wall-mode") {
           const wall = new Wall();
-          wall.points = [p];
-          wall.state = WallState.PROVISIONAL;
+          wall.addPoint(p);
           game.world.walls.add(wall);
           return wall;
       }
@@ -19439,11 +19468,8 @@ var quarantine = (function (exports) {
           }
       }
       else if (game.view.toolbeltMode == "wall-mode") {
-          const points = event.subject.points;
-          if (squaredDistance(p, points[points.length - 1]) >
-              5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH) {
-              points.push({ x: p.x, y: p.y });
-          }
+          const wall = event.subject;
+          wall.maybeAddPoint(p, 5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH);
       }
   }
   function dragEnded(game) {
@@ -19455,16 +19481,10 @@ var quarantine = (function (exports) {
           }
       }
       else if (game.view.toolbeltMode == "wall-mode") {
-          for (let i = 0; i < event.subject.points.length; i++) {
-              const point = event.subject.points[i];
-              game.world.nodes.push(new WallJoint(point.x, point.y, game.world.WALL_HALF_WIDTH, event.subject));
-              if (i == 0)
-                  continue;
-              const prevPoint = event.subject.points[i - 1];
-              game.world.nodes.push(new SegmentNode(prevPoint, point, game.world.WALL_HALF_WIDTH, event.subject));
-          }
+          const wall = event.subject;
+          wall.complete();
+          game.world.nodes.push(...wall.joints, ...wall.segments);
           game.world.simulation.nodes(game.world.nodes);
-          event.subject.state = WallState.BUILT;
       }
   }
 

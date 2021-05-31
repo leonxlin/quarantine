@@ -119,7 +119,46 @@ export enum WallState {
 
 export class Wall {
   points: Array<Point> = [];
-  state: WallState.PROVISIONAL;
+  state: WallState = WallState.PROVISIONAL;
+  halfWidth: number;
+
+  joints: Array<WallJoint> = [];
+  segments: Array<SegmentNode> = [];
+
+  constructor() {
+    this.halfWidth = 5;
+  }
+
+  // Add a point to the wall. This should only be called if the wall is still in
+  // state PROVISIONAL.
+  addPoint(p: Point): void {
+    this.points.push({ x: p.x, y: p.y });
+  }
+
+  // Add a point to the wall if it is farther than minSquaredDist away from
+  // the current last point in the wall. This should only be called if the wall
+  // is still in state PROVISIONAL.
+  maybeAddPoint(p: Point, minSquaredDist: number): void {
+    if (
+      squaredDistance(p, this.points[this.points.length - 1]) > minSquaredDist
+    ) {
+      this.addPoint(p);
+    }
+  }
+
+  // Construct joint and segment nodes based on the wall's points, and change the
+  // wall state to BUILT.
+  complete(): void {
+    for (let i = 0; i < this.points.length; i++) {
+      const point = this.points[i];
+      this.joints.push(new WallJoint(point.x, point.y, this));
+
+      if (i == 0) continue;
+      const prevPoint = this.points[i - 1];
+      this.segments.push(new SegmentNode(prevPoint, point, this));
+    }
+    this.state = WallState.BUILT;
+  }
 }
 
 export interface WallComponent extends SNode {
@@ -140,10 +179,10 @@ export class WallJoint implements SNode, WallComponent {
   index?: number;
   wall: Wall;
 
-  constructor(x: number, y: number, r: number, wall: Wall) {
+  constructor(x: number, y: number, wall: Wall) {
     this.fx = this.x = x;
     this.fy = this.y = y;
-    this.r = r;
+    this.r = wall.halfWidth;
     this.wall = wall;
   }
 }
@@ -180,14 +219,14 @@ export class SegmentNode implements SNode, WallComponent {
 
   wall: Wall;
 
-  constructor(left: Point, right: Point, half_width: number, wall: Wall) {
+  constructor(left: Point, right: Point, wall: Wall) {
     this.left = left;
     this.right = right;
     this.length2 = squaredDistance(left, right);
     this.fx = this.x = 0.5 * (left.x + right.x);
     this.fy = this.y = 0.5 * (left.y + right.y);
     // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
-    this.r = Math.sqrt(this.length2 / 4 + half_width * half_width);
+    this.r = Math.sqrt(this.length2 / 4 + wall.halfWidth * wall.halfWidth);
     this.length = Math.sqrt(this.length2);
     this.vec = {
       x: right.x - left.x,

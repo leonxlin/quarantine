@@ -156,8 +156,8 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
   function force() {
     const startTime = Date.now();
 
-    let i, tree, node, xi, yi, ri, ri2;
-    tree = quadtree(world.nodes, x, y).visitAfter(prepare);
+    let i, node, xi, yi, ri, ri2;
+    const tree = quadtree(world.nodes, x, y).visitAfter(prepare);
 
     // For each node, visit other nodes that could collide.
     for (i = 0; i < world.nodes.length; ++i) {

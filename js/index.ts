@@ -1,15 +1,11 @@
 import * as d3 from "d3";
 import {
   SNode,
-  SegmentNode,
   Wall,
-  WallState,
-  WallJoint,
   isWallComponent,
   Party,
   isCreature,
   isLiveCreature,
-  squaredDistance,
 } from "./simulation-types";
 import { World } from "./world";
 import { DebugInfo } from "./debug-info";
@@ -146,8 +142,7 @@ function dragSubject(game: Game) {
   const p = game.view.scaleMouseCoordsToCanvasCoords(d3.event);
   if (game.view.toolbeltMode == "wall-mode") {
     const wall = new Wall();
-    wall.points = [p];
-    wall.state = WallState.PROVISIONAL;
+    wall.addPoint(p);
     game.world.walls.add(wall);
     return wall;
   } else if (game.view.toolbeltMode == "select-mode") {
@@ -200,13 +195,11 @@ function dragDragged(game: Game) {
       game.view.selectedObject.fy = p.y;
     }
   } else if (game.view.toolbeltMode == "wall-mode") {
-    const points = d3.event.subject.points;
-    if (
-      squaredDistance(p, points[points.length - 1]) >
+    const wall = d3.event.subject as Wall;
+    wall.maybeAddPoint(
+      p,
       5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH
-    ) {
-      points.push({ x: p.x, y: p.y });
-    }
+    );
   }
 }
 
@@ -218,29 +211,9 @@ function dragEnded(game: Game) {
       game.view.selectedObject = null;
     }
   } else if (game.view.toolbeltMode == "wall-mode") {
-    for (let i = 0; i < d3.event.subject.points.length; i++) {
-      const point = d3.event.subject.points[i];
-      game.world.nodes.push(
-        new WallJoint(
-          point.x,
-          point.y,
-          game.world.WALL_HALF_WIDTH,
-          d3.event.subject
-        )
-      );
-
-      if (i == 0) continue;
-      const prevPoint = d3.event.subject.points[i - 1];
-      game.world.nodes.push(
-        new SegmentNode(
-          prevPoint,
-          point,
-          game.world.WALL_HALF_WIDTH,
-          d3.event.subject
-        )
-      );
-    }
+    const wall = d3.event.subject as Wall;
+    wall.complete();
+    game.world.nodes.push(...wall.joints, ...wall.segments);
     game.world.simulation.nodes(game.world.nodes);
-    d3.event.subject.state = WallState.BUILT;
   }
 }
