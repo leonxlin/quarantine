@@ -228,7 +228,7 @@ export type Interaction = (
   ...args: unknown[]
 ) => void;
 
-export interface SForceCollide extends d3.ForceCollide<SNode> {
+export interface SForceCollide extends d3.Force<SNode, undefined> {
   interaction(name: string): Interaction;
   interaction(name: string, f: Interaction): SForceCollide;
 }

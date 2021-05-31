@@ -162,7 +162,7 @@ var quarantine = (function (exports) {
   var slice$6 = array$3.slice;
   var map$3 = array$3.map;
 
-  function constant$e(x) {
+  function constant$d(x) {
     return function() {
       return x;
     };
@@ -295,15 +295,15 @@ var quarantine = (function (exports) {
     }
 
     histogram.value = function(_) {
-      return arguments.length ? (value = typeof _ === "function" ? _ : constant$e(_), histogram) : value;
+      return arguments.length ? (value = typeof _ === "function" ? _ : constant$d(_), histogram) : value;
     };
 
     histogram.domain = function(_) {
-      return arguments.length ? (domain = typeof _ === "function" ? _ : constant$e([_[0], _[1]]), histogram) : domain;
+      return arguments.length ? (domain = typeof _ === "function" ? _ : constant$d([_[0], _[1]]), histogram) : domain;
     };
 
     histogram.thresholds = function(_) {
-      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$e(slice$6.call(_)) : constant$e(_), histogram) : threshold;
+      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$d(slice$6.call(_)) : constant$d(_), histogram) : threshold;
     };
 
     return histogram;
@@ -943,7 +943,7 @@ var quarantine = (function (exports) {
     querySelectorAll: function(selector) { return this._parent.querySelectorAll(selector); }
   };
 
-  function constant$d(x) {
+  function constant$c(x) {
     return function() {
       return x;
     };
@@ -1032,7 +1032,7 @@ var quarantine = (function (exports) {
         parents = this._parents,
         groups = this._groups;
 
-    if (typeof value !== "function") value = constant$d(value);
+    if (typeof value !== "function") value = constant$c(value);
 
     for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
       var parent = parents[j],
@@ -2397,7 +2397,7 @@ var quarantine = (function (exports) {
     };
   }
 
-  function constant$c(x) {
+  function constant$b(x) {
     return function() {
       return x;
     };
@@ -2417,18 +2417,18 @@ var quarantine = (function (exports) {
 
   function hue$1(a, b) {
     var d = b - a;
-    return d ? linear$2(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$c(isNaN(a) ? b : a);
+    return d ? linear$2(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$b(isNaN(a) ? b : a);
   }
 
   function gamma(y) {
     return (y = +y) === 1 ? nogamma : function(a, b) {
-      return b - a ? exponential$1(a, b, y) : constant$c(isNaN(a) ? b : a);
+      return b - a ? exponential$1(a, b, y) : constant$b(isNaN(a) ? b : a);
     };
   }
 
   function nogamma(a, b) {
     var d = b - a;
-    return d ? linear$2(a, d) : constant$c(isNaN(a) ? b : a);
+    return d ? linear$2(a, d) : constant$b(isNaN(a) ? b : a);
   }
 
   var interpolateRgb = (function rgbGamma(y) {
@@ -2617,7 +2617,7 @@ var quarantine = (function (exports) {
 
   function interpolateValue(a, b) {
     var t = typeof b, c;
-    return b == null || t === "boolean" ? constant$c(b)
+    return b == null || t === "boolean" ? constant$b(b)
         : (t === "number" ? interpolateNumber
         : t === "string" ? ((c = color(b)) ? (b = c, interpolateRgb) : interpolateString)
         : b instanceof color ? interpolateRgb
@@ -4130,7 +4130,7 @@ var quarantine = (function (exports) {
     return null;
   }
 
-  function constant$b(x) {
+  function constant$a(x) {
     return function() {
       return x;
     };
@@ -4705,15 +4705,15 @@ var quarantine = (function (exports) {
     }
 
     brush.extent = function(_) {
-      return arguments.length ? (extent = typeof _ === "function" ? _ : constant$b(number2(_)), brush) : extent;
+      return arguments.length ? (extent = typeof _ === "function" ? _ : constant$a(number2(_)), brush) : extent;
     };
 
     brush.filter = function(_) {
-      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$b(!!_), brush) : filter;
+      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$a(!!_), brush) : filter;
     };
 
     brush.touchable = function(_) {
-      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$b(!!_), brush) : touchable;
+      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$a(!!_), brush) : touchable;
     };
 
     brush.handleSize = function(_) {
@@ -4860,7 +4860,7 @@ var quarantine = (function (exports) {
 
   var slice$4 = Array.prototype.slice;
 
-  function constant$a(x) {
+  function constant$9(x) {
     return function() {
       return x;
     };
@@ -5052,15 +5052,15 @@ var quarantine = (function (exports) {
     }
 
     ribbon.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$a(+_), ribbon) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$9(+_), ribbon) : radius;
     };
 
     ribbon.startAngle = function(_) {
-      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$a(+_), ribbon) : startAngle;
+      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$9(+_), ribbon) : startAngle;
     };
 
     ribbon.endAngle = function(_) {
-      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$a(+_), ribbon) : endAngle;
+      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$9(+_), ribbon) : endAngle;
     };
 
     ribbon.source = function(_) {
@@ -5292,7 +5292,7 @@ var quarantine = (function (exports) {
     return area;
   }
 
-  function constant$9(x) {
+  function constant$8(x) {
     return function() {
       return x;
     };
@@ -5514,7 +5514,7 @@ var quarantine = (function (exports) {
     };
 
     contours.thresholds = function(_) {
-      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$9(slice$3.call(_)) : constant$9(_), contours) : threshold;
+      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$8(slice$3.call(_)) : constant$8(_), contours) : threshold;
     };
 
     contours.smooth = function(_) {
@@ -5591,7 +5591,7 @@ var quarantine = (function (exports) {
         o = r * 3, // grid offset, to pad for blur
         n = (dx + o * 2) >> k, // grid width
         m = (dy + o * 2) >> k, // grid height
-        threshold = constant$9(20);
+        threshold = constant$8(20);
 
     function density(data) {
       var values0 = new Float32Array(n * m),
@@ -5659,15 +5659,15 @@ var quarantine = (function (exports) {
     }
 
     density.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$9(+_), density) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$8(+_), density) : x;
     };
 
     density.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$9(+_), density) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$8(+_), density) : y;
     };
 
     density.weight = function(_) {
-      return arguments.length ? (weight = typeof _ === "function" ? _ : constant$9(+_), density) : weight;
+      return arguments.length ? (weight = typeof _ === "function" ? _ : constant$8(+_), density) : weight;
     };
 
     density.size = function(_) {
@@ -5684,7 +5684,7 @@ var quarantine = (function (exports) {
     };
 
     density.thresholds = function(_) {
-      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$9(slice$3.call(_)) : constant$9(_), density) : threshold;
+      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$8(slice$3.call(_)) : constant$8(_), density) : threshold;
     };
 
     density.bandwidth = function(_) {
@@ -5731,7 +5731,7 @@ var quarantine = (function (exports) {
     }
   }
 
-  function constant$8(x) {
+  function constant$7(x) {
     return function() {
       return x;
     };
@@ -5889,19 +5889,19 @@ var quarantine = (function (exports) {
     }
 
     drag.filter = function(_) {
-      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$8(!!_), drag) : filter;
+      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$7(!!_), drag) : filter;
     };
 
     drag.container = function(_) {
-      return arguments.length ? (container = typeof _ === "function" ? _ : constant$8(_), drag) : container;
+      return arguments.length ? (container = typeof _ === "function" ? _ : constant$7(_), drag) : container;
     };
 
     drag.subject = function(_) {
-      return arguments.length ? (subject = typeof _ === "function" ? _ : constant$8(_), drag) : subject;
+      return arguments.length ? (subject = typeof _ === "function" ? _ : constant$7(_), drag) : subject;
     };
 
     drag.touchable = function(_) {
-      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$8(!!_), drag) : touchable;
+      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$7(!!_), drag) : touchable;
     };
 
     drag.on = function() {
@@ -6240,7 +6240,7 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function constant$7(x) {
+  function constant$6(x) {
     return function() {
       return x;
     };
@@ -6671,7 +6671,7 @@ var quarantine = (function (exports) {
         strength = 1,
         iterations = 1;
 
-    if (typeof radius !== "function") radius = constant$7(radius == null ? 1 : +radius);
+    if (typeof radius !== "function") radius = constant$6(radius == null ? 1 : +radius);
 
     function force() {
       var i, n = nodes.length,
@@ -6746,7 +6746,7 @@ var quarantine = (function (exports) {
     };
 
     force.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : radius;
     };
 
     return force;
@@ -6766,7 +6766,7 @@ var quarantine = (function (exports) {
     var id = index$3,
         strength = defaultStrength,
         strengths,
-        distance = constant$7(30),
+        distance = constant$6(30),
         distances,
         nodes,
         count,
@@ -6855,11 +6855,11 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$7(+_), initializeStrength(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$6(+_), initializeStrength(), force) : strength;
     };
 
     force.distance = function(_) {
-      return arguments.length ? (distance = typeof _ === "function" ? _ : constant$7(+_), initializeDistance(), force) : distance;
+      return arguments.length ? (distance = typeof _ === "function" ? _ : constant$6(+_), initializeDistance(), force) : distance;
     };
 
     return force;
@@ -7017,7 +7017,7 @@ var quarantine = (function (exports) {
     var nodes,
         node,
         alpha,
-        strength = constant$7(-30),
+        strength = constant$6(-30),
         strengths,
         distanceMin2 = 1,
         distanceMax2 = Infinity,
@@ -7105,7 +7105,7 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : strength;
     };
 
     force.distanceMin = function(_) {
@@ -7125,11 +7125,11 @@ var quarantine = (function (exports) {
 
   function radial(radius, x, y) {
     var nodes,
-        strength = constant$7(0.1),
+        strength = constant$6(0.1),
         strengths,
         radiuses;
 
-    if (typeof radius !== "function") radius = constant$7(+radius);
+    if (typeof radius !== "function") radius = constant$6(+radius);
     if (x == null) x = 0;
     if (y == null) y = 0;
 
@@ -7161,11 +7161,11 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : strength;
     };
 
     force.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : radius;
     };
 
     force.x = function(_) {
@@ -7180,12 +7180,12 @@ var quarantine = (function (exports) {
   }
 
   function x$3(x) {
-    var strength = constant$7(0.1),
+    var strength = constant$6(0.1),
         nodes,
         strengths,
         xz;
 
-    if (typeof x !== "function") x = constant$7(x == null ? 0 : +x);
+    if (typeof x !== "function") x = constant$6(x == null ? 0 : +x);
 
     function force(alpha) {
       for (var i = 0, n = nodes.length, node; i < n; ++i) {
@@ -7209,23 +7209,23 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : strength;
     };
 
     force.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : x;
     };
 
     return force;
   }
 
   function y$3(y) {
-    var strength = constant$7(0.1),
+    var strength = constant$6(0.1),
         nodes,
         strengths,
         yz;
 
-    if (typeof y !== "function") y = constant$7(y == null ? 0 : +y);
+    if (typeof y !== "function") y = constant$6(y == null ? 0 : +y);
 
     function force(alpha) {
       for (var i = 0, n = nodes.length, node; i < n; ++i) {
@@ -7249,11 +7249,11 @@ var quarantine = (function (exports) {
     };
 
     force.strength = function(_) {
-      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : strength;
+      return arguments.length ? (strength = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : strength;
     };
 
     force.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$7(+_), initialize(), force) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$6(+_), initialize(), force) : y;
     };
 
     return force;
@@ -8143,7 +8143,7 @@ var quarantine = (function (exports) {
     return [atan2$1(y, x) * degrees, asin$1(z / sqrt$2(m)) * degrees];
   }
 
-  function constant$6(x) {
+  function constant$5(x) {
     return function() {
       return x;
     };
@@ -8265,9 +8265,9 @@ var quarantine = (function (exports) {
   }
 
   function circle$2() {
-    var center = constant$6([0, 0]),
-        radius = constant$6(90),
-        precision = constant$6(6),
+    var center = constant$5([0, 0]),
+        radius = constant$5(90),
+        precision = constant$5(6),
         ring,
         rotate,
         stream = {point: point};
@@ -8290,15 +8290,15 @@ var quarantine = (function (exports) {
     }
 
     circle.center = function(_) {
-      return arguments.length ? (center = typeof _ === "function" ? _ : constant$6([+_[0], +_[1]]), circle) : center;
+      return arguments.length ? (center = typeof _ === "function" ? _ : constant$5([+_[0], +_[1]]), circle) : center;
     };
 
     circle.radius = function(_) {
-      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$6(+_), circle) : radius;
+      return arguments.length ? (radius = typeof _ === "function" ? _ : constant$5(+_), circle) : radius;
     };
 
     circle.precision = function(_) {
-      return arguments.length ? (precision = typeof _ === "function" ? _ : constant$6(+_), circle) : precision;
+      return arguments.length ? (precision = typeof _ === "function" ? _ : constant$5(+_), circle) : precision;
     };
 
     return circle;
@@ -11241,7 +11241,7 @@ var quarantine = (function (exports) {
     return 0;
   }
 
-  function constant$5(x) {
+  function constant$4(x) {
     return function() {
       return x;
     };
@@ -11281,7 +11281,7 @@ var quarantine = (function (exports) {
     };
 
     pack.padding = function(x) {
-      return arguments.length ? (padding = typeof x === "function" ? x : constant$5(+x), pack) : padding;
+      return arguments.length ? (padding = typeof x === "function" ? x : constant$4(+x), pack) : padding;
     };
 
     return pack;
@@ -11841,7 +11841,7 @@ var quarantine = (function (exports) {
     };
 
     treemap.paddingInner = function(x) {
-      return arguments.length ? (paddingInner = typeof x === "function" ? x : constant$5(+x), treemap) : paddingInner;
+      return arguments.length ? (paddingInner = typeof x === "function" ? x : constant$4(+x), treemap) : paddingInner;
     };
 
     treemap.paddingOuter = function(x) {
@@ -11849,19 +11849,19 @@ var quarantine = (function (exports) {
     };
 
     treemap.paddingTop = function(x) {
-      return arguments.length ? (paddingTop = typeof x === "function" ? x : constant$5(+x), treemap) : paddingTop;
+      return arguments.length ? (paddingTop = typeof x === "function" ? x : constant$4(+x), treemap) : paddingTop;
     };
 
     treemap.paddingRight = function(x) {
-      return arguments.length ? (paddingRight = typeof x === "function" ? x : constant$5(+x), treemap) : paddingRight;
+      return arguments.length ? (paddingRight = typeof x === "function" ? x : constant$4(+x), treemap) : paddingRight;
     };
 
     treemap.paddingBottom = function(x) {
-      return arguments.length ? (paddingBottom = typeof x === "function" ? x : constant$5(+x), treemap) : paddingBottom;
+      return arguments.length ? (paddingBottom = typeof x === "function" ? x : constant$4(+x), treemap) : paddingBottom;
     };
 
     treemap.paddingLeft = function(x) {
-      return arguments.length ? (paddingLeft = typeof x === "function" ? x : constant$5(+x), treemap) : paddingLeft;
+      return arguments.length ? (paddingLeft = typeof x === "function" ? x : constant$4(+x), treemap) : paddingLeft;
     };
 
     return treemap;
@@ -12345,7 +12345,7 @@ var quarantine = (function (exports) {
     return pointish(band.apply(null, arguments).paddingInner(1));
   }
 
-  function constant$4(x) {
+  function constant$3(x) {
     return function() {
       return x;
     };
@@ -12364,7 +12364,7 @@ var quarantine = (function (exports) {
   function normalize(a, b) {
     return (b -= (a = +a))
         ? function(x) { return (x - a) / b; }
-        : constant$4(isNaN(b) ? NaN : 0.5);
+        : constant$3(isNaN(b) ? NaN : 0.5);
   }
 
   function clamper(domain) {
@@ -14742,7 +14742,7 @@ var quarantine = (function (exports) {
 
   var plasma = ramp(colors("0d088710078813078916078a19068c1b068d1d068e20068f2206902406912605912805922a05932c05942e05952f059631059733059735049837049938049a3a049a3c049b3e049c3f049c41049d43039e44039e46039f48039f4903a04b03a14c02a14e02a25002a25102a35302a35502a45601a45801a45901a55b01a55c01a65e01a66001a66100a76300a76400a76600a76700a86900a86a00a86c00a86e00a86f00a87100a87201a87401a87501a87701a87801a87a02a87b02a87d03a87e03a88004a88104a78305a78405a78606a68707a68808a68a09a58b0aa58d0ba58e0ca48f0da4910ea3920fa39410a29511a19613a19814a099159f9a169f9c179e9d189d9e199da01a9ca11b9ba21d9aa31e9aa51f99a62098a72197a82296aa2395ab2494ac2694ad2793ae2892b02991b12a90b22b8fb32c8eb42e8db52f8cb6308bb7318ab83289ba3388bb3488bc3587bd3786be3885bf3984c03a83c13b82c23c81c33d80c43e7fc5407ec6417dc7427cc8437bc9447aca457acb4679cc4778cc4977cd4a76ce4b75cf4c74d04d73d14e72d24f71d35171d45270d5536fd5546ed6556dd7566cd8576bd9586ada5a6ada5b69db5c68dc5d67dd5e66de5f65de6164df6263e06363e16462e26561e26660e3685fe4695ee56a5de56b5de66c5ce76e5be76f5ae87059e97158e97257ea7457eb7556eb7655ec7754ed7953ed7a52ee7b51ef7c51ef7e50f07f4ff0804ef1814df1834cf2844bf3854bf3874af48849f48948f58b47f58c46f68d45f68f44f79044f79143f79342f89441f89540f9973ff9983ef99a3efa9b3dfa9c3cfa9e3bfb9f3afba139fba238fca338fca537fca636fca835fca934fdab33fdac33fdae32fdaf31fdb130fdb22ffdb42ffdb52efeb72dfeb82cfeba2cfebb2bfebd2afebe2afec029fdc229fdc328fdc527fdc627fdc827fdca26fdcb26fccd25fcce25fcd025fcd225fbd324fbd524fbd724fad824fada24f9dc24f9dd25f8df25f8e125f7e225f7e425f6e626f6e826f5e926f5eb27f4ed27f3ee27f3f027f2f227f1f426f1f525f0f724f0f921"));
 
-  function constant$3(x) {
+  function constant$2(x) {
     return function constant() {
       return x;
     };
@@ -14844,7 +14844,7 @@ var quarantine = (function (exports) {
   function arc() {
     var innerRadius = arcInnerRadius,
         outerRadius = arcOuterRadius,
-        cornerRadius = constant$3(0),
+        cornerRadius = constant$2(0),
         padRadius = null,
         startAngle = arcStartAngle,
         endAngle = arcEndAngle,
@@ -14993,31 +14993,31 @@ var quarantine = (function (exports) {
     };
 
     arc.innerRadius = function(_) {
-      return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$3(+_), arc) : innerRadius;
+      return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$2(+_), arc) : innerRadius;
     };
 
     arc.outerRadius = function(_) {
-      return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$3(+_), arc) : outerRadius;
+      return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$2(+_), arc) : outerRadius;
     };
 
     arc.cornerRadius = function(_) {
-      return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$3(+_), arc) : cornerRadius;
+      return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$2(+_), arc) : cornerRadius;
     };
 
     arc.padRadius = function(_) {
-      return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$3(+_), arc) : padRadius;
+      return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$2(+_), arc) : padRadius;
     };
 
     arc.startAngle = function(_) {
-      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$3(+_), arc) : startAngle;
+      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$2(+_), arc) : startAngle;
     };
 
     arc.endAngle = function(_) {
-      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$3(+_), arc) : endAngle;
+      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$2(+_), arc) : endAngle;
     };
 
     arc.padAngle = function(_) {
-      return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$3(+_), arc) : padAngle;
+      return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$2(+_), arc) : padAngle;
     };
 
     arc.context = function(_) {
@@ -15070,7 +15070,7 @@ var quarantine = (function (exports) {
   function line() {
     var x = x$2,
         y = y$2,
-        defined = constant$3(true),
+        defined = constant$2(true),
         context = null,
         curve = curveLinear,
         output = null;
@@ -15096,15 +15096,15 @@ var quarantine = (function (exports) {
     }
 
     line.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$3(+_), line) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$2(+_), line) : x;
     };
 
     line.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$3(+_), line) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$2(+_), line) : y;
     };
 
     line.defined = function(_) {
-      return arguments.length ? (defined = typeof _ === "function" ? _ : constant$3(!!_), line) : defined;
+      return arguments.length ? (defined = typeof _ === "function" ? _ : constant$2(!!_), line) : defined;
     };
 
     line.curve = function(_) {
@@ -15121,9 +15121,9 @@ var quarantine = (function (exports) {
   function area() {
     var x0 = x$2,
         x1 = null,
-        y0 = constant$3(0),
+        y0 = constant$2(0),
         y1 = y$2,
-        defined = constant$3(true),
+        defined = constant$2(true),
         context = null,
         curve = curveLinear,
         output = null;
@@ -15171,27 +15171,27 @@ var quarantine = (function (exports) {
     }
 
     area.x = function(_) {
-      return arguments.length ? (x0 = typeof _ === "function" ? _ : constant$3(+_), x1 = null, area) : x0;
+      return arguments.length ? (x0 = typeof _ === "function" ? _ : constant$2(+_), x1 = null, area) : x0;
     };
 
     area.x0 = function(_) {
-      return arguments.length ? (x0 = typeof _ === "function" ? _ : constant$3(+_), area) : x0;
+      return arguments.length ? (x0 = typeof _ === "function" ? _ : constant$2(+_), area) : x0;
     };
 
     area.x1 = function(_) {
-      return arguments.length ? (x1 = _ == null ? null : typeof _ === "function" ? _ : constant$3(+_), area) : x1;
+      return arguments.length ? (x1 = _ == null ? null : typeof _ === "function" ? _ : constant$2(+_), area) : x1;
     };
 
     area.y = function(_) {
-      return arguments.length ? (y0 = typeof _ === "function" ? _ : constant$3(+_), y1 = null, area) : y0;
+      return arguments.length ? (y0 = typeof _ === "function" ? _ : constant$2(+_), y1 = null, area) : y0;
     };
 
     area.y0 = function(_) {
-      return arguments.length ? (y0 = typeof _ === "function" ? _ : constant$3(+_), area) : y0;
+      return arguments.length ? (y0 = typeof _ === "function" ? _ : constant$2(+_), area) : y0;
     };
 
     area.y1 = function(_) {
-      return arguments.length ? (y1 = _ == null ? null : typeof _ === "function" ? _ : constant$3(+_), area) : y1;
+      return arguments.length ? (y1 = _ == null ? null : typeof _ === "function" ? _ : constant$2(+_), area) : y1;
     };
 
     area.lineX0 =
@@ -15208,7 +15208,7 @@ var quarantine = (function (exports) {
     };
 
     area.defined = function(_) {
-      return arguments.length ? (defined = typeof _ === "function" ? _ : constant$3(!!_), area) : defined;
+      return arguments.length ? (defined = typeof _ === "function" ? _ : constant$2(!!_), area) : defined;
     };
 
     area.curve = function(_) {
@@ -15234,9 +15234,9 @@ var quarantine = (function (exports) {
     var value = identity$1,
         sortValues = descending$1,
         sort = null,
-        startAngle = constant$3(0),
-        endAngle = constant$3(tau),
-        padAngle = constant$3(0);
+        startAngle = constant$2(0),
+        endAngle = constant$2(tau),
+        padAngle = constant$2(0);
 
     function pie(data) {
       var i,
@@ -15279,7 +15279,7 @@ var quarantine = (function (exports) {
     }
 
     pie.value = function(_) {
-      return arguments.length ? (value = typeof _ === "function" ? _ : constant$3(+_), pie) : value;
+      return arguments.length ? (value = typeof _ === "function" ? _ : constant$2(+_), pie) : value;
     };
 
     pie.sortValues = function(_) {
@@ -15291,15 +15291,15 @@ var quarantine = (function (exports) {
     };
 
     pie.startAngle = function(_) {
-      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$3(+_), pie) : startAngle;
+      return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$2(+_), pie) : startAngle;
     };
 
     pie.endAngle = function(_) {
-      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$3(+_), pie) : endAngle;
+      return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$2(+_), pie) : endAngle;
     };
 
     pie.padAngle = function(_) {
-      return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$3(+_), pie) : padAngle;
+      return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$2(+_), pie) : padAngle;
     };
 
     return pie;
@@ -15420,11 +15420,11 @@ var quarantine = (function (exports) {
     };
 
     link.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$3(+_), link) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$2(+_), link) : x;
     };
 
     link.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$3(+_), link) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$2(+_), link) : y;
     };
 
     link.context = function(_) {
@@ -15591,8 +15591,8 @@ var quarantine = (function (exports) {
   ];
 
   function symbol() {
-    var type = constant$3(circle),
-        size = constant$3(64),
+    var type = constant$2(circle),
+        size = constant$2(64),
         context = null;
 
     function symbol() {
@@ -15603,11 +15603,11 @@ var quarantine = (function (exports) {
     }
 
     symbol.type = function(_) {
-      return arguments.length ? (type = typeof _ === "function" ? _ : constant$3(_), symbol) : type;
+      return arguments.length ? (type = typeof _ === "function" ? _ : constant$2(_), symbol) : type;
     };
 
     symbol.size = function(_) {
-      return arguments.length ? (size = typeof _ === "function" ? _ : constant$3(+_), symbol) : size;
+      return arguments.length ? (size = typeof _ === "function" ? _ : constant$2(+_), symbol) : size;
     };
 
     symbol.context = function(_) {
@@ -16470,7 +16470,7 @@ var quarantine = (function (exports) {
   }
 
   function stack() {
-    var keys = constant$3([]),
+    var keys = constant$2([]),
         order = none,
         offset = none$1,
         value = stackValue;
@@ -16500,15 +16500,15 @@ var quarantine = (function (exports) {
     }
 
     stack.keys = function(_) {
-      return arguments.length ? (keys = typeof _ === "function" ? _ : constant$3(slice.call(_)), stack) : keys;
+      return arguments.length ? (keys = typeof _ === "function" ? _ : constant$2(slice.call(_)), stack) : keys;
     };
 
     stack.value = function(_) {
-      return arguments.length ? (value = typeof _ === "function" ? _ : constant$3(+_), stack) : value;
+      return arguments.length ? (value = typeof _ === "function" ? _ : constant$2(+_), stack) : value;
     };
 
     stack.order = function(_) {
-      return arguments.length ? (order = _ == null ? none : typeof _ === "function" ? _ : constant$3(slice.call(_)), stack) : order;
+      return arguments.length ? (order = _ == null ? none : typeof _ === "function" ? _ : constant$2(slice.call(_)), stack) : order;
     };
 
     stack.offset = function(_) {
@@ -16629,7 +16629,7 @@ var quarantine = (function (exports) {
     return none(series).reverse();
   }
 
-  function constant$2(x) {
+  function constant$1(x) {
     return function() {
       return x;
     };
@@ -17598,11 +17598,11 @@ var quarantine = (function (exports) {
     };
 
     voronoi.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$2(+_), voronoi) : x;
+      return arguments.length ? (x = typeof _ === "function" ? _ : constant$1(+_), voronoi) : x;
     };
 
     voronoi.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$2(+_), voronoi) : y;
+      return arguments.length ? (y = typeof _ === "function" ? _ : constant$1(+_), voronoi) : y;
     };
 
     voronoi.extent = function(_) {
@@ -17647,7 +17647,7 @@ var quarantine = (function (exports) {
     }
   }
 
-  function constant$1(x) {
+  function constant(x) {
     return function() {
       return x;
     };
@@ -18083,19 +18083,19 @@ var quarantine = (function (exports) {
     }
 
     zoom.wheelDelta = function(_) {
-      return arguments.length ? (wheelDelta = typeof _ === "function" ? _ : constant$1(+_), zoom) : wheelDelta;
+      return arguments.length ? (wheelDelta = typeof _ === "function" ? _ : constant(+_), zoom) : wheelDelta;
     };
 
     zoom.filter = function(_) {
-      return arguments.length ? (filter = typeof _ === "function" ? _ : constant$1(!!_), zoom) : filter;
+      return arguments.length ? (filter = typeof _ === "function" ? _ : constant(!!_), zoom) : filter;
     };
 
     zoom.touchable = function(_) {
-      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$1(!!_), zoom) : touchable;
+      return arguments.length ? (touchable = typeof _ === "function" ? _ : constant(!!_), zoom) : touchable;
     };
 
     zoom.extent = function(_) {
-      return arguments.length ? (extent = typeof _ === "function" ? _ : constant$1([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), zoom) : extent;
+      return arguments.length ? (extent = typeof _ === "function" ? _ : constant([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), zoom) : extent;
     };
 
     zoom.scaleExtent = function(_) {
@@ -18742,11 +18742,6 @@ var quarantine = (function (exports) {
   }
 
   // The code in this file is adapted
-  function constant(x) {
-      return function () {
-          return x;
-      };
-  }
   function jiggle() {
       return (Math.random() - 0.5) * 1e-6;
   }
@@ -18822,10 +18817,8 @@ var quarantine = (function (exports) {
       circleNode.vy += a * commonFactor;
   }
   // Returns the collide force.
-  //
-  // `radius` is a function that takes a node and returns a number.
-  function collideForce (radius, debugInfo) {
-      let nodes, radii, strength = 1, iterations = 1;
+  function collideForce (debugInfo) {
+      let nodes, strength = 1, iterations = 1;
       // Named interactions between pairs of nodes.
       const interactions = new Map();
       function force() {
@@ -18842,7 +18835,8 @@ var quarantine = (function (exports) {
                       continue;
                   if (isCursorNode(node))
                       node.target = null;
-                  (ri = radii[node.index]), (ri2 = ri * ri);
+                  ri = node.r;
+                  ri2 = ri * ri;
                   xi = node.x + node.vx;
                   yi = node.y + node.vy;
                   tree.visit(apply);
@@ -18876,25 +18870,15 @@ var quarantine = (function (exports) {
       }
       function prepare(quad) {
           if (quad.data)
-              return (quad.r = radii[quad.data.index]);
+              return (quad.r = quad.data.r);
           for (let i = (quad.r = 0); i < 4; ++i) {
               if (quad[i] && quad[i].r > quad.r) {
                   quad.r = quad[i].r;
               }
           }
       }
-      function initialize() {
-          if (!nodes)
-              return;
-          let i, node;
-          const n = nodes.length;
-          radii = new Array(n);
-          for (i = 0; i < n; ++i)
-              (node = nodes[i]), (radii[node.index] = +radius(node));
-      }
       force.initialize = function (_) {
           nodes = _;
-          initialize();
       };
       /* eslint-disable @typescript-eslint/no-explicit-any --
         I can't figure out how to get function overloads to work with typescript without `any`. */
@@ -18910,13 +18894,6 @@ var quarantine = (function (exports) {
       };
       force.strength = function (_) {
           return arguments.length ? ((strength = +_), force) : strength;
-      };
-      force.radius = function (_) {
-          return arguments.length
-              ? ((radius = typeof _ === "function" ? _ : constant(+_)),
-                  initialize(),
-                  force)
-              : radius;
       };
       return force;
   }
@@ -19012,10 +18989,7 @@ var quarantine = (function (exports) {
                   n.vy += (alpha * (n.goal.y - n.y)) / len;
               });
           })
-              .force("interaction", collideForce(
-          /* radius */ function (d) {
-              return d.r;
-          }, debugInfo)
+              .force("interaction", collideForce(debugInfo)
               .interaction("collision", collisionInteraction)
               .interaction("party", (creature, party) => {
               if (!(party instanceof Party && isLiveCreature(creature)))

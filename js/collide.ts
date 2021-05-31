@@ -46,12 +46,6 @@ import {
 } from "./simulation-types";
 import { DebugInfo } from "./debug-info";
 
-function constant(x) {
-  return function () {
-    return x;
-  };
-}
-
 function jiggle() {
   return (Math.random() - 0.5) * 1e-6;
 }
@@ -166,14 +160,8 @@ function circleLineCollisionInteraction(
 }
 
 // Returns the collide force.
-//
-// `radius` is a function that takes a node and returns a number.
-export default function (
-  radius: (SNode) => number,
-  debugInfo: DebugInfo
-): SForceCollide {
+export default function (debugInfo: DebugInfo): SForceCollide {
   let nodes,
-    radii,
     strength = 1,
     iterations = 1;
   // Named interactions between pairs of nodes.
@@ -195,7 +183,8 @@ export default function (
         if (!(isLiveCreature(node) || isCursorNode(node))) continue;
         if (isCursorNode(node)) node.target = null;
 
-        (ri = radii[node.index]), (ri2 = ri * ri);
+        ri = node.r;
+        ri2 = ri * ri;
         xi = node.x + node.vx;
         yi = node.y + node.vy;
         tree.visit(apply);
@@ -237,7 +226,7 @@ export default function (
   }
 
   function prepare(quad) {
-    if (quad.data) return (quad.r = radii[quad.data.index]);
+    if (quad.data) return (quad.r = quad.data.r);
     for (let i = (quad.r = 0); i < 4; ++i) {
       if (quad[i] && quad[i].r > quad.r) {
         quad.r = quad[i].r;
@@ -245,18 +234,8 @@ export default function (
     }
   }
 
-  function initialize() {
-    if (!nodes) return;
-    let i, node;
-    const n = nodes.length;
-    radii = new Array(n);
-    for (i = 0; i < n; ++i)
-      (node = nodes[i]), (radii[node.index] = +radius(node));
-  }
-
   force.initialize = function (_) {
     nodes = _;
-    initialize();
   };
 
   /* eslint-disable @typescript-eslint/no-explicit-any -- 
@@ -275,14 +254,6 @@ export default function (
 
   force.strength = function (_?: any): any {
     return arguments.length ? ((strength = +_), force) : strength;
-  };
-
-  force.radius = function (_?): any {
-    return arguments.length
-      ? ((radius = typeof _ === "function" ? _ : constant(+_)),
-        initialize(),
-        force)
-      : radius;
   };
 
   return force;
