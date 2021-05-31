@@ -18753,10 +18753,10 @@ var quarantine = (function (exports) {
   }
   // Handles collision between two nodes.
   // TODO: document arguments.
-  function collisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+  function collisionInteraction(node1, node2, x, y, l, r, ri2, rj) {
       if (isImpassableCircle(node1)) {
           if (isImpassableCircle(node2)) {
-              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength);
+              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
           }
           else if (isImpassableSegment(node2)) {
               circleLineCollisionInteraction(node1, node2);
@@ -18778,12 +18778,12 @@ var quarantine = (function (exports) {
   }
   // Handles collision between two circles.
   // TODO: document arguments.
-  function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj, strength) {
+  function circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj) {
       if (x === 0)
           (x = jiggle()), (l += x * x);
       if (y === 0)
           (y = jiggle()), (l += y * y);
-      l = ((r - (l = Math.sqrt(l))) / l) * strength;
+      l = (r - (l = Math.sqrt(l))) / l;
       node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
       node1.vy += (y *= l) * r;
       node2.vx -= x * (r = 1 - r);
@@ -18817,30 +18817,26 @@ var quarantine = (function (exports) {
       circleNode.vy += a * commonFactor;
   }
   // Returns the collide force.
-  function collideForce (debugInfo) {
-      let nodes, strength = 1, iterations = 1;
+  function collideForce (world, debugInfo) {
       // Named interactions between pairs of nodes.
       const interactions = new Map();
       function force() {
           const startTime = Date.now();
-          const n = nodes.length;
           let i, tree, node, xi, yi, ri, ri2;
-          for (let k = 0; k < iterations; ++k) {
-              tree = quadtree(nodes, x, y).visitAfter(prepare);
-              // For each node, visit other nodes that could collide.
-              for (i = 0; i < n; ++i) {
-                  node = nodes[i];
-                  // Only loop through nodes that might need to respond to a collision.
-                  if (!(isLiveCreature(node) || isCursorNode(node)))
-                      continue;
-                  if (isCursorNode(node))
-                      node.target = null;
-                  ri = node.r;
-                  ri2 = ri * ri;
-                  xi = node.x + node.vx;
-                  yi = node.y + node.vy;
-                  tree.visit(apply);
-              }
+          tree = quadtree(world.nodes, x, y).visitAfter(prepare);
+          // For each node, visit other nodes that could collide.
+          for (i = 0; i < world.nodes.length; ++i) {
+              node = world.nodes[i];
+              // Only loop through nodes that might need to respond to a collision.
+              if (!(isLiveCreature(node) || isCursorNode(node)))
+                  continue;
+              if (isCursorNode(node))
+                  node.target = null;
+              ri = node.r;
+              ri2 = ri * ri;
+              xi = node.x + node.vx;
+              yi = node.y + node.vy;
+              tree.visit(apply);
           }
           function apply(quad, x0, y0, x1, y1) {
               const data = quad.data, rj = quad.r, r = ri + rj;
@@ -18857,7 +18853,7 @@ var quarantine = (function (exports) {
                       if (l < r * r) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
-                              interaction(node, data, x, y, l, r, ri2, rj, strength);
+                              interaction(node, data, x, y, l, r, ri2, rj);
                           });
                       }
                   }
@@ -18868,6 +18864,8 @@ var quarantine = (function (exports) {
           }
           debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
       }
+      // Sets the radii of each quad, both leaves and internal nodes. Should be invoked in postorder
+      // sequence.
       function prepare(quad) {
           if (quad.data)
               return (quad.r = quad.data.r);
@@ -18877,9 +18875,6 @@ var quarantine = (function (exports) {
               }
           }
       }
-      force.initialize = function (_) {
-          nodes = _;
-      };
       /* eslint-disable @typescript-eslint/no-explicit-any --
         I can't figure out how to get function overloads to work with typescript without `any`. */
       // Set a named interaction, or get the interaction with the given name.
@@ -18888,12 +18883,6 @@ var quarantine = (function (exports) {
               ? (_ == null ? interactions.delete(name) : interactions.set(name, _),
                   force)
               : interactions.get(name);
-      };
-      force.iterations = function (_) {
-          return arguments.length ? ((iterations = +_), force) : iterations;
-      };
-      force.strength = function (_) {
-          return arguments.length ? ((strength = +_), force) : strength;
       };
       return force;
   }
@@ -18989,7 +18978,7 @@ var quarantine = (function (exports) {
                   n.vy += (alpha * (n.goal.y - n.y)) / len;
               });
           })
-              .force("interaction", collideForce(debugInfo)
+              .force("interaction", collideForce(this, debugInfo)
               .interaction("collision", collisionInteraction)
               .interaction("party", (creature, party) => {
               if (!(party instanceof Party && isLiveCreature(creature)))

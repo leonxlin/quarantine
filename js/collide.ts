@@ -45,6 +45,7 @@ import {
   isLiveCreature,
 } from "./simulation-types";
 import { DebugInfo } from "./debug-info";
+import { World } from "./world";
 
 function jiggle() {
   return (Math.random() - 0.5) * 1e-6;
@@ -68,22 +69,11 @@ export function collisionInteraction(
   l: number,
   r: number,
   ri2: number,
-  rj: number,
-  strength: number
+  rj: number
 ): void {
   if (isImpassableCircle(node1)) {
     if (isImpassableCircle(node2)) {
-      circleCircleCollisionInteraction(
-        node1,
-        node2,
-        x,
-        y,
-        l,
-        r,
-        ri2,
-        rj,
-        strength
-      );
+      circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
     } else if (isImpassableSegment(node2)) {
       circleLineCollisionInteraction(node1, node2);
     }
@@ -110,12 +100,11 @@ function circleCircleCollisionInteraction(
   l: number,
   r: number,
   ri2: number,
-  rj: number,
-  strength: number
+  rj: number
 ): void {
   if (x === 0) (x = jiggle()), (l += x * x);
   if (y === 0) (y = jiggle()), (l += y * y);
-  l = ((r - (l = Math.sqrt(l))) / l) * strength;
+  l = (r - (l = Math.sqrt(l))) / l;
   node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
   node1.vy += (y *= l) * r;
   node2.vx -= x * (r = 1 - r);
@@ -160,35 +149,28 @@ function circleLineCollisionInteraction(
 }
 
 // Returns the collide force.
-export default function (debugInfo: DebugInfo): SForceCollide {
-  let nodes,
-    strength = 1,
-    iterations = 1;
+export default function (world: World, debugInfo: DebugInfo): SForceCollide {
   // Named interactions between pairs of nodes.
   const interactions = new Map<string, Interaction>();
 
   function force() {
     const startTime = Date.now();
 
-    const n = nodes.length;
     let i, tree, node, xi, yi, ri, ri2;
+    tree = quadtree(world.nodes, x, y).visitAfter(prepare);
 
-    for (let k = 0; k < iterations; ++k) {
-      tree = quadtree(nodes, x, y).visitAfter(prepare);
+    // For each node, visit other nodes that could collide.
+    for (i = 0; i < world.nodes.length; ++i) {
+      node = world.nodes[i];
+      // Only loop through nodes that might need to respond to a collision.
+      if (!(isLiveCreature(node) || isCursorNode(node))) continue;
+      if (isCursorNode(node)) node.target = null;
 
-      // For each node, visit other nodes that could collide.
-      for (i = 0; i < n; ++i) {
-        node = nodes[i];
-        // Only loop through nodes that might need to respond to a collision.
-        if (!(isLiveCreature(node) || isCursorNode(node))) continue;
-        if (isCursorNode(node)) node.target = null;
-
-        ri = node.r;
-        ri2 = ri * ri;
-        xi = node.x + node.vx;
-        yi = node.y + node.vy;
-        tree.visit(apply);
-      }
+      ri = node.r;
+      ri2 = ri * ri;
+      xi = node.x + node.vx;
+      yi = node.y + node.vy;
+      tree.visit(apply);
     }
 
     function apply(quad, x0, y0, x1, y1) {
@@ -211,7 +193,7 @@ export default function (debugInfo: DebugInfo): SForceCollide {
           if (l < r * r) {
             // Execute registered interactions for (node, data).
             interactions.forEach(function (interaction) {
-              interaction(node, data, x, y, l, r, ri2, rj, strength);
+              interaction(node, data, x, y, l, r, ri2, rj);
             });
           }
         }
@@ -225,6 +207,8 @@ export default function (debugInfo: DebugInfo): SForceCollide {
     debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
   }
 
+  // Sets the radii of each quad, both leaves and internal nodes. Should be invoked in postorder
+  // sequence.
   function prepare(quad) {
     if (quad.data) return (quad.r = quad.data.r);
     for (let i = (quad.r = 0); i < 4; ++i) {
@@ -234,10 +218,6 @@ export default function (debugInfo: DebugInfo): SForceCollide {
     }
   }
 
-  force.initialize = function (_) {
-    nodes = _;
-  };
-
   /* eslint-disable @typescript-eslint/no-explicit-any -- 
     I can't figure out how to get function overloads to work with typescript without `any`. */
   // Set a named interaction, or get the interaction with the given name.
@@ -246,14 +226,6 @@ export default function (debugInfo: DebugInfo): SForceCollide {
       ? (_ == null ? interactions.delete(name) : interactions.set(name, _),
         force)
       : interactions.get(name);
-  };
-
-  force.iterations = function (_?): any {
-    return arguments.length ? ((iterations = +_), force) : iterations;
-  };
-
-  force.strength = function (_?: any): any {
-    return arguments.length ? ((strength = +_), force) : strength;
   };
 
   return force;

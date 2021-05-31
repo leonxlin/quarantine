@@ -125,7 +125,7 @@ export class World {
       })
       .force(
         "interaction",
-        collideForce(debugInfo)
+        collideForce(this, debugInfo)
           .interaction("collision", collisionInteraction)
           .interaction("party", (creature, party) => {
             if (!(party instanceof Party && isLiveCreature(creature))) return;
