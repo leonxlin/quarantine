@@ -5,7 +5,6 @@ import {
   Wall,
   Creature,
   Party,
-  isCreature,
   isLiveCreature,
   squaredDistance,
 } from "./simulation-types";
@@ -14,7 +13,6 @@ import { collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 
 export class World {
-  nodes: SNode[];
   simulation: d3.Simulation<SNode, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
   cursorNode: CursorNode;
@@ -27,6 +25,8 @@ export class World {
 
   paused = false;
 
+  creatures: Array<Creature> = [];
+  deadCreatures: Array<Creature> = [];
   walls: Set<Wall> = new Set();
   parties: Array<Party> = [];
 
@@ -36,19 +36,17 @@ export class World {
   WALL_HALF_WIDTH = 5;
 
   constructor(render_function: (world: World) => void, debugInfo: DebugInfo) {
-    this.nodes = d3.range(200).map(
+    this.creatures = d3.range(200).map(
       () =>
         new Creature(
           Math.random() * this.width, // x
           Math.random() * this.height // y
         )
     );
-    (this.nodes[0] as Creature).infected = true;
+    this.creatures[0].infected = true;
 
     this.cursorNode = new CursorNode();
-    this.nodes.push(this.cursorNode);
 
-    const nodes = this.nodes;
     const width = this.width;
     const height = this.height;
 
@@ -57,70 +55,67 @@ export class World {
       .velocityDecay(0.2)
       .force("time", () => {
         this.t += 1;
-        debugInfo.numNodes = nodes.length;
       })
       .force("agent", (alpha) => {
-        nodes.forEach((n: SNode) => {
-          if (!isLiveCreature(n)) return;
-
+        this.creatures.forEach((c: Creature) => {
           let stuck = false;
-          if (this.t > n.previousLoggedTime + 20 && Math.random() < 0.8) {
-            stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
-            n.previousLoggedTime = this.t;
-            n.previousLoggedLocation = { x: n.x, y: n.y };
+          if (this.t > c.previousLoggedTime + 20 && Math.random() < 0.8) {
+            stuck = squaredDistance(c, c.previousLoggedLocation) < 5;
+            c.previousLoggedTime = this.t;
+            c.previousLoggedLocation = { x: c.x, y: c.y };
           }
 
-          if (!("goal" in n)) {
-            n.goal = {
+          if (!("goal" in c)) {
+            c.goal = {
               x: Math.random() * width,
               y: Math.random() * height,
             };
-          } else if (squaredDistance(n, n.goal) < (n.r + 8) * (n.r + 8)) {
-            if (n.goalStack.length > 0) {
-              n.goal = n.goalStack.pop();
+          } else if (squaredDistance(c, c.goal) < (c.r + 8) * (c.r + 8)) {
+            if (c.goalStack.length > 0) {
+              c.goal = c.goalStack.pop();
             } else {
-              n.goal = {
+              c.goal = {
                 x: Math.random() * width,
                 y: Math.random() * height,
               };
             }
           } else if (stuck) {
-            if (n.goalStack.length > 15) {
-              n.goal = n.goalStack[0];
-              n.goalStack = [];
+            if (c.goalStack.length > 15) {
+              c.goal = c.goalStack[0];
+              c.goalStack = [];
             } else {
-              if (n.goalStack.length == 0) {
-                n.turnSign = Math.random() < 0.5 ? -1 : 1;
+              if (c.goalStack.length == 0) {
+                c.turnSign = Math.random() < 0.5 ? -1 : 1;
               }
-              n.goalStack.push(n.goal);
+              c.goalStack.push(c.goal);
               let vec = {
-                x: n.goal.x - n.x,
-                y: n.goal.y - n.y,
+                x: c.goal.x - c.x,
+                y: c.goal.y - c.y,
               };
               vec = {
-                x: vec.x * 0.6 - vec.y * 0.8 * n.turnSign,
-                y: vec.x * 0.8 * n.turnSign + vec.y * 0.6,
+                x: vec.x * 0.6 - vec.y * 0.8 * c.turnSign,
+                y: vec.x * 0.8 * c.turnSign + vec.y * 0.6,
               };
               const veclen = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
-              n.goal = {
-                x: n.x + (100 * vec.x) / veclen,
-                y: n.y + (100 * vec.y) / veclen,
+              c.goal = {
+                x: c.x + (100 * vec.x) / veclen,
+                y: c.y + (100 * vec.y) / veclen,
               };
 
               if (
-                n.goalStack.length > 4 &&
-                squaredDistance(n, n.goal) >
-                  10 * squaredDistance(n, n.goalStack[0])
+                c.goalStack.length > 4 &&
+                squaredDistance(c, c.goal) >
+                  10 * squaredDistance(c, c.goalStack[0])
               ) {
-                n.goal = n.goalStack[0];
-                n.goalStack = [];
+                c.goal = c.goalStack[0];
+                c.goalStack = [];
               }
             }
           }
 
-          const len = Math.sqrt(squaredDistance(n, n.goal));
-          n.vx += (alpha * (n.goal.x - n.x)) / len;
-          n.vy += (alpha * (n.goal.y - n.y)) / len;
+          const len = Math.sqrt(squaredDistance(c, c.goal));
+          c.vx += (alpha * (c.goal.x - c.x)) / len;
+          c.vy += (alpha * (c.goal.y - c.y)) / len;
         });
       })
       .force(
@@ -166,30 +161,43 @@ export class World {
           })
       )
       .force("health", () => {
-        nodes.forEach((n) => {
-          if (!isCreature(n) || !n.infected) return;
-          if (!n.dead) {
-            n.health -= 0.0003;
-            if (n.health <= 0) {
-              n.dead = true;
-              n.ticksSinceDeath = 0;
-              n.health = 0;
-              this.score -= 200;
-            }
-          } else {
-            n.ticksSinceDeath++;
+        let newlyDead = 0;
+        this.creatures.forEach((c) => {
+          if (!c.infected) return;
+          c.health -= 0.0003;
+          if (c.health <= 0) {
+            newlyDead++;
+            c.dead = true;
+            c.ticksSinceDeath = 0;
+            c.health = 0;
+            this.score -= 200;
           }
+        });
+        this.deadCreatures.forEach((c) => {
+          c.ticksSinceDeath++;
+        });
+
+        // Move newly dead creatures from this.creatures to this.deadCreatures.
+        // TODO: check if this should be made faster.
+        if (newlyDead == 0) return;
+        this.deadCreatures.push(
+          ...this.creatures.filter((c: Creature) => {
+            return c.dead;
+          })
+        );
+        this.creatures = this.creatures.filter((c: Creature) => {
+          return !c.dead;
         });
       })
       .force("scoring-state", () => {
-        nodes.forEach((n) => {
-          if (!isLiveCreature(n) || !n.scoring) return;
+        this.creatures.forEach((c) => {
+          if (!c.scoring) return;
 
-          n.ticksLeftInScoringState--;
-          if (n.ticksLeftInScoringState <= 0) {
-            n.scoring = false;
-            n.fx = null;
-            n.fy = null;
+          c.ticksLeftInScoringState--;
+          if (c.ticksLeftInScoringState <= 0) {
+            c.scoring = false;
+            c.fx = null;
+            c.fy = null;
           }
         });
       })
@@ -198,8 +206,13 @@ export class World {
           p.age++;
         });
       })
-      .nodes(nodes)
+      // Only moving objects need to be registered as nodes in the d3 simulation.
+      .nodes(this.creatures)
       .on("tick", () => {
+        // Refresh d3 simulation nodes if any creatures have newly died.
+        if (this.creatures.length != this.simulation.nodes().length) {
+          this.simulation.nodes(this.creatures);
+        }
         render_function(this);
       })
       // This is greater than alphaMin, so the simulation should run indefinitely (until paused).

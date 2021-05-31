@@ -47,16 +47,16 @@ import {
 import { DebugInfo } from "./debug-info";
 import { World } from "./world";
 
-function jiggle() {
+function jiggle(): number {
   return (Math.random() - 0.5) * 1e-6;
 }
 
-function x(d) {
-  return d.x + d.vx;
+function getX(d: SNode): number {
+  return d.fx || d.x + d.vx;
 }
 
-function y(d) {
-  return d.y + d.vy;
+function getY(d: SNode): number {
+  return d.fy || d.y + d.vy;
 }
 
 // Handles collision between two nodes.
@@ -156,12 +156,19 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
   function force() {
     const startTime = Date.now();
 
-    let i, node, xi, yi, ri, ri2;
-    const tree = quadtree(world.nodes, x, y).visitAfter(prepare);
+    let node, xi, yi, ri, ri2;
+
+    // Add all collidable nodes to quadtree.
+    const tree = quadtree(world.creatures, getX, getY)
+      .addAll(world.parties)
+      .add(world.cursorNode);
+    for (const wall of world.walls) {
+      tree.addAll(wall.joints).addAll(wall.segments);
+    }
+    tree.visitAfter(prepare);
 
     // For each node, visit other nodes that could collide.
-    for (i = 0; i < world.nodes.length; ++i) {
-      node = world.nodes[i];
+    for (node of (world.creatures as SNode[]).concat([world.cursorNode])) {
       // Only loop through nodes that might need to respond to a collision.
       if (!(isLiveCreature(node) || isCursorNode(node))) continue;
       if (isCursorNode(node)) node.target = null;
@@ -187,8 +194,8 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
           data.index > node.index ||
           isCursorNode(node)
         ) {
-          const x = xi - data.x - data.vx,
-            y = yi - data.y - data.vy,
+          const x = xi - getX(data),
+            y = yi - getY(data),
             l = x * x + y * y;
           if (l < r * r) {
             // Execute registered interactions for (node, data).

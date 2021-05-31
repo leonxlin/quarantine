@@ -1,6 +1,5 @@
 import * as d3 from "d3";
 import {
-  SNode,
   Wall,
   isWallComponent,
   Party,
@@ -89,38 +88,7 @@ export class Game {
 
     d3.select(".delete-wall").on("click", function () {
       if (!(view.selectedObject instanceof Wall)) return;
-
-      // Delete selected wall.
       game.world.walls.delete(view.selectedObject);
-
-      // Delete wall components from game.nodes.
-      // TODO: represent World.nodes as a Set perhaps to make this less crappy.
-      let numNodesToRemove = 0;
-      function swap(arr, a: number, b: number): void {
-        const temp = arr[a];
-        arr[a] = arr[b];
-        arr[b] = temp;
-      }
-      for (let i = 0; i < game.world.nodes.length; i++) {
-        let n: SNode;
-        while (
-          isWallComponent((n = game.world.nodes[i])) &&
-          n.wall === view.selectedObject &&
-          i + numNodesToRemove < game.world.nodes.length
-        ) {
-          swap(
-            game.world.nodes,
-            i,
-            game.world.nodes.length - numNodesToRemove - 1
-          );
-          numNodesToRemove++;
-        }
-      }
-      if (numNodesToRemove > 0) {
-        game.world.nodes.splice(-numNodesToRemove);
-      }
-      game.world.simulation.nodes(game.world.nodes);
-
       view.deselectAll();
     });
   }
@@ -169,8 +137,6 @@ function dragSubject(game: Game) {
   } else if (game.view.toolbeltMode == "party-mode") {
     const party = new Party(p.x, p.y);
     game.world.parties.push(party);
-    game.world.nodes.push(party);
-    game.world.simulation.nodes(game.world.nodes);
   }
   return null;
 }
@@ -213,7 +179,5 @@ function dragEnded(game: Game) {
   } else if (game.view.toolbeltMode == "wall-mode") {
     const wall = d3.event.subject as Wall;
     wall.complete();
-    game.world.nodes.push(...wall.joints, ...wall.segments);
-    game.world.simulation.nodes(game.world.nodes);
   }
 }

@@ -6657,11 +6657,11 @@ var quarantine = (function (exports) {
   treeProto.x = tree_x;
   treeProto.y = tree_y;
 
-  function x$5(d) {
+  function x$4(d) {
     return d.x + d.vx;
   }
 
-  function y$5(d) {
+  function y$4(d) {
     return d.y + d.vy;
   }
 
@@ -6683,7 +6683,7 @@ var quarantine = (function (exports) {
           ri2;
 
       for (var k = 0; k < iterations; ++k) {
-        tree = quadtree(nodes, x$5, y$5).visitAfter(prepare);
+        tree = quadtree(nodes, x$4, y$4).visitAfter(prepare);
         for (i = 0; i < n; ++i) {
           node = nodes[i];
           ri = radii[node.index], ri2 = ri * ri;
@@ -6865,11 +6865,11 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function x$4(d) {
+  function x$3(d) {
     return d.x;
   }
 
-  function y$4(d) {
+  function y$3(d) {
     return d.y;
   }
 
@@ -7024,7 +7024,7 @@ var quarantine = (function (exports) {
         theta2 = 0.81;
 
     function force(_) {
-      var i, n = nodes.length, tree = quadtree(nodes, x$4, y$4).visitAfter(accumulate);
+      var i, n = nodes.length, tree = quadtree(nodes, x$3, y$3).visitAfter(accumulate);
       for (alpha = _, i = 0; i < n; ++i) node = nodes[i], tree.visit(apply);
     }
 
@@ -7179,7 +7179,7 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function x$3(x) {
+  function x$2(x) {
     var strength = constant$6(0.1),
         nodes,
         strengths,
@@ -7219,7 +7219,7 @@ var quarantine = (function (exports) {
     return force;
   }
 
-  function y$3(y) {
+  function y$2(y) {
     var strength = constant$6(0.1),
         nodes,
         strengths,
@@ -15059,17 +15059,17 @@ var quarantine = (function (exports) {
     return new Linear(context);
   }
 
-  function x$2(p) {
+  function x$1(p) {
     return p[0];
   }
 
-  function y$2(p) {
+  function y$1(p) {
     return p[1];
   }
 
   function line() {
-    var x = x$2,
-        y = y$2,
+    var x = x$1,
+        y = y$1,
         defined = constant$2(true),
         context = null,
         curve = curveLinear,
@@ -15119,10 +15119,10 @@ var quarantine = (function (exports) {
   }
 
   function area() {
-    var x0 = x$2,
+    var x0 = x$1,
         x1 = null,
         y0 = constant$2(0),
-        y1 = y$2,
+        y1 = y$1,
         defined = constant$2(true),
         context = null,
         curve = curveLinear,
@@ -15400,8 +15400,8 @@ var quarantine = (function (exports) {
   function link(curve) {
     var source = linkSource,
         target = linkTarget,
-        x = x$2,
-        y = y$2,
+        x = x$1,
+        y = y$1,
         context = null;
 
     function link() {
@@ -16635,11 +16635,11 @@ var quarantine = (function (exports) {
     };
   }
 
-  function x$1(d) {
+  function x(d) {
     return d[0];
   }
 
-  function y$1(d) {
+  function y(d) {
     return d[1];
   }
 
@@ -17572,13 +17572,13 @@ var quarantine = (function (exports) {
   };
 
   function voronoi() {
-    var x = x$1,
-        y = y$1,
+    var x$1 = x,
+        y$1 = y,
         extent = null;
 
     function voronoi(data) {
       return new Diagram(data.map(function(d, i) {
-        var s = [Math.round(x(d, i, data) / epsilon) * epsilon, Math.round(y(d, i, data) / epsilon) * epsilon];
+        var s = [Math.round(x$1(d, i, data) / epsilon) * epsilon, Math.round(y$1(d, i, data) / epsilon) * epsilon];
         s.index = i;
         s.data = d;
         return s;
@@ -17598,11 +17598,11 @@ var quarantine = (function (exports) {
     };
 
     voronoi.x = function(_) {
-      return arguments.length ? (x = typeof _ === "function" ? _ : constant$1(+_), voronoi) : x;
+      return arguments.length ? (x$1 = typeof _ === "function" ? _ : constant$1(+_), voronoi) : x$1;
     };
 
     voronoi.y = function(_) {
-      return arguments.length ? (y = typeof _ === "function" ? _ : constant$1(+_), voronoi) : y;
+      return arguments.length ? (y$1 = typeof _ === "function" ? _ : constant$1(+_), voronoi) : y$1;
     };
 
     voronoi.extent = function(_) {
@@ -18264,8 +18264,8 @@ var quarantine = (function (exports) {
     forceManyBody: manyBody,
     forceRadial: radial,
     forceSimulation: simulation,
-    forceX: x$3,
-    forceY: y$3,
+    forceX: x$2,
+    forceY: y$2,
     formatDefaultLocale: defaultLocale$1,
     get format () { return format; },
     get formatPrefix () { return formatPrefix; },
@@ -18775,11 +18775,11 @@ var quarantine = (function (exports) {
   function jiggle() {
       return (Math.random() - 0.5) * 1e-6;
   }
-  function x(d) {
-      return d.x + d.vx;
+  function getX(d) {
+      return d.fx || d.x + d.vx;
   }
-  function y(d) {
-      return d.y + d.vy;
+  function getY(d) {
+      return d.fy || d.y + d.vy;
   }
   // Handles collision between two nodes.
   // TODO: document arguments.
@@ -18852,11 +18852,17 @@ var quarantine = (function (exports) {
       const interactions = new Map();
       function force() {
           const startTime = Date.now();
-          let i, node, xi, yi, ri, ri2;
-          const tree = quadtree(world.nodes, x, y).visitAfter(prepare);
+          let node, xi, yi, ri, ri2;
+          // Add all collidable nodes to quadtree.
+          const tree = quadtree(world.creatures, getX, getY)
+              .addAll(world.parties)
+              .add(world.cursorNode);
+          for (const wall of world.walls) {
+              tree.addAll(wall.joints).addAll(wall.segments);
+          }
+          tree.visitAfter(prepare);
           // For each node, visit other nodes that could collide.
-          for (i = 0; i < world.nodes.length; ++i) {
-              node = world.nodes[i];
+          for (node of world.creatures.concat([world.cursorNode])) {
               // Only loop through nodes that might need to respond to a collision.
               if (!(isLiveCreature(node) || isCursorNode(node)))
                   continue;
@@ -18879,7 +18885,7 @@ var quarantine = (function (exports) {
                   if (!isLiveCreature(data) ||
                       data.index > node.index ||
                       isCursorNode(node)) {
-                      const x = xi - data.x - data.vx, y = yi - data.y - data.vy, l = x * x + y * y;
+                      const x = xi - getX(data), y = yi - getY(data), l = x * x + y * y;
                       if (l < r * r) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
@@ -18925,87 +18931,84 @@ var quarantine = (function (exports) {
           this.score = 0;
           this.t = 0;
           this.paused = false;
+          this.creatures = [];
+          this.deadCreatures = [];
           this.walls = new Set();
           this.parties = [];
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
-          this.nodes = sequence(200).map(() => new Creature(Math.random() * this.width, // x
+          this.creatures = sequence(200).map(() => new Creature(Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
-          this.nodes[0].infected = true;
+          this.creatures[0].infected = true;
           this.cursorNode = new CursorNode();
-          this.nodes.push(this.cursorNode);
-          const nodes = this.nodes;
           const width = this.width;
           const height = this.height;
           this.simulation = simulation()
               .velocityDecay(0.2)
               .force("time", () => {
               this.t += 1;
-              debugInfo.numNodes = nodes.length;
           })
               .force("agent", (alpha) => {
-              nodes.forEach((n) => {
-                  if (!isLiveCreature(n))
-                      return;
+              this.creatures.forEach((c) => {
                   let stuck = false;
-                  if (this.t > n.previousLoggedTime + 20 && Math.random() < 0.8) {
-                      stuck = squaredDistance(n, n.previousLoggedLocation) < 5;
-                      n.previousLoggedTime = this.t;
-                      n.previousLoggedLocation = { x: n.x, y: n.y };
+                  if (this.t > c.previousLoggedTime + 20 && Math.random() < 0.8) {
+                      stuck = squaredDistance(c, c.previousLoggedLocation) < 5;
+                      c.previousLoggedTime = this.t;
+                      c.previousLoggedLocation = { x: c.x, y: c.y };
                   }
-                  if (!("goal" in n)) {
-                      n.goal = {
+                  if (!("goal" in c)) {
+                      c.goal = {
                           x: Math.random() * width,
                           y: Math.random() * height,
                       };
                   }
-                  else if (squaredDistance(n, n.goal) < (n.r + 8) * (n.r + 8)) {
-                      if (n.goalStack.length > 0) {
-                          n.goal = n.goalStack.pop();
+                  else if (squaredDistance(c, c.goal) < (c.r + 8) * (c.r + 8)) {
+                      if (c.goalStack.length > 0) {
+                          c.goal = c.goalStack.pop();
                       }
                       else {
-                          n.goal = {
+                          c.goal = {
                               x: Math.random() * width,
                               y: Math.random() * height,
                           };
                       }
                   }
                   else if (stuck) {
-                      if (n.goalStack.length > 15) {
-                          n.goal = n.goalStack[0];
-                          n.goalStack = [];
+                      if (c.goalStack.length > 15) {
+                          c.goal = c.goalStack[0];
+                          c.goalStack = [];
                       }
                       else {
-                          if (n.goalStack.length == 0) {
-                              n.turnSign = Math.random() < 0.5 ? -1 : 1;
+                          if (c.goalStack.length == 0) {
+                              c.turnSign = Math.random() < 0.5 ? -1 : 1;
                           }
-                          n.goalStack.push(n.goal);
+                          c.goalStack.push(c.goal);
                           let vec = {
-                              x: n.goal.x - n.x,
-                              y: n.goal.y - n.y,
+                              x: c.goal.x - c.x,
+                              y: c.goal.y - c.y,
                           };
                           vec = {
-                              x: vec.x * 0.6 - vec.y * 0.8 * n.turnSign,
-                              y: vec.x * 0.8 * n.turnSign + vec.y * 0.6,
+                              x: vec.x * 0.6 - vec.y * 0.8 * c.turnSign,
+                              y: vec.x * 0.8 * c.turnSign + vec.y * 0.6,
                           };
                           const veclen = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
-                          n.goal = {
-                              x: n.x + (100 * vec.x) / veclen,
-                              y: n.y + (100 * vec.y) / veclen,
+                          c.goal = {
+                              x: c.x + (100 * vec.x) / veclen,
+                              y: c.y + (100 * vec.y) / veclen,
                           };
-                          if (n.goalStack.length > 4 &&
-                              squaredDistance(n, n.goal) >
-                                  10 * squaredDistance(n, n.goalStack[0])) {
-                              n.goal = n.goalStack[0];
-                              n.goalStack = [];
+                          if (c.goalStack.length > 4 &&
+                              squaredDistance(c, c.goal) >
+                                  10 * squaredDistance(c, c.goalStack[0])) {
+                              c.goal = c.goalStack[0];
+                              c.goalStack = [];
                           }
                       }
                   }
-                  const len = Math.sqrt(squaredDistance(n, n.goal));
-                  n.vx += (alpha * (n.goal.x - n.x)) / len;
-                  n.vy += (alpha * (n.goal.y - n.y)) / len;
+                  const len = Math.sqrt(squaredDistance(c, c.goal));
+                  c.vx += (alpha * (c.goal.x - c.x)) / len;
+                  c.vy += (alpha * (c.goal.y - c.y)) / len;
               });
           })
               .force("interaction", collideForce(this, debugInfo)
@@ -19045,32 +19048,42 @@ var quarantine = (function (exports) {
               node2.ticksLeftInScoringState = 60;
           }))
               .force("health", () => {
-              nodes.forEach((n) => {
-                  if (!isCreature(n) || !n.infected)
+              let newlyDead = 0;
+              this.creatures.forEach((c) => {
+                  if (!c.infected)
                       return;
-                  if (!n.dead) {
-                      n.health -= 0.0003;
-                      if (n.health <= 0) {
-                          n.dead = true;
-                          n.ticksSinceDeath = 0;
-                          n.health = 0;
-                          this.score -= 200;
-                      }
+                  c.health -= 0.0003;
+                  if (c.health <= 0) {
+                      newlyDead++;
+                      c.dead = true;
+                      c.ticksSinceDeath = 0;
+                      c.health = 0;
+                      this.score -= 200;
                   }
-                  else {
-                      n.ticksSinceDeath++;
-                  }
+              });
+              this.deadCreatures.forEach((c) => {
+                  c.ticksSinceDeath++;
+              });
+              // Move newly dead creatures from this.creatures to this.deadCreatures.
+              // TODO: check if this should be made faster.
+              if (newlyDead == 0)
+                  return;
+              this.deadCreatures.push(...this.creatures.filter((c) => {
+                  return c.dead;
+              }));
+              this.creatures = this.creatures.filter((c) => {
+                  return !c.dead;
               });
           })
               .force("scoring-state", () => {
-              nodes.forEach((n) => {
-                  if (!isLiveCreature(n) || !n.scoring)
+              this.creatures.forEach((c) => {
+                  if (!c.scoring)
                       return;
-                  n.ticksLeftInScoringState--;
-                  if (n.ticksLeftInScoringState <= 0) {
-                      n.scoring = false;
-                      n.fx = null;
-                      n.fy = null;
+                  c.ticksLeftInScoringState--;
+                  if (c.ticksLeftInScoringState <= 0) {
+                      c.scoring = false;
+                      c.fx = null;
+                      c.fy = null;
                   }
               });
           })
@@ -19079,8 +19092,13 @@ var quarantine = (function (exports) {
                   p.age++;
               });
           })
-              .nodes(nodes)
+              // Only moving objects need to be registered as nodes in the d3 simulation.
+              .nodes(this.creatures)
               .on("tick", () => {
+              // Refresh d3 simulation nodes if any creatures have newly died.
+              if (this.creatures.length != this.simulation.nodes().length) {
+                  this.simulation.nodes(this.creatures);
+              }
               render_function(this);
           })
               // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
@@ -19113,10 +19131,8 @@ var quarantine = (function (exports) {
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
           this.recentCollisionForceRuntime = [];
-          this.numNodes = 0;
           setInterval(function () {
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
-              select(".num-nodes").text(this.numNodes);
               // Print the average.
               if (this.recentCollisionForceRuntime.length > 0) {
                   select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
@@ -19203,26 +19219,18 @@ var quarantine = (function (exports) {
               context.fillStyle = "pink";
               context.fill();
           });
-          // Draw nodes.
+          // Draw living creatures.
           const scoringNodes = [];
-          const recentlyDeadNodes = [];
-          world.nodes.forEach((n) => {
-              if (!isCreature(n))
-                  return;
-              if (n.dead) {
-                  if (n.ticksSinceDeath < 60)
-                      recentlyDeadNodes.push(n);
-                  return;
-              }
-              if (n.scoring) {
-                  scoringNodes.push(n);
+          world.creatures.forEach((c) => {
+              if (c.scoring) {
+                  scoringNodes.push(c);
                   return;
               }
               context.beginPath();
-              context.moveTo(n.x + n.r, n.y);
-              context.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+              context.moveTo(c.x + c.r, c.y);
+              context.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
               // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(n.health * 0.6 + 0.2);
+              context.fillStyle = plasma(c.health * 0.6 + 0.2);
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
@@ -19255,21 +19263,23 @@ var quarantine = (function (exports) {
           }
           context.lineWidth = 1;
           // Draw recently dead nodes.
-          for (const n of recentlyDeadNodes) {
-              const t = n.ticksSinceDeath / 60;
-              const y = interpolateNumber(n.y, n.y - 15)(t);
+          for (const c of world.deadCreatures) {
+              if (c.ticksSinceDeath >= 60)
+                  continue; // Too old to draw.
+              const t = c.ticksSinceDeath / 60;
+              const y = interpolateNumber(c.y, c.y - 15)(t);
               context.globalAlpha = interpolateNumber(1, 0)(t);
               context.beginPath();
-              context.moveTo(n.x + n.r, y);
-              context.arc(n.x, y, n.r, 0, 2 * Math.PI);
+              context.moveTo(c.x + c.r, y);
+              context.arc(c.x, y, c.r, 0, 2 * Math.PI);
               // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(n.health * 0.6 + 0.2);
+              context.fillStyle = plasma(c.health * 0.6 + 0.2);
               context.fill();
               context.strokeStyle = "#333";
               context.stroke();
               this.tempScoreIndicators.add({
-                  x: n.x,
-                  y: n.y - 15,
+                  x: c.x,
+                  y: c.y - 15,
                   text: "-200",
                   color: "#900",
               });
@@ -19377,29 +19387,7 @@ var quarantine = (function (exports) {
           select(".delete-wall").on("click", function () {
               if (!(view.selectedObject instanceof Wall))
                   return;
-              // Delete selected wall.
               game.world.walls.delete(view.selectedObject);
-              // Delete wall components from game.nodes.
-              // TODO: represent World.nodes as a Set perhaps to make this less crappy.
-              let numNodesToRemove = 0;
-              function swap(arr, a, b) {
-                  const temp = arr[a];
-                  arr[a] = arr[b];
-                  arr[b] = temp;
-              }
-              for (let i = 0; i < game.world.nodes.length; i++) {
-                  let n;
-                  while (isWallComponent((n = game.world.nodes[i])) &&
-                      n.wall === view.selectedObject &&
-                      i + numNodesToRemove < game.world.nodes.length) {
-                      swap(game.world.nodes, i, game.world.nodes.length - numNodesToRemove - 1);
-                      numNodesToRemove++;
-                  }
-              }
-              if (numNodesToRemove > 0) {
-                  game.world.nodes.splice(-numNodesToRemove);
-              }
-              game.world.simulation.nodes(game.world.nodes);
               view.deselectAll();
           });
       }
@@ -19443,8 +19431,6 @@ var quarantine = (function (exports) {
       else if (game.view.toolbeltMode == "party-mode") {
           const party = new Party(p.x, p.y);
           game.world.parties.push(party);
-          game.world.nodes.push(party);
-          game.world.simulation.nodes(game.world.nodes);
       }
       return null;
   }
@@ -19483,8 +19469,6 @@ var quarantine = (function (exports) {
       else if (game.view.toolbeltMode == "wall-mode") {
           const wall = event.subject;
           wall.complete();
-          game.world.nodes.push(...wall.joints, ...wall.segments);
-          game.world.simulation.nodes(game.world.nodes);
       }
   }
 

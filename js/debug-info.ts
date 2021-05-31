@@ -6,13 +6,11 @@ export class DebugInfo {
   recentTicksPerSecond: number[] = new Array(20);
   recentTicksPerSecondIndex = 0;
   recentCollisionForceRuntime: number[] = [];
-  numNodes = 0;
 
   constructor() {
     setInterval(
       function () {
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
-        d3.select(".num-nodes").text(this.numNodes);
         // Print the average.
         if (this.recentCollisionForceRuntime.length > 0) {
           d3.select(".collision-force-runtime").text(

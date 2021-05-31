@@ -5,7 +5,6 @@ import {
   Creature,
   Point,
   Selectable,
-  isCreature,
   TempScoreIndicator,
 } from "./simulation-types";
 import { World } from "./world";
@@ -101,26 +100,19 @@ export class View {
       context.fill();
     });
 
-    // Draw nodes.
+    // Draw living creatures.
     const scoringNodes: Creature[] = [];
-    const recentlyDeadNodes: Creature[] = [];
-    world.nodes.forEach((n) => {
-      if (!isCreature(n)) return;
-      if (n.dead) {
-        if (n.ticksSinceDeath < 60) recentlyDeadNodes.push(n);
-        return;
-      }
-
-      if (n.scoring) {
-        scoringNodes.push(n);
+    world.creatures.forEach((c) => {
+      if (c.scoring) {
+        scoringNodes.push(c);
         return;
       }
 
       context.beginPath();
-      context.moveTo(n.x + n.r, n.y);
-      context.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+      context.moveTo(c.x + c.r, c.y);
+      context.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
       // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(n.health * 0.6 + 0.2);
+      context.fillStyle = d3.interpolatePlasma(c.health * 0.6 + 0.2);
       context.fill();
       context.strokeStyle = "#333";
       context.stroke();
@@ -154,23 +146,24 @@ export class View {
     context.lineWidth = 1;
 
     // Draw recently dead nodes.
-    for (const n of recentlyDeadNodes) {
-      const t = n.ticksSinceDeath / 60;
-      const y = d3.interpolateNumber(n.y, n.y - 15)(t);
+    for (const c of world.deadCreatures) {
+      if (c.ticksSinceDeath >= 60) continue; // Too old to draw.
+      const t = c.ticksSinceDeath / 60;
+      const y = d3.interpolateNumber(c.y, c.y - 15)(t);
       context.globalAlpha = d3.interpolateNumber(1, 0)(t);
 
       context.beginPath();
-      context.moveTo(n.x + n.r, y);
-      context.arc(n.x, y, n.r, 0, 2 * Math.PI);
+      context.moveTo(c.x + c.r, y);
+      context.arc(c.x, y, c.r, 0, 2 * Math.PI);
       // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(n.health * 0.6 + 0.2);
+      context.fillStyle = d3.interpolatePlasma(c.health * 0.6 + 0.2);
       context.fill();
       context.strokeStyle = "#333";
       context.stroke();
 
       this.tempScoreIndicators.add({
-        x: n.x,
-        y: n.y - 15,
+        x: c.x,
+        y: c.y - 15,
         text: "-200",
         color: "#900",
       });
