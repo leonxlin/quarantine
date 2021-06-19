@@ -36,4 +36,8 @@ in the top-level directory and visit `localhost:8000`.
 - next features
   - make interaction bonuses more visually obvious
   - level modes
-  - try path planning with a potential function
+  - pathing
+    - research keywords: navmesh
+    - AI Navigation: It's not a solved problem: https://gdcvault.com/play/1014514/AI-Navigation-It-s-Not
+    - https://gamedev.stackexchange.com/questions/183708/how-does-heavily-constrained-delaunay-triangulation-work
+    - Efficient Triangulation-Based Pathfinding: https://www.aaai.org/Papers/AAAI/2006/AAAI06-148.pdf
