@@ -18649,8 +18649,6 @@ var quarantine = (function (exports) {
           this.y = this.fy = p.y;
       }
       reportPotentialTarget(n, distanceSq) {
-          console.log(n);
-          console.log(distanceSq);
           if (this.target == null || distanceSq < this.targetDistanceSq) {
               this.target = n;
               this.targetDistanceSq = distanceSq;
@@ -18681,6 +18679,7 @@ var quarantine = (function (exports) {
               p = this;
           this.fx = this.x = p.x;
           this.fy = this.y = p.y;
+          this.vx = this.vy = 0;
       }
       unfixPosition() {
           this.fx = null;
@@ -18781,6 +18780,9 @@ var quarantine = (function (exports) {
       expired() {
           return this.age > 1000;
       }
+  }
+  function isParty(n) {
+      return n instanceof Party;
   }
 
   // The code in this file is adapted
@@ -18887,14 +18889,16 @@ var quarantine = (function (exports) {
               tree.visit(apply);
           }
           function apply(quad, x0, y0, x1, y1) {
-              const data = quad.data, rj = quad.r, r = ri + rj;
-              if (data) {
-                  // Only process pairs of creatures with the smaller index first.
-                  // Non-creature |data| nodes should always be processed since |node|
-                  // is a creature.
-                  if (isCursorNode(data))
-                      return;
-                  if (!isLiveCreature(data) ||
+              if (!quad.data) {
+                  const r = quad.r;
+                  // Return true if there is no need to visit the children of `quad`.
+                  return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+              }
+              let q = quad;
+              do {
+                  const data = q.data, rj = data.r, r = ri + rj;
+                  if (isWallComponent(data) ||
+                      isParty(data) ||
                       data.index > node.index ||
                       isCursorNode(node)) {
                       const x = xi - getX(data), y = yi - getY(data), l = x * x + y * y;
@@ -18905,18 +18909,24 @@ var quarantine = (function (exports) {
                           });
                       }
                   }
-                  return;
-              }
-              // Return true if there is no need to visit the children of `quad`.
-              return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+                  q = q.next;
+              } while (q);
           }
           debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
       }
       // Sets the radii of each quad, both leaves and internal nodes. Should be invoked in postorder
       // sequence.
       function prepare(quad) {
-          if (quad.data)
-              return (quad.r = quad.data.r);
+          if (quad.data) {
+              quad.r = quad.data.r;
+              // Take the maximum radius of all items that are centered at the exact same (x, y).
+              let q = quad;
+              while (q.next) {
+                  q = q.next;
+                  quad.r = Math.max(quad.r, q.data.r);
+              }
+              return;
+          }
           for (let i = (quad.r = 0); i < 4; ++i) {
               if (quad[i] && quad[i].r > quad.r) {
                   quad.r = quad[i].r;

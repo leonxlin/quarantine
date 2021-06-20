@@ -45,8 +45,6 @@ export class CursorNode implements SNode {
   }
 
   reportPotentialTarget(n: SNode, distanceSq: number): void {
-    console.log(n);
-    console.log(distanceSq);
     if (this.target == null || distanceSq < this.targetDistanceSq) {
       this.target = n;
       this.targetDistanceSq = distanceSq;
@@ -106,6 +104,7 @@ export class Creature implements SNode {
     if (!p) p = this;
     this.fx = this.x = p.x;
     this.fy = this.y = p.y;
+    this.vx = this.vy = 0;
   }
 
   unfixPosition(): void {
@@ -272,6 +271,10 @@ export class Party implements SNode {
   expired(): boolean {
     return this.age > 1000;
   }
+}
+
+export function isParty(n: SNode): n is Party {
+  return n instanceof Party;
 }
 
 export type Interaction = (

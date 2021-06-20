@@ -17,9 +17,6 @@ in the top-level directory and visit `localhost:8000`.
 - make creatures give up on goal after some amount of time
 - make initial speed uniform (currently creatures move faster at start)
 
-- BUG: mouse cursor doesn't stay as pointer while dragging creature
-- BUG: collision broken for some creature pairs while dragging creature
-
 - clean up code
 
   - separate node lists into
