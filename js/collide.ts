@@ -119,9 +119,6 @@ function circleLineCollisionInteraction(
   circleNode: SNode,
   segmentNode: SegmentNode
 ): void {
-  // TODO: figure out best way to pass WALL_HALF_WIDTH into this function.
-  const WALL_HALF_WIDTH = 5;
-
   const a = segmentNode.vec.x,
     b = segmentNode.vec.y;
   const nx = circleNode.x - segmentNode.left.x,
@@ -133,7 +130,7 @@ function circleLineCollisionInteraction(
   const nyp = (a * ny - b * nx) / segmentNode.length;
 
   // Min distance we need to move the creature in order to not be overlapping with this wall segment.
-  const discrepancy = WALL_HALF_WIDTH + circleNode.r - Math.abs(nyp);
+  const discrepancy = segmentNode.wall.halfWidth + circleNode.r - Math.abs(nyp);
   if (discrepancy <= 0) return;
 
   if (isCursorNode(circleNode)) {
