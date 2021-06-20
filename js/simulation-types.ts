@@ -6,10 +6,6 @@ export function squaredDistance(p1: Point, p2: Point): number {
   return dx * dx + dy * dy;
 }
 
-export interface SNode extends d3.SimulationNodeDatum {
-  r: number;
-}
-
 export type Selectable = Wall | Creature;
 
 export interface Point {
@@ -17,16 +13,17 @@ export interface Point {
   y?: number;
 }
 
+// Objects that can participate in collision/proximity detection.
+export interface SNode extends Point {
+  // An upper bound on the distance from the center to any part of the node.
+  // Used for collision detection.
+  r: number;
+}
+
 export class CursorNode implements SNode {
   r: number;
   x?: number;
   y?: number;
-  // Used by d3 simulation code.
-  fx?: number;
-  fy?: number;
-  vx?: number;
-  vy?: number;
-  index?: number;
 
   // The SNode that would be interacted with if the user clicked.
   target: SNode | null;
@@ -35,13 +32,13 @@ export class CursorNode implements SNode {
 
   constructor() {
     this.r = 4;
-    this.x = this.y = this.fx = this.fy = this.vx = this.vy = 0;
+    this.x = this.y = 0;
     this.target = null;
   }
 
   setLocation(p: Point): void {
-    this.x = this.fx = p.x;
-    this.y = this.fy = p.y;
+    this.x = p.x;
+    this.y = p.y;
   }
 
   reportPotentialTarget(n: SNode, distanceSq: number): void {
@@ -56,7 +53,7 @@ export function isCursorNode(n: SNode): n is CursorNode {
   return n instanceof CursorNode;
 }
 
-export class Creature implements SNode {
+export class Creature implements SNode, d3.SimulationNodeDatum {
   r: number;
   x?: number;
   y?: number;
@@ -181,7 +178,7 @@ export function isWallComponent(n: SNode): n is WallComponent {
   return n instanceof WallJoint || n instanceof SegmentNode;
 }
 
-export class WallJoint implements SNode, WallComponent {
+export class WallJoint implements WallComponent {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;
@@ -208,16 +205,11 @@ export function isImpassableSegment(n: SNode): n is SegmentNode {
 }
 
 // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
-export class SegmentNode implements SNode, WallComponent {
+export class SegmentNode implements WallComponent {
   // Fields required for d3.SimulationNodeDatum.
   r: number;
   x?: number;
   y?: number;
-  fx?: number;
-  fy?: number;
-  vx?: number;
-  vy?: number;
-  index?: number;
 
   // The two endpoints of the segment.
   left?: Point;
@@ -235,8 +227,8 @@ export class SegmentNode implements SNode, WallComponent {
     this.left = left;
     this.right = right;
     this.length2 = squaredDistance(left, right);
-    this.fx = this.x = 0.5 * (left.x + right.x);
-    this.fy = this.y = 0.5 * (left.y + right.y);
+    this.x = 0.5 * (left.x + right.x);
+    this.y = 0.5 * (left.y + right.y);
     // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
     this.r = Math.sqrt(this.length2 / 4 + wall.halfWidth * wall.halfWidth);
     this.length = Math.sqrt(this.length2);
@@ -249,20 +241,15 @@ export class SegmentNode implements SNode, WallComponent {
 }
 
 export class Party implements SNode {
-  // For SNode.
   r: number;
   x?: number;
   y?: number;
-  fx?: number;
-  fy?: number;
-  index?: number;
-
   age: number;
   visibleR: number;
 
   constructor(x: number, y: number) {
-    this.fx = this.x = x;
-    this.fy = this.y = y;
+    this.x = x;
+    this.y = y;
     this.age = 0;
     this.r = 80;
     this.visibleR = 50;

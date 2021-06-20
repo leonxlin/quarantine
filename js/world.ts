@@ -14,7 +14,7 @@ import { collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 
 export class World {
-  simulation: d3.Simulation<SNode, undefined>;
+  simulation: d3.Simulation<Creature, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
   cursorNode: CursorNode;
   // TODO: Deduplicate these parameters with the equivalents in view.ts.
@@ -52,7 +52,7 @@ export class World {
     const height = this.height;
 
     this.simulation = d3
-      .forceSimulation<SNode, undefined>()
+      .forceSimulation<Creature, undefined>()
       .velocityDecay(0.2)
       .force("time", () => {
         this.t += 1;

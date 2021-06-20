@@ -53,12 +53,13 @@ function jiggle(): number {
   return (Math.random() - 0.5) * 1e-6;
 }
 
+// Guesses for the next coordinates of `d`; used for collision handling to avoid
+// jitteriness.
 function getX(d: SNode): number {
-  return d.fx || d.x + d.vx;
+  return isLiveCreature(d) ? d.x + d.vx : d.x;
 }
-
 function getY(d: SNode): number {
-  return d.fy || d.y + d.vy;
+  return isLiveCreature(d) ? d.y + d.vy : d.y;
 }
 
 // Handles collision between two nodes.
@@ -107,10 +108,19 @@ function circleCircleCollisionInteraction(
   if (x === 0) (x = jiggle()), (l += x * x);
   if (y === 0) (y = jiggle()), (l += y * y);
   l = (r - (l = Math.sqrt(l))) / l;
-  node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-  node1.vy += (y *= l) * r;
-  node2.vx -= x * (r = 1 - r);
-  node2.vy -= y * r;
+  x *= l;
+  y *= l;
+  const rj2 = rj * rj;
+  const fi = rj2 / (ri2 + rj2);
+  const fj = 1 - fi;
+  if (isLiveCreature(node1)) {
+    node1.vx += x * fi;
+    node1.vy += y * fi;
+  }
+  if (isLiveCreature(node2)) {
+    node2.vx -= x * fj;
+    node2.vy -= y * fj;
+  }
 }
 
 // Handles collision between a circle and line segment with a certain width.
@@ -137,6 +147,7 @@ function circleLineCollisionInteraction(
     circleNode.reportPotentialTarget(segmentNode, 0);
     return;
   }
+  if (!isLiveCreature(circleNode)) return;
 
   const sign = nyp > 0 ? 1 : -1;
   // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
@@ -158,7 +169,7 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
     let node, xi, yi, ri, ri2;
 
     // Add all collidable nodes to quadtree.
-    const tree = quadtree(world.creatures, getX, getY)
+    const tree = quadtree<SNode>(world.creatures, getX, getY)
       .addAll(world.parties)
       .add(world.cursorNode);
     for (const wall of world.walls) {
@@ -174,8 +185,8 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
 
       ri = node.r;
       ri2 = ri * ri;
-      xi = node.x + node.vx;
-      yi = node.y + node.vy;
+      xi = getX(node);
+      yi = getY(node);
       tree.visit(apply);
     }
 

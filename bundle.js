@@ -18641,12 +18641,12 @@ var quarantine = (function (exports) {
   class CursorNode {
       constructor() {
           this.r = 4;
-          this.x = this.y = this.fx = this.fy = this.vx = this.vy = 0;
+          this.x = this.y = 0;
           this.target = null;
       }
       setLocation(p) {
-          this.x = this.fx = p.x;
-          this.y = this.fy = p.y;
+          this.x = p.x;
+          this.y = p.y;
       }
       reportPotentialTarget(n, distanceSq) {
           if (this.target == null || distanceSq < this.targetDistanceSq) {
@@ -18757,8 +18757,8 @@ var quarantine = (function (exports) {
           this.left = left;
           this.right = right;
           this.length2 = squaredDistance(left, right);
-          this.fx = this.x = 0.5 * (left.x + right.x);
-          this.fy = this.y = 0.5 * (left.y + right.y);
+          this.x = 0.5 * (left.x + right.x);
+          this.y = 0.5 * (left.y + right.y);
           // The minimum berth from the line between `left` and `right` within which we need to check for collisions.
           this.r = Math.sqrt(this.length2 / 4 + wall.halfWidth * wall.halfWidth);
           this.length = Math.sqrt(this.length2);
@@ -18771,8 +18771,8 @@ var quarantine = (function (exports) {
   }
   class Party {
       constructor(x, y) {
-          this.fx = this.x = x;
-          this.fy = this.y = y;
+          this.x = x;
+          this.y = y;
           this.age = 0;
           this.r = 80;
           this.visibleR = 50;
@@ -18789,11 +18789,13 @@ var quarantine = (function (exports) {
   function jiggle() {
       return (Math.random() - 0.5) * 1e-6;
   }
+  // Guesses for the next coordinates of `d`; used for collision handling to avoid
+  // jitteriness.
   function getX(d) {
-      return d.fx || d.x + d.vx;
+      return isLiveCreature(d) ? d.x + d.vx : d.x;
   }
   function getY(d) {
-      return d.fy || d.y + d.vy;
+      return isLiveCreature(d) ? d.y + d.vy : d.y;
   }
   // Handles collision between two nodes.
   // TODO: document arguments.
@@ -18828,10 +18830,19 @@ var quarantine = (function (exports) {
       if (y === 0)
           (y = jiggle()), (l += y * y);
       l = (r - (l = Math.sqrt(l))) / l;
-      node1.vx += (x *= l) * (r = (rj *= rj) / (ri2 + rj));
-      node1.vy += (y *= l) * r;
-      node2.vx -= x * (r = 1 - r);
-      node2.vy -= y * r;
+      x *= l;
+      y *= l;
+      const rj2 = rj * rj;
+      const fi = rj2 / (ri2 + rj2);
+      const fj = 1 - fi;
+      if (isLiveCreature(node1)) {
+          node1.vx += x * fi;
+          node1.vy += y * fi;
+      }
+      if (isLiveCreature(node2)) {
+          node2.vx -= x * fj;
+          node2.vy -= y * fj;
+      }
   }
   // Handles collision between a circle and line segment with a certain width.
   // The segment is assumed to be immovable.
@@ -18851,6 +18862,8 @@ var quarantine = (function (exports) {
           circleNode.reportPotentialTarget(segmentNode, 0);
           return;
       }
+      if (!isLiveCreature(circleNode))
+          return;
       const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
       const commonFactor = ((sign * discrepancy) / segmentNode.length) *
@@ -18882,8 +18895,8 @@ var quarantine = (function (exports) {
                   node.target = null;
               ri = node.r;
               ri2 = ri * ri;
-              xi = node.x + node.vx;
-              yi = node.y + node.vy;
+              xi = getX(node);
+              yi = getY(node);
               tree.visit(apply);
           }
           function apply(quad, x0, y0, x1, y1) {
