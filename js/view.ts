@@ -15,13 +15,14 @@ export class View {
   CANVAS_ASPECT_RATIO = 3 / 2;
   canvasClientScaleFactor: number;
   debugInfo: DebugInfo;
-  // TODO: revisit whether toolbeltMode belongs in View.
-  toolbeltMode = "select-mode";
   width: number;
   height: number;
 
   tempScoreIndicators: Set<TempScoreIndicator>;
 
+  // View also maintains state related to the player's interactions with the game interface.
+  // TODO: revisit whether these belong in View.
+  toolbeltMode = "select-mode";
   selectedObject: Selectable = null;
 
   fitCanvas(): void {
@@ -76,6 +77,11 @@ export class View {
   }
 
   render(world: World): void {
+    // TODO: The cursor style logic being here in `render`, which is only called
+    // when the simulation is running, causes the cursor style to be stuck when the
+    // game is paused. To repro: in select mode, hover over a wall to get the pointer
+    // cursor; then, pause the game and move the mouse around the canvas. This should
+    // be fixed.
     if (this.toolbeltMode != "select-mode") {
       this.canvas.style.cursor = "default";
     } else if (world.cursorNode.target != null) {
@@ -211,6 +217,18 @@ export class View {
     context.fillText(String(world.score), this.canvas.width - 10, 30);
 
     context.restore();
+  }
+
+  selectWall(wall: Wall, cursorLocation: Point): void {
+    this.selectedObject = wall;
+    const s = d3.select(".delete-wall");
+    s.style("display", "inline");
+    s.style("left", cursorLocation.x + "px");
+    s.style("top", cursorLocation.y + "px");
+  }
+
+  selectCreature(creature: Creature): void {
+    this.selectedObject = creature;
   }
 
   deselectAll(): void {

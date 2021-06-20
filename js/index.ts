@@ -2,7 +2,6 @@ import * as d3 from "d3";
 import {
   Wall,
   isWallComponent,
-  Party,
   isCreature,
   isLiveCreature,
 } from "./simulation-types";
@@ -71,8 +70,9 @@ export class Game {
       )
       .on("mousemove", () => {
         if (view.toolbeltMode != "select-mode") return;
-        const p = view.shiftAndScaleMouseCoordsToCanvasCoords(d3.event);
-        game.world.cursorNode.setLocation(p.x, p.y);
+        game.world.cursorNode.setLocation(
+          view.shiftAndScaleMouseCoordsToCanvasCoords(d3.event)
+        );
       });
 
     // Toolbelt mode toggling.
@@ -106,37 +106,37 @@ window.onload = function () {
   window.game = new Game();
 };
 
+// In d3-drag, the drag subject function should return the object being dragged, which
+// is then accessible as event.subject later. If null is returned, then the drag event
+// is suppressed.
+//
+// Here we are essentially using dragSubject both for its intended purpose and as a
+// mousedown handler for non-draggable objects. TODO: think about whether that's good
+// or not.
 function dragSubject(game: Game) {
   const p = game.view.scaleMouseCoordsToCanvasCoords(d3.event);
   if (game.view.toolbeltMode == "wall-mode") {
-    const wall = new Wall();
-    wall.addPoint(p);
-    game.world.walls.add(wall);
-    return wall;
+    return game.world.startNewWall(p);
   } else if (game.view.toolbeltMode == "select-mode") {
     if (isWallComponent(game.world.cursorNode.target)) {
-      game.view.selectedObject = game.world.cursorNode.target.wall;
-      const s = d3.select(".delete-wall");
-      s.style("display", "inline");
-      s.style("left", d3.event.x + "px");
-      s.style("top", d3.event.y + "px");
+      game.view.selectWall(game.world.cursorNode.target.wall, d3.event);
+      return null;
     } else if (isLiveCreature(game.world.cursorNode.target)) {
-      game.view.selectedObject = game.world.cursorNode.target;
-      // Hack: return an empty object without x or y properties. This is the only way
-      // I've found to make d3-drag's event object have usable x and y coordinates. Somehow
-      // using different coords for the canvas makes things very confusing.
+      game.view.selectCreature(game.world.cursorNode.target);
+      // Hack: return an empty object without x or y properties. Later, in further drag
+      // handling, the selected creature is accessed via game.view.selectedObject rather
+      // than event.subject. This is the only way I've found to make d3-drag's event
+      // object have usable x and y coordinates. Somehow using different coords for the
+      // canvas makes things very confusing.
       // TODO: revisit
       return {};
     } else {
       game.view.deselectAll();
+      return null;
     }
-    // Note: for walls, this returns an object without `x` or `y` properties, which is
-    // not how d3.subject is meant to be used. But it works for now.
-    // TODO: revisit
-    return game.view.selectedObject;
   } else if (game.view.toolbeltMode == "party-mode") {
-    const party = new Party(p.x, p.y);
-    game.world.parties.push(party);
+    game.world.createParty(p);
+    return null;
   }
   return null;
 }
@@ -144,11 +144,10 @@ function dragSubject(game: Game) {
 function dragStarted(game: Game) {
   if (game.view.toolbeltMode == "select-mode") {
     if (isLiveCreature(game.view.selectedObject)) {
-      // Manipulating game.selectedObject instead of `d3.event.subject` because I had trouble
-      // getting the coords to be right in d3.event when using `d3.event.subject`.
-      // See notes in dragSubject.
-      game.view.selectedObject.fx = game.view.selectedObject.x;
-      game.view.selectedObject.fy = game.view.selectedObject.y;
+      // Note: this has the effect of snapping the creature's position to be centered at
+      // the cursor.
+      const p = game.view.scaleMouseCoordsToCanvasCoords(d3.event);
+      game.view.selectedObject.fixPosition(p);
     }
   }
 }
@@ -157,9 +156,11 @@ function dragDragged(game: Game) {
   const p = game.view.scaleMouseCoordsToCanvasCoords(d3.event);
   if (game.view.toolbeltMode == "select-mode") {
     if (isCreature(game.view.selectedObject)) {
-      game.view.selectedObject.fx = p.x;
-      game.view.selectedObject.fy = p.y;
+      game.view.selectedObject.fixPosition(p);
     }
+    // Needed here because the mousemove listener above is not triggered while the drag event
+    // is in progress.
+    game.world.cursorNode.setLocation(p);
   } else if (game.view.toolbeltMode == "wall-mode") {
     const wall = d3.event.subject as Wall;
     wall.maybeAddPoint(
@@ -172,10 +173,9 @@ function dragDragged(game: Game) {
 function dragEnded(game: Game) {
   if (game.view.toolbeltMode == "select-mode") {
     if (isLiveCreature(game.view.selectedObject)) {
-      game.view.selectedObject.fx = null;
-      game.view.selectedObject.fy = null;
-      game.view.selectedObject = null;
+      game.view.selectedObject.unfixPosition();
     }
+    game.view.deselectAll();
   } else if (game.view.toolbeltMode == "wall-mode") {
     const wall = d3.event.subject as Wall;
     wall.complete();

@@ -7,6 +7,7 @@ import {
   Party,
   isLiveCreature,
   squaredDistance,
+  Point,
 } from "./simulation-types";
 import collideForce from "./collide";
 import { collisionInteraction } from "./collide";
@@ -219,6 +220,19 @@ export class World {
       .alphaTarget(0.3)
       // Don't start the simulation yet.
       .stop();
+  }
+
+  startNewWall(p: Point): Wall {
+    const wall = new Wall();
+    wall.addPoint(p);
+    this.walls.add(wall);
+    return wall;
+  }
+
+  createParty(p: Point): Party {
+    const party = new Party(p.x, p.y);
+    this.parties.push(party);
+    return party;
   }
 
   togglePause(): void {

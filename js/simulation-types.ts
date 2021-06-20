@@ -39,12 +39,14 @@ export class CursorNode implements SNode {
     this.target = null;
   }
 
-  setLocation(x: number, y: number): void {
-    this.x = this.fx = x;
-    this.y = this.fy = y;
+  setLocation(p: Point): void {
+    this.x = this.fx = p.x;
+    this.y = this.fy = p.y;
   }
 
   reportPotentialTarget(n: SNode, distanceSq: number): void {
+    console.log(n);
+    console.log(distanceSq);
     if (this.target == null || distanceSq < this.targetDistanceSq) {
       this.target = n;
       this.targetDistanceSq = distanceSq;
@@ -98,6 +100,17 @@ export class Creature implements SNode {
 
     this.goalStack = [];
     this.turnSign = 1;
+  }
+
+  fixPosition(p?: Point): void {
+    if (!p) p = this;
+    this.fx = this.x = p.x;
+    this.fy = this.y = p.y;
+  }
+
+  unfixPosition(): void {
+    this.fx = null;
+    this.fy = null;
   }
 }
 
