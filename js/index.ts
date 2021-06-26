@@ -8,6 +8,7 @@ import {
 import { World } from "./world";
 import { DebugInfo } from "./debug-info";
 import { View } from "./view";
+import * as levels from "./levels";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Needed to make typescript happy when defining properties on the global window object for easy debugging.
@@ -96,7 +97,11 @@ export class Game {
   constructor() {
     this.debugInfo = new DebugInfo();
     this.view = new View(this.debugInfo);
-    this.world = new World(this.view.render.bind(this.view), this.debugInfo);
+    this.world = new World(
+      levels.Level1,
+      this.view.render.bind(this.view),
+      this.debugInfo
+    );
     this.setUpInputListeners();
   }
 }

@@ -18957,7 +18957,7 @@ var quarantine = (function (exports) {
   }
 
   class World {
-      constructor(render_function, debugInfo) {
+      constructor(level, render_function, debugInfo) {
           // TODO: Deduplicate these parameters with the equivalents in view.ts.
           this.width = 900;
           this.height = 600;
@@ -18971,7 +18971,8 @@ var quarantine = (function (exports) {
           // Figure out a better place for this constant.
           this.pointCircleFactor = 0.5;
           this.WALL_HALF_WIDTH = 5;
-          this.creatures = sequence(200).map(() => new Creature(Math.random() * this.width, // x
+          this.level = level;
+          this.creatures = sequence(level.numCreatures).map(() => new Creature(Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
           this.creatures[0].infected = true;
@@ -19388,6 +19389,10 @@ var quarantine = (function (exports) {
       }
   }
 
+  class Level1 {
+  }
+  Level1.numCreatures = 200;
+
   /* eslint-enable @typescript-eslint/no-explicit-any */
   // Not sure if a class is really the best way to organize this code...
   // TODO: revisit code organization.
@@ -19395,7 +19400,7 @@ var quarantine = (function (exports) {
       constructor() {
           this.debugInfo = new DebugInfo();
           this.view = new View(this.debugInfo);
-          this.world = new World(this.view.render.bind(this.view), this.debugInfo);
+          this.world = new World(Level1, this.view.render.bind(this.view), this.debugInfo);
           this.setUpInputListeners();
       }
       togglePause() {
