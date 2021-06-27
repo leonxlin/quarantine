@@ -10,7 +10,7 @@ import {
   Point,
 } from "./simulation-types";
 import collideForce from "./collide";
-import { collisionInteraction } from "./collide";
+import { getNextX, getNextY, collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
@@ -31,6 +31,8 @@ export class World {
   deadCreatures: Array<Creature> = [];
   walls: Set<Wall> = new Set();
   parties: Array<Party> = [];
+
+  quadtree: d3.Quadtree<SNode>;
 
   constructor(
     readonly level: Level,
@@ -120,6 +122,7 @@ export class World {
           c.vy += (alpha * (c.goal.y - c.y)) / len;
         });
       })
+      .force("quadtree", this.rebuildQuadtree.bind(this))
       .force(
         "interaction",
         collideForce(this, debugInfo)
@@ -221,6 +224,40 @@ export class World {
       .alphaTarget(0.3)
       // Don't start the simulation yet.
       .stop();
+  }
+
+  private rebuildQuadtree(): void {
+    this.quadtree = d3
+      .quadtree<SNode>(this.creatures, getNextX, getNextY)
+      .addAll(this.parties);
+    for (const wall of this.walls) {
+      this.quadtree
+        .addAll(wall.joints)
+        .addAll(wall.segments)
+        .add(this.cursorNode);
+    }
+    this.quadtree.visitAfter(setRadius);
+
+    // Sets the radius of each quad, both leaves and internal nodes. Invoked in postorder
+    // sequence.
+    function setRadius(quad) {
+      if (quad.data) {
+        quad.r = quad.data.r;
+
+        // Take the maximum radius of all items that are centered at the exact same (x, y).
+        let q = quad;
+        while (q.next) {
+          q = q.next;
+          quad.r = Math.max(quad.r, q.data.r);
+        }
+        return;
+      }
+      for (let i = (quad.r = 0); i < 4; ++i) {
+        if (quad[i] && quad[i].r > quad.r) {
+          quad.r = quad[i].r;
+        }
+      }
+    }
   }
 
   startNewWall(p: Point): Wall {

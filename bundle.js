@@ -18791,10 +18791,10 @@ var quarantine = (function (exports) {
   }
   // Guesses for the next coordinates of `d`; used for collision handling to avoid
   // jitteriness.
-  function getX(d) {
+  function getNextX(d) {
       return isLiveCreature(d) ? d.x + d.vx : d.x;
   }
-  function getY(d) {
+  function getNextY(d) {
       return isLiveCreature(d) ? d.y + d.vy : d.y;
   }
   // Handles collision between two nodes.
@@ -18877,14 +18877,7 @@ var quarantine = (function (exports) {
       function force() {
           const startTime = Date.now();
           let node, xi, yi, ri, ri2;
-          // Add all collidable nodes to quadtree.
-          const tree = quadtree(world.creatures, getX, getY)
-              .addAll(world.parties)
-              .add(world.cursorNode);
-          for (const wall of world.walls) {
-              tree.addAll(wall.joints).addAll(wall.segments);
-          }
-          tree.visitAfter(prepare);
+          const tree = world.quadtree;
           // For each node, visit other nodes that could collide.
           for (node of world.creatures.concat([world.cursorNode])) {
               // Only loop through nodes that might need to respond to a collision.
@@ -18894,8 +18887,8 @@ var quarantine = (function (exports) {
                   node.target = null;
               ri = node.r;
               ri2 = ri * ri;
-              xi = getX(node);
-              yi = getY(node);
+              xi = getNextX(node);
+              yi = getNextY(node);
               tree.visit(apply);
           }
           function apply(quad, x0, y0, x1, y1) {
@@ -18911,7 +18904,7 @@ var quarantine = (function (exports) {
                       isParty(data) ||
                       data.index > node.index ||
                       isCursorNode(node)) {
-                      const x = xi - getX(data), y = yi - getY(data), l = x * x + y * y;
+                      const x = xi - getNextX(data), y = yi - getNextY(data), l = x * x + y * y;
                       if (l < r * r) {
                           // Execute registered interactions for (node, data).
                           interactions.forEach(function (interaction) {
@@ -18923,25 +18916,6 @@ var quarantine = (function (exports) {
               } while (q);
           }
           debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
-      }
-      // Sets the radii of each quad, both leaves and internal nodes. Should be invoked in postorder
-      // sequence.
-      function prepare(quad) {
-          if (quad.data) {
-              quad.r = quad.data.r;
-              // Take the maximum radius of all items that are centered at the exact same (x, y).
-              let q = quad;
-              while (q.next) {
-                  q = q.next;
-                  quad.r = Math.max(quad.r, q.data.r);
-              }
-              return;
-          }
-          for (let i = (quad.r = 0); i < 4; ++i) {
-              if (quad[i] && quad[i].r > quad.r) {
-                  quad.r = quad[i].r;
-              }
-          }
       }
       /* eslint-disable @typescript-eslint/no-explicit-any --
         I can't figure out how to get function overloads to work with typescript without `any`. */
@@ -19041,6 +19015,7 @@ var quarantine = (function (exports) {
                   c.vy += (alpha * (c.goal.y - c.y)) / len;
               });
           })
+              .force("quadtree", this.rebuildQuadtree.bind(this))
               .force("interaction", collideForce(this, debugInfo)
               .interaction("collision", collisionInteraction.bind(null, level))
               .interaction("party", (creature, party) => {
@@ -19135,6 +19110,36 @@ var quarantine = (function (exports) {
               .alphaTarget(0.3)
               // Don't start the simulation yet.
               .stop();
+      }
+      rebuildQuadtree() {
+          this.quadtree = quadtree(this.creatures, getNextX, getNextY)
+              .addAll(this.parties);
+          for (const wall of this.walls) {
+              this.quadtree
+                  .addAll(wall.joints)
+                  .addAll(wall.segments)
+                  .add(this.cursorNode);
+          }
+          this.quadtree.visitAfter(setRadius);
+          // Sets the radius of each quad, both leaves and internal nodes. Invoked in postorder
+          // sequence.
+          function setRadius(quad) {
+              if (quad.data) {
+                  quad.r = quad.data.r;
+                  // Take the maximum radius of all items that are centered at the exact same (x, y).
+                  let q = quad;
+                  while (q.next) {
+                      q = q.next;
+                      quad.r = Math.max(quad.r, q.data.r);
+                  }
+                  return;
+              }
+              for (let i = (quad.r = 0); i < 4; ++i) {
+                  if (quad[i] && quad[i].r > quad.r) {
+                      quad.r = quad[i].r;
+                  }
+              }
+          }
       }
       startNewWall(p) {
           const wall = new Wall(this.level);

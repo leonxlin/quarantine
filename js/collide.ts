@@ -33,7 +33,6 @@
 // This file defines a d3 force (see https://github.com/d3/d3-force#forces) that
 // detects nearby objects on the map and handles interactions between them.
 
-import { quadtree } from "d3-quadtree";
 import {
   SNode,
   SegmentNode,
@@ -56,10 +55,10 @@ function jiggle(): number {
 
 // Guesses for the next coordinates of `d`; used for collision handling to avoid
 // jitteriness.
-function getX(d: SNode): number {
+export function getNextX(d: SNode): number {
   return isLiveCreature(d) ? d.x + d.vx : d.x;
 }
-function getY(d: SNode): number {
+export function getNextY(d: SNode): number {
   return isLiveCreature(d) ? d.y + d.vy : d.y;
 }
 
@@ -170,14 +169,7 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
 
     let node, xi, yi, ri, ri2;
 
-    // Add all collidable nodes to quadtree.
-    const tree = quadtree<SNode>(world.creatures, getX, getY)
-      .addAll(world.parties)
-      .add(world.cursorNode);
-    for (const wall of world.walls) {
-      tree.addAll(wall.joints).addAll(wall.segments);
-    }
-    tree.visitAfter(prepare);
+    const tree = world.quadtree;
 
     // For each node, visit other nodes that could collide.
     for (node of (world.creatures as SNode[]).concat([world.cursorNode])) {
@@ -187,8 +179,8 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
 
       ri = node.r;
       ri2 = ri * ri;
-      xi = getX(node);
-      yi = getY(node);
+      xi = getNextX(node);
+      yi = getNextY(node);
       tree.visit(apply);
     }
 
@@ -210,8 +202,8 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
           data.index > node.index ||
           isCursorNode(node)
         ) {
-          const x = xi - getX(data),
-            y = yi - getY(data),
+          const x = xi - getNextX(data),
+            y = yi - getNextY(data),
             l = x * x + y * y;
           if (l < r * r) {
             // Execute registered interactions for (node, data).
@@ -226,27 +218,6 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
     }
 
     debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
-  }
-
-  // Sets the radii of each quad, both leaves and internal nodes. Should be invoked in postorder
-  // sequence.
-  function prepare(quad) {
-    if (quad.data) {
-      quad.r = quad.data.r;
-
-      // Take the maximum radius of all items that are centered at the exact same (x, y).
-      let q = quad;
-      while (q.next) {
-        q = q.next;
-        quad.r = Math.max(quad.r, q.data.r);
-      }
-      return;
-    }
-    for (let i = (quad.r = 0); i < 4; ++i) {
-      if (quad[i] && quad[i].r > quad.r) {
-        quad.r = quad[i].r;
-      }
-    }
   }
 
   /* eslint-disable @typescript-eslint/no-explicit-any -- 
