@@ -31,7 +31,6 @@ export class Level1 extends Level {
 export class Level2 extends Level {
   readonly numCreatures = 5;
   readonly wallHalfWidth = 13;
-  readonly pointCircleFactor = 0.1;
   creatureRadius(): number {
     return Math.random() * 15 + 12;
   }

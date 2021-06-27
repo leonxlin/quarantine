@@ -194,7 +194,7 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
 
     function apply(quad, x0, y0, x1, y1) {
       if (!quad.data) {
-        const r = quad.r;
+        const r = quad.r + ri;
         // Return true if there is no need to visit the children of `quad`.
         return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
       }
