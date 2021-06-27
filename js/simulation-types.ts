@@ -10,8 +10,8 @@ export function squaredDistance(p1: Point, p2: Point): number {
 export type Selectable = Wall | Creature;
 
 export interface Point {
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
 }
 
 // Objects that can participate in collision/proximity detection.
@@ -23,8 +23,8 @@ export interface SNode extends Point {
 
 export class CursorNode implements SNode {
   r: number;
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
 
   // The SNode that would be interacted with if the user clicked.
   target: SNode | null;
@@ -56,8 +56,6 @@ export function isCursorNode(n: SNode): n is CursorNode {
 
 export class Creature implements SNode, d3.SimulationNodeDatum {
   r: number;
-  x?: number;
-  y?: number;
   fx?: number;
   fy?: number;
   vx?: number;
@@ -82,10 +80,8 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   previousLoggedLocation: Point;
   previousLoggedTime: number;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Level, public x: number, public y: number) {
     this.r = level.creatureRadius();
-    this.x = x;
-    this.y = y;
     this.previousLoggedLocation = { x: x, y: y };
     this.previousLoggedTime = 0;
     this.dead = false;
@@ -180,20 +176,10 @@ export function isWallComponent(n: SNode): n is WallComponent {
 }
 
 export class WallJoint implements WallComponent {
-  // Fields required for d3.SimulationNodeDatum.
   r: number;
-  x?: number;
-  y?: number;
-  fx?: number;
-  fy?: number;
-  index?: number;
-  wall: Wall;
 
-  constructor(x: number, y: number, wall: Wall) {
-    this.fx = this.x = x;
-    this.fy = this.y = y;
+  constructor(public x: number, public y: number, public wall: Wall) {
     this.r = wall.halfWidth;
-    this.wall = wall;
   }
 }
 
@@ -207,26 +193,17 @@ export function isImpassableSegment(n: SNode): n is SegmentNode {
 
 // TODO: distinguish wall segments from general SegmentNodes, perhaps using inheritance.
 export class SegmentNode implements WallComponent {
-  // Fields required for d3.SimulationNodeDatum.
   r: number;
-  x?: number;
-  y?: number;
-
-  // The two endpoints of the segment.
-  left?: Point;
-  right?: Point;
+  x: number;
+  y: number;
 
   // Precomuptations.
   // The vector from `left` to `right`, i.e., `right - left`.
-  vec?: Point;
-  length?: number;
-  length2?: number;
+  vec: Point;
+  length: number;
+  length2: number;
 
-  wall: Wall;
-
-  constructor(left: Point, right: Point, wall: Wall) {
-    this.left = left;
-    this.right = right;
+  constructor(public left: Point, public right: Point, public wall: Wall) {
     this.length2 = squaredDistance(left, right);
     this.x = 0.5 * (left.x + right.x);
     this.y = 0.5 * (left.y + right.y);
@@ -237,20 +214,15 @@ export class SegmentNode implements WallComponent {
       x: right.x - left.x,
       y: right.y - left.y,
     };
-    this.wall = wall;
   }
 }
 
 export class Party implements SNode {
   r: number;
-  x?: number;
-  y?: number;
   age: number;
   visibleR: number;
 
-  constructor(x: number, y: number) {
-    this.x = x;
-    this.y = y;
+  constructor(public x: number, public y: number) {
     this.age = 0;
     this.r = 80;
     this.visibleR = 50;

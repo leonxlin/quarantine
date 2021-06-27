@@ -18660,11 +18660,11 @@ var quarantine = (function (exports) {
   }
   class Creature {
       constructor(level, x, y) {
+          this.x = x;
+          this.y = y;
           this.infected = false;
           this.health = 1;
           this.r = level.creatureRadius();
-          this.x = x;
-          this.y = y;
           this.previousLoggedLocation = { x: x, y: y };
           this.previousLoggedTime = 0;
           this.dead = false;
@@ -18739,10 +18739,10 @@ var quarantine = (function (exports) {
   }
   class WallJoint {
       constructor(x, y, wall) {
-          this.fx = this.x = x;
-          this.fy = this.y = y;
-          this.r = wall.halfWidth;
+          this.x = x;
+          this.y = y;
           this.wall = wall;
+          this.r = wall.halfWidth;
       }
   }
   function isImpassableCircle(n) {
@@ -18756,6 +18756,7 @@ var quarantine = (function (exports) {
       constructor(left, right, wall) {
           this.left = left;
           this.right = right;
+          this.wall = wall;
           this.length2 = squaredDistance(left, right);
           this.x = 0.5 * (left.x + right.x);
           this.y = 0.5 * (left.y + right.y);
@@ -18766,7 +18767,6 @@ var quarantine = (function (exports) {
               x: right.x - left.x,
               y: right.y - left.y,
           };
-          this.wall = wall;
       }
   }
   class Party {
@@ -18957,6 +18957,7 @@ var quarantine = (function (exports) {
 
   class World {
       constructor(level, render_function, debugInfo) {
+          this.level = level;
           // TODO: Deduplicate these parameters with the equivalents in view.ts.
           this.width = 900;
           this.height = 600;
@@ -18967,7 +18968,6 @@ var quarantine = (function (exports) {
           this.deadCreatures = [];
           this.walls = new Set();
           this.parties = [];
-          this.level = level;
           this.creatures = sequence(level.numCreatures).map(() => new Creature(level, Math.random() * this.width, // x
           Math.random() * this.height // y
           ));

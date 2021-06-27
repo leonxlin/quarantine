@@ -15,8 +15,6 @@ import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
 export class World {
-  readonly level: Level;
-
   simulation: d3.Simulation<Creature, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
   cursorNode: CursorNode;
@@ -35,11 +33,10 @@ export class World {
   parties: Array<Party> = [];
 
   constructor(
-    level: Level,
+    readonly level: Level,
     render_function: (world: World) => void,
     debugInfo: DebugInfo
   ) {
-    this.level = level;
     this.creatures = d3.range(level.numCreatures).map(
       () =>
         new Creature(
