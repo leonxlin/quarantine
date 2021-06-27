@@ -15,7 +15,7 @@ import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
 export class World {
-  readonly level: typeof Level;
+  readonly level: Level;
 
   simulation: d3.Simulation<Creature, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
@@ -34,13 +34,8 @@ export class World {
   walls: Set<Wall> = new Set();
   parties: Array<Party> = [];
 
-  // Figure out a better place for this constant.
-  pointCircleFactor = 0.5;
-
-  WALL_HALF_WIDTH = 5;
-
   constructor(
-    level: typeof Level,
+    level: Level,
     render_function: (world: World) => void,
     debugInfo: DebugInfo
   ) {
@@ -48,6 +43,7 @@ export class World {
     this.creatures = d3.range(level.numCreatures).map(
       () =>
         new Creature(
+          level,
           Math.random() * this.width, // x
           Math.random() * this.height // y
         )
@@ -130,7 +126,7 @@ export class World {
       .force(
         "interaction",
         collideForce(this, debugInfo)
-          .interaction("collision", collisionInteraction)
+          .interaction("collision", collisionInteraction.bind(null, level))
           .interaction("party", (creature, party) => {
             if (!(party instanceof Party && isLiveCreature(creature))) return;
             if (party.expired()) return;
@@ -231,7 +227,7 @@ export class World {
   }
 
   startNewWall(p: Point): Wall {
-    const wall = new Wall();
+    const wall = new Wall(this.level);
     wall.addPoint(p);
     this.walls.add(wall);
     return wall;

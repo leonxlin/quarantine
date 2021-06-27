@@ -1,4 +1,5 @@
 import * as d3 from "d3";
+import { Level } from "./levels";
 
 export function squaredDistance(p1: Point, p2: Point): number {
   const dx = p1.x - p2.x,
@@ -81,8 +82,8 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   previousLoggedLocation: Point;
   previousLoggedTime: number;
 
-  constructor(x: number, y: number) {
-    this.r = Math.random() * 5 + 4;
+  constructor(level: Level, x: number, y: number) {
+    this.r = level.creatureRadius();
     this.x = x;
     this.y = y;
     this.previousLoggedLocation = { x: x, y: y };
@@ -134,8 +135,8 @@ export class Wall {
   joints: Array<WallJoint> = [];
   segments: Array<SegmentNode> = [];
 
-  constructor() {
-    this.halfWidth = 5;
+  constructor(level: Level) {
+    this.halfWidth = level.wallHalfWidth;
   }
 
   // Add a point to the wall. This should only be called if the wall is still in

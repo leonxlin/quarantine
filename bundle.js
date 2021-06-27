@@ -18659,10 +18659,10 @@ var quarantine = (function (exports) {
       return n instanceof CursorNode;
   }
   class Creature {
-      constructor(x, y) {
+      constructor(level, x, y) {
           this.infected = false;
           this.health = 1;
-          this.r = Math.random() * 5 + 4;
+          this.r = level.creatureRadius();
           this.x = x;
           this.y = y;
           this.previousLoggedLocation = { x: x, y: y };
@@ -18700,12 +18700,12 @@ var quarantine = (function (exports) {
       WallState[WallState["BUILT"] = 1] = "BUILT";
   })(WallState || (WallState = {}));
   class Wall {
-      constructor() {
+      constructor(level) {
           this.points = [];
           this.state = WallState.PROVISIONAL;
           this.joints = [];
           this.segments = [];
-          this.halfWidth = 5;
+          this.halfWidth = level.wallHalfWidth;
       }
       // Add a point to the wall. This should only be called if the wall is still in
       // state PROVISIONAL.
@@ -18799,18 +18799,18 @@ var quarantine = (function (exports) {
   }
   // Handles collision between two nodes.
   // TODO: document arguments.
-  function collisionInteraction(node1, node2, x, y, l, r, ri2, rj) {
+  function collisionInteraction(level, node1, node2, x, y, l, r, ri2, rj) {
       if (isImpassableCircle(node1)) {
           if (isImpassableCircle(node2)) {
               circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
           }
           else if (isImpassableSegment(node2)) {
-              circleLineCollisionInteraction(node1, node2);
+              circleLineCollisionInteraction(level, node1, node2);
           }
       }
       else if (isImpassableSegment(node1)) {
           if (isImpassableCircle(node2)) {
-              circleLineCollisionInteraction(node2, node1);
+              circleLineCollisionInteraction(level, node2, node1);
           }
       }
       else if (isCursorNode(node1)) {
@@ -18818,7 +18818,7 @@ var quarantine = (function (exports) {
               node1.reportPotentialTarget(node2, l);
           }
           else if (isImpassableSegment(node2)) {
-              circleLineCollisionInteraction(node1, node2);
+              circleLineCollisionInteraction(level, node1, node2);
           }
       }
   }
@@ -18846,7 +18846,7 @@ var quarantine = (function (exports) {
   }
   // Handles collision between a circle and line segment with a certain width.
   // The segment is assumed to be immovable.
-  function circleLineCollisionInteraction(circleNode, segmentNode) {
+  function circleLineCollisionInteraction(level, circleNode, segmentNode) {
       const a = segmentNode.vec.x, b = segmentNode.vec.y;
       const nx = circleNode.x - segmentNode.left.x, ny = circleNode.y - segmentNode.left.y;
       const nxpc = a * nx + b * ny;
@@ -18866,8 +18866,7 @@ var quarantine = (function (exports) {
           return;
       const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      const commonFactor = ((sign * discrepancy) / segmentNode.length) *
-          window.game.world.pointCircleFactor;
+      const commonFactor = ((sign * discrepancy) / segmentNode.length) * level.pointCircleFactor;
       circleNode.vx += -b * commonFactor;
       circleNode.vy += a * commonFactor;
   }
@@ -18968,11 +18967,8 @@ var quarantine = (function (exports) {
           this.deadCreatures = [];
           this.walls = new Set();
           this.parties = [];
-          // Figure out a better place for this constant.
-          this.pointCircleFactor = 0.5;
-          this.WALL_HALF_WIDTH = 5;
           this.level = level;
-          this.creatures = sequence(level.numCreatures).map(() => new Creature(Math.random() * this.width, // x
+          this.creatures = sequence(level.numCreatures).map(() => new Creature(level, Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
           this.creatures[0].infected = true;
@@ -19046,7 +19042,7 @@ var quarantine = (function (exports) {
               });
           })
               .force("interaction", collideForce(this, debugInfo)
-              .interaction("collision", collisionInteraction)
+              .interaction("collision", collisionInteraction.bind(null, level))
               .interaction("party", (creature, party) => {
               if (!(party instanceof Party && isLiveCreature(creature)))
                   return;
@@ -19141,7 +19137,7 @@ var quarantine = (function (exports) {
               .stop();
       }
       startNewWall(p) {
-          const wall = new Wall();
+          const wall = new Wall(this.level);
           wall.addPoint(p);
           this.walls.add(wall);
           return wall;
@@ -19289,8 +19285,8 @@ var quarantine = (function (exports) {
           // Draw walls.
           context.lineJoin = "round";
           context.lineCap = "round";
-          context.lineWidth = 2 * world.WALL_HALF_WIDTH;
           function drawWall(wall, color) {
+              context.lineWidth = 2 * wall.halfWidth;
               context.beginPath();
               const curve = curveLinear(context);
               curve.lineStart();
@@ -19387,11 +19383,46 @@ var quarantine = (function (exports) {
           this.selectedObject = null;
           select(".delete-wall").style("display", "none");
       }
+      hideModal() {
+          select(".modal").classed("modal-active", false);
+      }
   }
 
-  class Level1 {
+  // These Level classes store parameters governing the behavior of
+  // the World in different levels. (A more accurate name for the
+  // class might be LevelParams.)
+  //
+  // It might have made more sense to make all of the properties
+  // of these Level objects static, or to make the individual levels
+  // instances of Level rather than subclasses. But I ran into some
+  // Typescript issues, and this was the easiest.
+  class Level {
+      constructor() {
+          // Half the width of a wall.
+          this.wallHalfWidth = 5;
+          this.pointCircleFactor = 0.5;
+      }
   }
-  Level1.numCreatures = 200;
+  class Level1 extends Level {
+      constructor() {
+          super(...arguments);
+          this.numCreatures = 200;
+      }
+      creatureRadius() {
+          return Math.random() * 5 + 4;
+      }
+  }
+  class Level2 extends Level {
+      constructor() {
+          super(...arguments);
+          this.numCreatures = 5;
+          this.wallHalfWidth = 13;
+          this.pointCircleFactor = 0.1;
+      }
+      creatureRadius() {
+          return Math.random() * 15 + 12;
+      }
+  }
 
   /* eslint-enable @typescript-eslint/no-explicit-any */
   // Not sure if a class is really the best way to organize this code...
@@ -19400,7 +19431,6 @@ var quarantine = (function (exports) {
       constructor() {
           this.debugInfo = new DebugInfo();
           this.view = new View(this.debugInfo);
-          this.world = new World(Level1, this.view.render.bind(this.view), this.debugInfo);
           this.setUpInputListeners();
       }
       togglePause() {
@@ -19414,9 +19444,11 @@ var quarantine = (function (exports) {
               }
           });
           // Start game button.
-          select(".start-game-button").on("click", () => {
-              select(".modal").classed("modal-active", false);
-              this.world.start();
+          select(".start-level1-button").on("click", () => {
+              this.startLevel(new Level1());
+          });
+          select(".start-level2-button").on("click", () => {
+              this.startLevel(new Level2());
           });
           // Dragging. Note: dragging code may have to change when upgrading to d3v6.
           // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -19454,6 +19486,11 @@ var quarantine = (function (exports) {
               game.world.walls.delete(view.selectedObject);
               view.deselectAll();
           });
+      }
+      startLevel(level) {
+          this.view.hideModal();
+          this.world = new World(level, this.view.render.bind(this.view), this.debugInfo);
+          this.world.start();
       }
   }
   window.onload = function () {
@@ -19520,7 +19557,7 @@ var quarantine = (function (exports) {
       }
       else if (game.view.toolbeltMode == "wall-mode") {
           const wall = event.subject;
-          wall.maybeAddPoint(p, 5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH);
+          wall.maybeAddPoint(p, 5 * wall.halfWidth * wall.halfWidth);
       }
   }
   function dragEnded(game) {

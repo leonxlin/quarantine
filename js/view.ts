@@ -127,8 +127,8 @@ export class View {
     // Draw walls.
     context.lineJoin = "round";
     context.lineCap = "round";
-    context.lineWidth = 2 * world.WALL_HALF_WIDTH;
     function drawWall(wall: Wall, color: string) {
+      context.lineWidth = 2 * wall.halfWidth;
       context.beginPath();
       const curve = d3.curveLinear(context);
       curve.lineStart();
@@ -234,5 +234,9 @@ export class View {
   deselectAll(): void {
     this.selectedObject = null;
     d3.select(".delete-wall").style("display", "none");
+  }
+
+  hideModal(): void {
+    d3.select(".modal").classed("modal-active", false);
   }
 }

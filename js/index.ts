@@ -40,9 +40,11 @@ export class Game {
     });
 
     // Start game button.
-    d3.select(".start-game-button").on("click", () => {
-      d3.select(".modal").classed("modal-active", false);
-      this.world.start();
+    d3.select(".start-level1-button").on("click", () => {
+      this.startLevel(new levels.Level1());
+    });
+    d3.select(".start-level2-button").on("click", () => {
+      this.startLevel(new levels.Level2());
     });
 
     // Dragging. Note: dragging code may have to change when upgrading to d3v6.
@@ -94,14 +96,19 @@ export class Game {
     });
   }
 
-  constructor() {
-    this.debugInfo = new DebugInfo();
-    this.view = new View(this.debugInfo);
+  startLevel(level: levels.Level): void {
+    this.view.hideModal();
     this.world = new World(
-      levels.Level1,
+      level,
       this.view.render.bind(this.view),
       this.debugInfo
     );
+    this.world.start();
+  }
+
+  constructor() {
+    this.debugInfo = new DebugInfo();
+    this.view = new View(this.debugInfo);
     this.setUpInputListeners();
   }
 }
@@ -168,10 +175,7 @@ function dragDragged(game: Game) {
     game.world.cursorNode.setLocation(p);
   } else if (game.view.toolbeltMode == "wall-mode") {
     const wall = d3.event.subject as Wall;
-    wall.maybeAddPoint(
-      p,
-      5 * game.world.WALL_HALF_WIDTH * game.world.WALL_HALF_WIDTH
-    );
+    wall.maybeAddPoint(p, 5 * wall.halfWidth * wall.halfWidth);
   }
 }
 

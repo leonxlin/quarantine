@@ -48,6 +48,7 @@ import {
 } from "./simulation-types";
 import { DebugInfo } from "./debug-info";
 import { World } from "./world";
+import { Level } from "./levels";
 
 function jiggle(): number {
   return (Math.random() - 0.5) * 1e-6;
@@ -65,6 +66,7 @@ function getY(d: SNode): number {
 // Handles collision between two nodes.
 // TODO: document arguments.
 export function collisionInteraction(
+  level: Level,
   node1: SNode,
   node2: SNode,
   x: number,
@@ -78,17 +80,17 @@ export function collisionInteraction(
     if (isImpassableCircle(node2)) {
       circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
     } else if (isImpassableSegment(node2)) {
-      circleLineCollisionInteraction(node1, node2);
+      circleLineCollisionInteraction(level, node1, node2);
     }
   } else if (isImpassableSegment(node1)) {
     if (isImpassableCircle(node2)) {
-      circleLineCollisionInteraction(node2, node1);
+      circleLineCollisionInteraction(level, node2, node1);
     }
   } else if (isCursorNode(node1)) {
     if (isImpassableCircle(node2)) {
       node1.reportPotentialTarget(node2, l);
     } else if (isImpassableSegment(node2)) {
-      circleLineCollisionInteraction(node1, node2);
+      circleLineCollisionInteraction(level, node1, node2);
     }
   }
 }
@@ -126,6 +128,7 @@ function circleCircleCollisionInteraction(
 // Handles collision between a circle and line segment with a certain width.
 // The segment is assumed to be immovable.
 function circleLineCollisionInteraction(
+  level: Level,
   circleNode: SNode,
   segmentNode: SegmentNode
 ): void {
@@ -152,8 +155,7 @@ function circleLineCollisionInteraction(
   const sign = nyp > 0 ? 1 : -1;
   // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
   const commonFactor =
-    ((sign * discrepancy) / segmentNode.length) *
-    window.game.world.pointCircleFactor;
+    ((sign * discrepancy) / segmentNode.length) * level.pointCircleFactor;
   circleNode.vx += -b * commonFactor;
   circleNode.vy += a * commonFactor;
 }
