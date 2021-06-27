@@ -14,7 +14,9 @@ export abstract class Level {
   // Half the width of a wall.
   readonly wallHalfWidth: number = 5;
 
-  readonly pointCircleFactor: number = 0.5;
+  // Multiplier affecting creatures' bounce when running into walls.
+  // If it's too high, their movement is too jittery.
+  readonly wallCollisionFactor: number = 0.5;
 
   // Returns the radius of a new creature to be created. The value
   // may vary from one invocation to the next.

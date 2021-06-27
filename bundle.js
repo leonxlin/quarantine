@@ -18866,7 +18866,7 @@ var quarantine = (function (exports) {
           return;
       const sign = nyp > 0 ? 1 : -1;
       // Without the scaling by pointCircleFactor, the movement of creatures near walls is too jittery.
-      const commonFactor = ((sign * discrepancy) / segmentNode.length) * level.pointCircleFactor;
+      const commonFactor = ((sign * discrepancy) / segmentNode.length) * level.wallCollisionFactor;
       circleNode.vx += -b * commonFactor;
       circleNode.vy += a * commonFactor;
   }
@@ -19400,7 +19400,9 @@ var quarantine = (function (exports) {
       constructor() {
           // Half the width of a wall.
           this.wallHalfWidth = 5;
-          this.pointCircleFactor = 0.5;
+          // Multiplier affecting creatures' bounce when running into walls.
+          // If it's too high, their movement is too jittery.
+          this.wallCollisionFactor = 0.5;
       }
   }
   class Level1 extends Level {
