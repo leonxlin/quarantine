@@ -21,6 +21,9 @@ export abstract class Level {
   // Returns the radius of a new creature to be created. The value
   // may vary from one invocation to the next.
   abstract creatureRadius(): number;
+
+  // Score at which the level is won.
+  readonly victoryScore: number;
 }
 
 export class Level1 extends Level {
@@ -28,6 +31,7 @@ export class Level1 extends Level {
   creatureRadius(): number {
     return Math.random() * 5 + 4;
   }
+  readonly victoryScore = 2000;
 }
 
 export class Level2 extends Level {
@@ -36,4 +40,6 @@ export class Level2 extends Level {
   creatureRadius(): number {
     return Math.random() * 15 + 12;
   }
+
+  readonly victoryScore = 50;
 }

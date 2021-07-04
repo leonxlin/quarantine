@@ -93,6 +93,11 @@ body {
   justify-content: space-around;
 }
 
+.victory-modal {
+  display: none;
+  align-items: center;
+}
+
 .credits {
   font-size: x-small;
   color: gray;

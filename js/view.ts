@@ -239,4 +239,10 @@ export class View {
   hideModal(): void {
     d3.select(".modal").classed("modal-active", false);
   }
+
+  showModal(modalName: string): void {
+    d3.select(".modal").classed("modal-active", true);
+    d3.selectAll(".modal-content").style("display", "none");
+    d3.select("." + modalName).style("display", "flex");
+  }
 }

@@ -34,9 +34,12 @@ export class World {
 
   quadtree: d3.Quadtree<SNode>;
 
+  victoryCheckEnabled = true;
+
   constructor(
     readonly level: Level,
-    render_function: (world: World) => void,
+    renderFunction: (world: World) => void,
+    victoryCallback: () => void,
     debugInfo: DebugInfo
   ) {
     this.creatures = d3.range(level.numCreatures).map(
@@ -59,6 +62,11 @@ export class World {
       .velocityDecay(0.2)
       .force("time", () => {
         this.t += 1;
+      })
+      .force("victory", () => {
+        if (this.score >= level.victoryScore && this.victoryCheckEnabled) {
+          victoryCallback();
+        }
       })
       .force("agent", (alpha) => {
         this.creatures.forEach((c: Creature) => {
@@ -218,7 +226,7 @@ export class World {
         if (this.creatures.length != this.simulation.nodes().length) {
           this.simulation.nodes(this.creatures);
         }
-        render_function(this);
+        renderFunction(this);
       })
       // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
       .alphaTarget(0.3)

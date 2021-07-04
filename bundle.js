@@ -18930,7 +18930,7 @@ var quarantine = (function (exports) {
   }
 
   class World {
-      constructor(level, render_function, debugInfo) {
+      constructor(level, renderFunction, victoryCallback, debugInfo) {
           this.level = level;
           // TODO: Deduplicate these parameters with the equivalents in view.ts.
           this.width = 900;
@@ -18942,6 +18942,7 @@ var quarantine = (function (exports) {
           this.deadCreatures = [];
           this.walls = new Set();
           this.parties = [];
+          this.victoryCheckEnabled = true;
           this.creatures = sequence(level.numCreatures).map(() => new Creature(level, Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
@@ -18953,6 +18954,11 @@ var quarantine = (function (exports) {
               .velocityDecay(0.2)
               .force("time", () => {
               this.t += 1;
+          })
+              .force("victory", () => {
+              if (this.score >= level.victoryScore && this.victoryCheckEnabled) {
+                  victoryCallback();
+              }
           })
               .force("agent", (alpha) => {
               this.creatures.forEach((c) => {
@@ -19104,7 +19110,7 @@ var quarantine = (function (exports) {
               if (this.creatures.length != this.simulation.nodes().length) {
                   this.simulation.nodes(this.creatures);
               }
-              render_function(this);
+              renderFunction(this);
           })
               // This is greater than alphaMin, so the simulation should run indefinitely (until paused).
               .alphaTarget(0.3)
@@ -19391,6 +19397,11 @@ var quarantine = (function (exports) {
       hideModal() {
           select(".modal").classed("modal-active", false);
       }
+      showModal(modalName) {
+          select(".modal").classed("modal-active", true);
+          selectAll(".modal-content").style("display", "none");
+          select("." + modalName).style("display", "flex");
+      }
   }
 
   // These Level classes store parameters governing the behavior of
@@ -19414,6 +19425,7 @@ var quarantine = (function (exports) {
       constructor() {
           super(...arguments);
           this.numCreatures = 200;
+          this.victoryScore = 2000;
       }
       creatureRadius() {
           return Math.random() * 5 + 4;
@@ -19424,6 +19436,7 @@ var quarantine = (function (exports) {
           super(...arguments);
           this.numCreatures = 5;
           this.wallHalfWidth = 13;
+          this.victoryScore = 50;
       }
       creatureRadius() {
           return Math.random() * 15 + 12;
@@ -19439,9 +19452,6 @@ var quarantine = (function (exports) {
           this.view = new View(this.debugInfo);
           this.setUpInputListeners();
       }
-      togglePause() {
-          this.world.togglePause();
-      }
       setUpInputListeners() {
           // Pausing and restarting by keypress.
           select("body").on("keydown", () => {
@@ -19449,12 +19459,20 @@ var quarantine = (function (exports) {
                   this.world.togglePause();
               }
           });
-          // Start game button.
+          // Buttons.
           select(".start-level1-button").on("click", () => {
               this.startLevel(new Level1());
           });
           select(".start-level2-button").on("click", () => {
               this.startLevel(new Level2());
+          });
+          select(".choose-level-button").on("click", () => {
+              this.view.showModal("start-game-modal");
+          });
+          select(".continue-level-button").on("click", () => {
+              this.view.hideModal();
+              this.world.victoryCheckEnabled = false;
+              this.world.start();
           });
           // Dragging. Note: dragging code may have to change when upgrading to d3v6.
           // See notes at https://observablehq.com/@d3/d3v6-migration-guide#event_drag
@@ -19495,8 +19513,12 @@ var quarantine = (function (exports) {
       }
       startLevel(level) {
           this.view.hideModal();
-          this.world = new World(level, this.view.render.bind(this.view), this.debugInfo);
+          this.world = new World(level, this.view.render.bind(this.view), this.levelVictory.bind(this), this.debugInfo);
           this.world.start();
+      }
+      levelVictory() {
+          this.world.stop();
+          this.view.showModal("victory-modal");
       }
   }
   window.onload = function () {

@@ -27,10 +27,6 @@ export class Game {
   view: View;
   world: World;
 
-  togglePause(): void {
-    this.world.togglePause();
-  }
-
   setUpInputListeners(): void {
     // Pausing and restarting by keypress.
     d3.select("body").on("keydown", () => {
@@ -39,12 +35,20 @@ export class Game {
       }
     });
 
-    // Start game button.
+    // Buttons.
     d3.select(".start-level1-button").on("click", () => {
       this.startLevel(new levels.Level1());
     });
     d3.select(".start-level2-button").on("click", () => {
       this.startLevel(new levels.Level2());
+    });
+    d3.select(".choose-level-button").on("click", () => {
+      this.view.showModal("start-game-modal");
+    });
+    d3.select(".continue-level-button").on("click", () => {
+      this.view.hideModal();
+      this.world.victoryCheckEnabled = false;
+      this.world.start();
     });
 
     // Dragging. Note: dragging code may have to change when upgrading to d3v6.
@@ -101,9 +105,15 @@ export class Game {
     this.world = new World(
       level,
       this.view.render.bind(this.view),
+      this.levelVictory.bind(this),
       this.debugInfo
     );
     this.world.start();
+  }
+
+  levelVictory(): void {
+    this.world.stop();
+    this.view.showModal("victory-modal");
   }
 
   constructor() {
