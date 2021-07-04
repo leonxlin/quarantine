@@ -366,7 +366,7 @@ var quarantine = (function (exports) {
     return max;
   }
 
-  function mean(values, valueof) {
+  function mean$1(values, valueof) {
     var n = values.length,
         m = n,
         i = -1,
@@ -18147,7 +18147,7 @@ var quarantine = (function (exports) {
     thresholdScott: scott,
     thresholdSturges: thresholdSturges,
     max: max$2,
-    mean: mean,
+    mean: mean$1,
     median: median,
     merge: merge,
     min: min$1,
@@ -18875,7 +18875,7 @@ var quarantine = (function (exports) {
       // Named interactions between pairs of nodes.
       const interactions = new Map();
       function force() {
-          const startTime = Date.now();
+          debugInfo.startTimer("collision");
           let node, xi, yi, ri, ri2;
           const tree = world.quadtree;
           // For each node, visit other nodes that could collide.
@@ -18915,7 +18915,7 @@ var quarantine = (function (exports) {
                   q = q.next;
               } while (q);
           }
-          debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
+          debugInfo.stopTimer("collision");
       }
       /* eslint-disable @typescript-eslint/no-explicit-any --
         I can't figure out how to get function overloads to work with typescript without `any`. */
@@ -18953,6 +18953,7 @@ var quarantine = (function (exports) {
           this.simulation = simulation()
               .velocityDecay(0.2)
               .force("time", () => {
+              debugInfo.startTimer("step");
               this.t += 1;
           })
               .force("victory", () => {
@@ -19176,21 +19177,24 @@ var quarantine = (function (exports) {
       }
   }
 
+  function mean(arr) {
+      return arr.reduce((a, b) => a + b) / arr.length;
+  }
   class DebugInfo {
       constructor() {
           // Some crude performance monitoring.
           this.numTicksSinceLastRecord = 0;
           this.recentTicksPerSecond = new Array(20);
           this.recentTicksPerSecondIndex = 0;
-          this.recentCollisionForceRuntime = [];
+          // Timer data.
+          this.timerStartTimes = new Map();
+          this.recentTimerValues = new Map();
+          this.initTimer("step");
+          this.initTimer("collision");
           setInterval(function () {
+              this.displayAndClearRecentTimerValues("step", ".step-runtime");
+              this.displayAndClearRecentTimerValues("collision", ".collision-force-runtime");
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
-              // Print the average.
-              if (this.recentCollisionForceRuntime.length > 0) {
-                  select(".collision-force-runtime").text(this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
-                      this.recentCollisionForceRuntime.length);
-              }
-              this.recentCollisionForceRuntime = [];
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
               this.recentTicksPerSecondIndex %= this.recentTicksPerSecond.length;
@@ -19203,16 +19207,33 @@ var quarantine = (function (exports) {
               .slice(this.recentTicksPerSecondIndex)
               .concat(this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)));
       }
+      // Timer-related methods.
+      displayAndClearRecentTimerValues(name, selector) {
+          const values = this.recentTimerValues[name];
+          if (values.length > 0) {
+              select(selector).text(mean(values));
+          }
+          this.recentTimerValues[name] = [];
+      }
+      initTimer(name) {
+          this.recentTimerValues[name] = [];
+      }
+      startTimer(name) {
+          this.timerStartTimes[name] = Date.now();
+      }
+      stopTimer(name) {
+          this.recentTimerValues[name].push(Date.now() - this.timerStartTimes[name]);
+      }
   }
 
   class View {
       constructor(debugInfo) {
+          this.debugInfo = debugInfo;
           this.CANVAS_ASPECT_RATIO = 3 / 2;
           // View also maintains state related to the player's interactions with the game interface.
           // TODO: revisit whether these belong in View.
           this.toolbeltMode = "select-mode";
           this.selectedObject = null;
-          this.debugInfo = debugInfo;
           this.tempScoreIndicators = new Set();
           this.canvas = document.querySelector("canvas");
           this.fitCanvas();
@@ -19379,6 +19400,7 @@ var quarantine = (function (exports) {
           context.textAlign = "right";
           context.fillText(String(world.score), this.canvas.width - 10, 30);
           context.restore();
+          this.debugInfo.stopTimer("step");
       }
       selectWall(wall, cursorLocation) {
           this.selectedObject = wall;

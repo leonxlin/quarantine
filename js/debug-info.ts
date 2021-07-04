@@ -1,26 +1,32 @@
 import * as d3 from "d3";
 
+function mean(arr: number[]): number {
+  return arr.reduce((a, b) => a + b) / arr.length;
+}
+
 export class DebugInfo {
   // Some crude performance monitoring.
   numTicksSinceLastRecord = 0;
   recentTicksPerSecond: number[] = new Array(20);
   recentTicksPerSecondIndex = 0;
-  recentCollisionForceRuntime: number[] = [];
+
+  // Timer data.
+  timerStartTimes = new Map<string, number>();
+  recentTimerValues = new Map<string, number[]>();
 
   constructor() {
+    this.initTimer("step");
+    this.initTimer("collision");
+
     setInterval(
       function () {
+        this.displayAndClearRecentTimerValues("step", ".step-runtime");
+        this.displayAndClearRecentTimerValues(
+          "collision",
+          ".collision-force-runtime"
+        );
+
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
-        // Print the average.
-        if (this.recentCollisionForceRuntime.length > 0) {
-          d3.select(".collision-force-runtime").text(
-            this.recentCollisionForceRuntime.reduce((a, b) => a + b) /
-              this.recentCollisionForceRuntime.length
-          );
-        }
-
-        this.recentCollisionForceRuntime = [];
-
         this.recentTicksPerSecond[
           this.recentTicksPerSecondIndex
         ] = this.numTicksSinceLastRecord;
@@ -41,5 +47,27 @@ export class DebugInfo {
           this.recentTicksPerSecond.slice(0, this.recentTicksPerSecondIndex)
         )
     );
+  }
+
+  // Timer-related methods.
+
+  displayAndClearRecentTimerValues(name: string, selector: string): void {
+    const values = this.recentTimerValues[name];
+    if (values.length > 0) {
+      d3.select(selector).text(mean(values));
+    }
+    this.recentTimerValues[name] = [];
+  }
+
+  initTimer(name: string): void {
+    this.recentTimerValues[name] = [];
+  }
+
+  startTimer(name: string): void {
+    this.timerStartTimes[name] = Date.now();
+  }
+
+  stopTimer(name: string): void {
+    this.recentTimerValues[name].push(Date.now() - this.timerStartTimes[name]);
   }
 }

@@ -61,6 +61,7 @@ export class World {
       .forceSimulation<Creature, undefined>()
       .velocityDecay(0.2)
       .force("time", () => {
+        debugInfo.startTimer("step");
         this.t += 1;
       })
       .force("victory", () => {

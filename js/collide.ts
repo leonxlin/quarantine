@@ -165,7 +165,7 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
   const interactions = new Map<string, Interaction>();
 
   function force() {
-    const startTime = Date.now();
+    debugInfo.startTimer("collision");
 
     let node, xi, yi, ri, ri2;
 
@@ -217,7 +217,7 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
       } while (q);
     }
 
-    debugInfo.recentCollisionForceRuntime.push(Date.now() - startTime);
+    debugInfo.stopTimer("collision");
   }
 
   /* eslint-disable @typescript-eslint/no-explicit-any -- 

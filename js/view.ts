@@ -14,7 +14,6 @@ export class View {
   canvas: HTMLCanvasElement;
   CANVAS_ASPECT_RATIO = 3 / 2;
   canvasClientScaleFactor: number;
-  debugInfo: DebugInfo;
   width: number;
   height: number;
 
@@ -69,8 +68,7 @@ export class View {
     };
   }
 
-  constructor(debugInfo: DebugInfo) {
-    this.debugInfo = debugInfo;
+  constructor(public debugInfo: DebugInfo) {
     this.tempScoreIndicators = new Set<TempScoreIndicator>();
     this.canvas = document.querySelector("canvas") as HTMLCanvasElement;
     this.fitCanvas();
@@ -217,6 +215,8 @@ export class View {
     context.fillText(String(world.score), this.canvas.width - 10, 30);
 
     context.restore();
+
+    this.debugInfo.stopTimer("step");
   }
 
   selectWall(wall: Wall, cursorLocation: Point): void {
