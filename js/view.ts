@@ -24,6 +24,13 @@ export class View {
   toolbeltMode = "select-mode";
   selectedObject: Selectable = null;
 
+  // Assets
+  blobBody: HTMLImageElement;
+  blobOutline: HTMLImageElement;
+
+  // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
+  blobCanvases: HTMLCanvasElement[][] = [];
+
   fitCanvas(): void {
     const canvas = this.canvas;
     const left_panel = document.querySelector(".left-panel") as HTMLElement;
@@ -70,8 +77,60 @@ export class View {
 
   constructor(public debugInfo: DebugInfo) {
     this.tempScoreIndicators = new Set<TempScoreIndicator>();
-    this.canvas = document.querySelector("canvas") as HTMLCanvasElement;
+    this.canvas = document.querySelector(".game-canvas") as HTMLCanvasElement;
     this.fitCanvas();
+
+    // Load assets.
+    this.blobBody = new Image();
+    this.blobBody.onload = this.predrawBlobs.bind(this);
+    this.blobBody.src = "./assets/blob1-body.svg";
+
+    this.blobOutline = new Image();
+    this.blobOutline.onload = this.predrawBlobs.bind(this);
+    this.blobOutline.src = "./assets/blob1.svg";
+  }
+
+  predrawBlobs(): void {
+    if (this.blobCanvases.length > 0) return;
+    if (!this.blobBody.complete || !this.blobOutline.complete) return;
+
+    for (let s = 0; s < 60; ++s) {
+      const row: HTMLCanvasElement[] = [];
+      this.blobCanvases.push(row);
+      for (let h = 0; h <= 10; ++h) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = s;
+        const c = canvas.getContext("2d");
+        c.drawImage(this.blobBody, 0, 0, s, s);
+        c.globalCompositeOperation = "source-in";
+        c.fillStyle = d3.interpolatePlasma(h * 0.06 + 0.2);
+        c.fillRect(0, 0, s, s);
+        c.globalCompositeOperation = "source-over";
+        c.drawImage(this.blobOutline, 0, 0, s, s);
+        row.push(canvas);
+      }
+    }
+  }
+
+  drawCreature(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    r: number,
+    health: number,
+    facingLeft: boolean
+  ): void {
+    const s = Math.round(2 * r);
+    const healthIndex = Math.min(Math.max(Math.round(health * 10), 0), 10);
+    const image = this.blobCanvases[s][healthIndex];
+    if (facingLeft) {
+      context.drawImage(image, x - r, y - r, s, s);
+    } else {
+      context.scale(-1, 1);
+      context.drawImage(image, -x - r, y - r, s, s);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    return;
   }
 
   render(world: World): void {
@@ -111,15 +170,7 @@ export class View {
         scoringNodes.push(c);
         return;
       }
-
-      context.beginPath();
-      context.moveTo(c.x + c.r, c.y);
-      context.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
-      // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(c.health * 0.6 + 0.2);
-      context.fill();
-      context.strokeStyle = "#333";
-      context.stroke();
+      this.drawCreature(context, c.x, c.y, c.r, c.health, c.vx <= 0);
     });
 
     // Draw walls.
@@ -156,14 +207,7 @@ export class View {
       const y = d3.interpolateNumber(c.y, c.y - 15)(t);
       context.globalAlpha = d3.interpolateNumber(1, 0)(t);
 
-      context.beginPath();
-      context.moveTo(c.x + c.r, y);
-      context.arc(c.x, y, c.r, 0, 2 * Math.PI);
-      // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(c.health * 0.6 + 0.2);
-      context.fill();
-      context.strokeStyle = "#333";
-      context.stroke();
+      this.drawCreature(context, c.x, y, c.r, c.health, c.vx <= 0);
 
       this.tempScoreIndicators.add({
         x: c.x,
@@ -180,14 +224,7 @@ export class View {
     for (const node of scoringNodes) {
       const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
 
-      context.beginPath();
-      context.moveTo(x + node.r, node.y);
-      context.arc(x, node.y, node.r, 0, 2 * Math.PI);
-      // A range from yellow (1 health) to purple (0 health).
-      context.fillStyle = d3.interpolatePlasma(node.health * 0.6 + 0.2);
-      context.fill();
-      context.strokeStyle = "#333";
-      context.stroke();
+      this.drawCreature(context, x, node.y, node.r, node.health, node.vx <= 0);
 
       // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
       this.tempScoreIndicators.add({

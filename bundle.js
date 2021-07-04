@@ -19234,9 +19234,18 @@ var quarantine = (function (exports) {
           // TODO: revisit whether these belong in View.
           this.toolbeltMode = "select-mode";
           this.selectedObject = null;
+          // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
+          this.blobCanvases = [];
           this.tempScoreIndicators = new Set();
-          this.canvas = document.querySelector("canvas");
+          this.canvas = document.querySelector(".game-canvas");
           this.fitCanvas();
+          // Load assets.
+          this.blobBody = new Image();
+          this.blobBody.onload = this.predrawBlobs.bind(this);
+          this.blobBody.src = "./assets/blob1-body.svg";
+          this.blobOutline = new Image();
+          this.blobOutline.onload = this.predrawBlobs.bind(this);
+          this.blobOutline.src = "./assets/blob1.svg";
       }
       fitCanvas() {
           const canvas = this.canvas;
@@ -19268,6 +19277,42 @@ var quarantine = (function (exports) {
               x: p.x * this.canvasClientScaleFactor,
               y: p.y * this.canvasClientScaleFactor,
           };
+      }
+      predrawBlobs() {
+          if (this.blobCanvases.length > 0)
+              return;
+          if (!this.blobBody.complete || !this.blobOutline.complete)
+              return;
+          for (let s = 0; s < 60; ++s) {
+              const row = [];
+              this.blobCanvases.push(row);
+              for (let h = 0; h <= 10; ++h) {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = canvas.height = s;
+                  const c = canvas.getContext("2d");
+                  c.drawImage(this.blobBody, 0, 0, s, s);
+                  c.globalCompositeOperation = "source-in";
+                  c.fillStyle = plasma(h * 0.06 + 0.2);
+                  c.fillRect(0, 0, s, s);
+                  c.globalCompositeOperation = "source-over";
+                  c.drawImage(this.blobOutline, 0, 0, s, s);
+                  row.push(canvas);
+              }
+          }
+      }
+      drawCreature(context, x, y, r, health, facingLeft) {
+          const s = Math.round(2 * r);
+          const healthIndex = Math.min(Math.max(Math.round(health * 10), 0), 10);
+          const image = this.blobCanvases[s][healthIndex];
+          if (facingLeft) {
+              context.drawImage(image, x - r, y - r, s, s);
+          }
+          else {
+              context.scale(-1, 1);
+              context.drawImage(image, -x - r, y - r, s, s);
+              context.setTransform(1, 0, 0, 1, 0, 0);
+          }
+          return;
       }
       render(world) {
           // TODO: The cursor style logic being here in `render`, which is only called
@@ -19305,14 +19350,7 @@ var quarantine = (function (exports) {
                   scoringNodes.push(c);
                   return;
               }
-              context.beginPath();
-              context.moveTo(c.x + c.r, c.y);
-              context.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
-              // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(c.health * 0.6 + 0.2);
-              context.fill();
-              context.strokeStyle = "#333";
-              context.stroke();
+              this.drawCreature(context, c.x, c.y, c.r, c.health, c.vx <= 0);
           });
           // Draw walls.
           context.lineJoin = "round";
@@ -19348,14 +19386,7 @@ var quarantine = (function (exports) {
               const t = c.ticksSinceDeath / 60;
               const y = interpolateNumber(c.y, c.y - 15)(t);
               context.globalAlpha = interpolateNumber(1, 0)(t);
-              context.beginPath();
-              context.moveTo(c.x + c.r, y);
-              context.arc(c.x, y, c.r, 0, 2 * Math.PI);
-              // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(c.health * 0.6 + 0.2);
-              context.fill();
-              context.strokeStyle = "#333";
-              context.stroke();
+              this.drawCreature(context, c.x, y, c.r, c.health, c.vx <= 0);
               this.tempScoreIndicators.add({
                   x: c.x,
                   y: c.y - 15,
@@ -19369,14 +19400,7 @@ var quarantine = (function (exports) {
           context.shadowColor = "#009933";
           for (const node of scoringNodes) {
               const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
-              context.beginPath();
-              context.moveTo(x + node.r, node.y);
-              context.arc(x, node.y, node.r, 0, 2 * Math.PI);
-              // A range from yellow (1 health) to purple (0 health).
-              context.fillStyle = plasma(node.health * 0.6 + 0.2);
-              context.fill();
-              context.strokeStyle = "#333";
-              context.stroke();
+              this.drawCreature(context, x, node.y, node.r, node.health, node.vx <= 0);
               // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
               this.tempScoreIndicators.add({
                   text: "+10",
@@ -19450,7 +19474,7 @@ var quarantine = (function (exports) {
           this.victoryScore = 2000;
       }
       creatureRadius() {
-          return Math.random() * 5 + 4;
+          return Math.round(Math.random() * 6 + 7);
       }
   }
   class Level2 extends Level {
@@ -19461,7 +19485,7 @@ var quarantine = (function (exports) {
           this.victoryScore = 50;
       }
       creatureRadius() {
-          return Math.random() * 15 + 12;
+          return Math.round(Math.random() * 15 + 12);
       }
   }
 

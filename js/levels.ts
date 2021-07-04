@@ -29,7 +29,7 @@ export abstract class Level {
 export class Level1 extends Level {
   readonly numCreatures = 200;
   creatureRadius(): number {
-    return Math.random() * 5 + 4;
+    return Math.round(Math.random() * 6 + 7);
   }
   readonly victoryScore = 2000;
 }
@@ -38,7 +38,7 @@ export class Level2 extends Level {
   readonly numCreatures = 5;
   readonly wallHalfWidth = 13;
   creatureRadius(): number {
-    return Math.random() * 15 + 12;
+    return Math.round(Math.random() * 15 + 12);
   }
 
   readonly victoryScore = 50;

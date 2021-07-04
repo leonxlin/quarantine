@@ -1,6 +1,11 @@
-canvas {
+.game-canvas {
   width: 100%;
   height: 100%;
+}
+
+.offscreen-canvas {
+  position: absolute;
+  border: 2px solid black;
 }
 
 circle {
