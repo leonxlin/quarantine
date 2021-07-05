@@ -19254,13 +19254,15 @@ var quarantine = (function (exports) {
           const body = document.querySelector("body");
           const available_width = body.clientWidth - right_panel.offsetWidth;
           const available_height = window.innerHeight - 2 * body.getBoundingClientRect().top;
-          canvas.width = this.width = Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO);
-          canvas.style.width = left_panel.style.width = this.width + "px";
-          canvas.height = this.height = Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO);
-          canvas.style.height = left_panel.style.height = this.height + "px";
-          canvas.width = this.width = 900;
-          canvas.height = this.height = 600;
-          this.canvasClientScaleFactor = this.height / canvas.clientHeight;
+          canvas.style.width = left_panel.style.width =
+              Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO) +
+                  "px";
+          canvas.style.height = left_panel.style.height =
+              Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
+                  "px";
+          canvas.width = 900;
+          canvas.height = 600;
+          this.canvasClientScaleFactor = canvas.height / canvas.clientHeight;
       }
       // The following functions convert the coordinates from mouse events to canvas
       // coordinates. Note that d3-drag will already do the shifting for you. Thus when
@@ -19331,7 +19333,7 @@ var quarantine = (function (exports) {
           }
           const context = this.canvas.getContext("2d");
           this.debugInfo.numTicksSinceLastRecord += 1;
-          context.clearRect(0, 0, this.width, this.height);
+          context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
           // Draw parties.
           world.parties.forEach(function (d) {
