@@ -18664,6 +18664,8 @@ var quarantine = (function (exports) {
           this.y = y;
           this.infected = false;
           this.health = 1;
+          this.isFacingLeft = true;
+          this.lastFlipT = -100; // Allow flipping immediately at t=0.
           this.r = level.creatureRadius();
           this.previousLoggedLocation = { x: x, y: y };
           this.previousLoggedTime = 0;
@@ -18684,6 +18686,19 @@ var quarantine = (function (exports) {
       unfixPosition() {
           this.fx = null;
           this.fy = null;
+      }
+      updateFaceDirection(t) {
+          // Don't update direction too often.
+          if (this.lastFlipT + 30 > t)
+              return;
+          if (this.vx < 0 && !this.isFacingLeft) {
+              this.isFacingLeft = true;
+              this.lastFlipT = t;
+          }
+          else if (this.vx > 0 && this.isFacingLeft) {
+              this.isFacingLeft = false;
+              this.lastFlipT = t;
+          }
       }
   }
   function isCreature(n) {
@@ -19104,6 +19119,11 @@ var quarantine = (function (exports) {
                   p.age++;
               });
           })
+              .force("face-direction", () => {
+              this.creatures.forEach((c) => {
+                  c.updateFaceDirection(this.t);
+              });
+          })
               // Only moving objects need to be registered as nodes in the d3 simulation.
               .nodes(this.creatures)
               .on("tick", () => {
@@ -19346,13 +19366,13 @@ var quarantine = (function (exports) {
               context.fill();
           });
           // Draw living creatures.
-          const scoringNodes = [];
+          const scoringCreatures = [];
           world.creatures.forEach((c) => {
               if (c.scoring) {
-                  scoringNodes.push(c);
+                  scoringCreatures.push(c);
                   return;
               }
-              this.drawCreature(context, c.x, c.y, c.r, c.health, c.vx <= 0);
+              this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
           });
           // Draw walls.
           context.lineJoin = "round";
@@ -19388,7 +19408,7 @@ var quarantine = (function (exports) {
               const t = c.ticksSinceDeath / 60;
               const y = interpolateNumber(c.y, c.y - 15)(t);
               context.globalAlpha = interpolateNumber(1, 0)(t);
-              this.drawCreature(context, c.x, y, c.r, c.health, c.vx <= 0);
+              this.drawCreature(context, c.x, y, c.r, c.health, c.isFacingLeft);
               this.tempScoreIndicators.add({
                   x: c.x,
                   y: c.y - 15,
@@ -19400,14 +19420,14 @@ var quarantine = (function (exports) {
           // Draw scoring nodes.
           context.shadowBlur = 80;
           context.shadowColor = "#009933";
-          for (const node of scoringNodes) {
-              const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
-              this.drawCreature(context, x, node.y, node.r, node.health, node.vx <= 0);
+          for (const c of scoringCreatures) {
+              const x = c.x + 4 * Math.sin(c.ticksLeftInScoringState);
+              this.drawCreature(context, x, c.y, c.r, c.health, c.isFacingLeft);
               // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
               this.tempScoreIndicators.add({
                   text: "+10",
-                  x: 0.5 * (node.x + node.scoringPartner.x),
-                  y: 0.5 * (node.y + node.scoringPartner.y) - 15,
+                  x: 0.5 * (c.x + c.scoringPartner.x),
+                  y: 0.5 * (c.y + c.scoringPartner.y) - 15,
                   color: "#336633",
               });
           }

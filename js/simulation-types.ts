@@ -80,6 +80,9 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   previousLoggedLocation: Point;
   previousLoggedTime: number;
 
+  isFacingLeft = true;
+  lastFlipT = -100; // Allow flipping immediately at t=0.
+
   constructor(level: Level, public x: number, public y: number) {
     this.r = level.creatureRadius();
     this.previousLoggedLocation = { x: x, y: y };
@@ -104,6 +107,18 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   unfixPosition(): void {
     this.fx = null;
     this.fy = null;
+  }
+
+  updateFaceDirection(t: number): void {
+    // Don't update direction too often.
+    if (this.lastFlipT + 30 > t) return;
+    if (this.vx < 0 && !this.isFacingLeft) {
+      this.isFacingLeft = true;
+      this.lastFlipT = t;
+    } else if (this.vx > 0 && this.isFacingLeft) {
+      this.isFacingLeft = false;
+      this.lastFlipT = t;
+    }
   }
 }
 

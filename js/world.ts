@@ -220,6 +220,11 @@ export class World {
           p.age++;
         });
       })
+      .force("face-direction", () => {
+        this.creatures.forEach((c) => {
+          c.updateFaceDirection(this.t);
+        });
+      })
       // Only moving objects need to be registered as nodes in the d3 simulation.
       .nodes(this.creatures)
       .on("tick", () => {

@@ -159,13 +159,13 @@ export class View {
     });
 
     // Draw living creatures.
-    const scoringNodes: Creature[] = [];
+    const scoringCreatures: Creature[] = [];
     world.creatures.forEach((c) => {
       if (c.scoring) {
-        scoringNodes.push(c);
+        scoringCreatures.push(c);
         return;
       }
-      this.drawCreature(context, c.x, c.y, c.r, c.health, c.vx <= 0);
+      this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
     });
 
     // Draw walls.
@@ -202,7 +202,7 @@ export class View {
       const y = d3.interpolateNumber(c.y, c.y - 15)(t);
       context.globalAlpha = d3.interpolateNumber(1, 0)(t);
 
-      this.drawCreature(context, c.x, y, c.r, c.health, c.vx <= 0);
+      this.drawCreature(context, c.x, y, c.r, c.health, c.isFacingLeft);
 
       this.tempScoreIndicators.add({
         x: c.x,
@@ -216,16 +216,16 @@ export class View {
     // Draw scoring nodes.
     context.shadowBlur = 80;
     context.shadowColor = "#009933";
-    for (const node of scoringNodes) {
-      const x = node.x + 4 * Math.sin(node.ticksLeftInScoringState);
+    for (const c of scoringCreatures) {
+      const x = c.x + 4 * Math.sin(c.ticksLeftInScoringState);
 
-      this.drawCreature(context, x, node.y, node.r, node.health, node.vx <= 0);
+      this.drawCreature(context, x, c.y, c.r, c.health, c.isFacingLeft);
 
       // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
       this.tempScoreIndicators.add({
         text: "+10",
-        x: 0.5 * (node.x + node.scoringPartner.x),
-        y: 0.5 * (node.y + node.scoringPartner.y) - 15,
+        x: 0.5 * (c.x + c.scoringPartner.x),
+        y: 0.5 * (c.y + c.scoringPartner.y) - 15,
         color: "#336633",
       });
     }
