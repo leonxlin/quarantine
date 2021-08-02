@@ -16,7 +16,7 @@ export abstract class Level {
 
   // Multiplier affecting creatures' bounce when running into walls.
   // If it's too high, their movement is too jittery.
-  readonly wallCollisionFactor: number = 0.5;
+  readonly wallCollisionFactor: number = 0.25;
 
   // Returns the radius of a new creature to be created. The value
   // may vary from one invocation to the next.

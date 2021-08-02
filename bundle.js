@@ -19486,7 +19486,7 @@ var quarantine = (function (exports) {
           this.wallHalfWidth = 5;
           // Multiplier affecting creatures' bounce when running into walls.
           // If it's too high, their movement is too jittery.
-          this.wallCollisionFactor = 0.5;
+          this.wallCollisionFactor = 0.25;
       }
   }
   class Level1 extends Level {
