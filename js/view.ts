@@ -27,6 +27,9 @@ export class View {
   // Assets
   blobBody: HTMLImageElement;
   blobOutline: HTMLImageElement;
+  scoreSound: HTMLAudioElement;
+  // Should only flip to true once and never change afterward.
+  doneLoadingAssets = false;
 
   // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
   blobCanvases: HTMLCanvasElement[][] = [];
@@ -83,6 +86,13 @@ export class View {
     this.blobOutline = new Image();
     this.blobOutline.onload = this.predrawBlobs.bind(this);
     this.blobOutline.src = "./assets/blob1.svg";
+
+    this.scoreSound = new Audio(
+      "./assets/zapsplat_multimedia_game_sound_building_blocks_bricks_collect_click_001_70219.mp3"
+    );
+    this.scoreSound.addEventListener("canplaythrough", () => {
+      this.checkIfDoneLoading();
+    });
   }
 
   predrawBlobs(): void {
@@ -104,6 +114,19 @@ export class View {
         c.drawImage(this.blobOutline, 0, 0, s, s);
         row.push(canvas);
       }
+    }
+
+    this.checkIfDoneLoading();
+  }
+
+  checkIfDoneLoading(): void {
+    if (
+      this.blobCanvases.length > 0 &&
+      this.scoreSound.readyState == HTMLMediaElement.HAVE_ENOUGH_DATA &&
+      !this.doneLoadingAssets
+    ) {
+      this.doneLoadingAssets = true;
+      this.showModal("start-game-modal");
     }
   }
 
@@ -216,8 +239,11 @@ export class View {
     // Draw scoring nodes.
     context.shadowBlur = 80;
     context.shadowColor = "#009933";
+    let shouldPlayScoreSound = false;
     for (const c of scoringCreatures) {
-      const x = c.x + 4 * Math.sin(c.ticksLeftInScoringState);
+      if (c.scoringStateTicksSoFar == 1) shouldPlayScoreSound = true;
+
+      const x = c.x + 4 * Math.sin(c.scoringStateTicksSoFar);
 
       this.drawCreature(context, x, c.y, c.r, c.health, c.isFacingLeft);
 
@@ -231,6 +257,7 @@ export class View {
     }
     context.shadowBlur = undefined;
     context.shadowColor = undefined;
+    if (shouldPlayScoreSound) this.scoreSound.play();
 
     // Print indicators when score increases.
     context.font = "bold 20px sans-serif";

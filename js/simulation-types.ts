@@ -74,7 +74,7 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   // Whether the creature is currently in a scoring "state".
   scoring: boolean;
   scoringPartner: SNode | null;
-  ticksLeftInScoringState: number;
+  scoringStateTicksSoFar: number;
 
   // At each time tick, the node's current location is logged in `previousLoggedLocation` with some probability.
   previousLoggedLocation: Point;
@@ -91,7 +91,7 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
 
     this.scoring = false;
     this.scoringPartner = null;
-    this.ticksLeftInScoringState = 0;
+    this.scoringStateTicksSoFar = 0;
 
     this.goalStack = [];
     this.turnSign = 1;

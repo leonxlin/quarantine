@@ -170,8 +170,8 @@ export class World {
             node2.scoring = true;
             node1.scoringPartner = node2;
             node2.scoringPartner = node1;
-            node1.ticksLeftInScoringState = 60;
-            node2.ticksLeftInScoringState = 60;
+            node1.scoringStateTicksSoFar = 0;
+            node2.scoringStateTicksSoFar = 0;
           })
       )
       .force("health", () => {
@@ -207,8 +207,8 @@ export class World {
         this.creatures.forEach((c) => {
           if (!c.scoring) return;
 
-          c.ticksLeftInScoringState--;
-          if (c.ticksLeftInScoringState <= 0) {
+          c.scoringStateTicksSoFar++;
+          if (c.scoringStateTicksSoFar >= level.scoringStateTicks) {
             c.scoring = false;
             c.fx = null;
             c.fy = null;

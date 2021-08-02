@@ -24,6 +24,10 @@ export abstract class Level {
 
   // Score at which the level is won.
   readonly victoryScore: number;
+
+  // Number of ticks a creature remains in scoring state when
+  // experiencing a true connection.
+  readonly scoringStateTicks: number = 60;
 }
 
 export class Level1 extends Level {

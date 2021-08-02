@@ -18672,7 +18672,7 @@ var quarantine = (function (exports) {
           this.dead = false;
           this.scoring = false;
           this.scoringPartner = null;
-          this.ticksLeftInScoringState = 0;
+          this.scoringStateTicksSoFar = 0;
           this.goalStack = [];
           this.turnSign = 1;
       }
@@ -19071,8 +19071,8 @@ var quarantine = (function (exports) {
               node2.scoring = true;
               node1.scoringPartner = node2;
               node2.scoringPartner = node1;
-              node1.ticksLeftInScoringState = 60;
-              node2.ticksLeftInScoringState = 60;
+              node1.scoringStateTicksSoFar = 0;
+              node2.scoringStateTicksSoFar = 0;
           }))
               .force("health", () => {
               let newlyDead = 0;
@@ -19106,8 +19106,8 @@ var quarantine = (function (exports) {
               this.creatures.forEach((c) => {
                   if (!c.scoring)
                       return;
-                  c.ticksLeftInScoringState--;
-                  if (c.ticksLeftInScoringState <= 0) {
+                  c.scoringStateTicksSoFar++;
+                  if (c.scoringStateTicksSoFar >= level.scoringStateTicks) {
                       c.scoring = false;
                       c.fx = null;
                       c.fy = null;
@@ -19254,6 +19254,8 @@ var quarantine = (function (exports) {
           // TODO: revisit whether these belong in View.
           this.toolbeltMode = "select-mode";
           this.selectedObject = null;
+          // Should only flip to true once and never change afterward.
+          this.doneLoadingAssets = false;
           // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
           this.blobCanvases = [];
           this.tempScoreIndicators = new Set();
@@ -19266,6 +19268,10 @@ var quarantine = (function (exports) {
           this.blobOutline = new Image();
           this.blobOutline.onload = this.predrawBlobs.bind(this);
           this.blobOutline.src = "./assets/blob1.svg";
+          this.scoreSound = new Audio("./assets/zapsplat_multimedia_game_sound_building_blocks_bricks_collect_click_001_70219.mp3");
+          this.scoreSound.addEventListener("canplaythrough", () => {
+              this.checkIfDoneLoading();
+          });
       }
       fitCanvas() {
           const canvas = this.canvas;
@@ -19320,6 +19326,15 @@ var quarantine = (function (exports) {
                   c.drawImage(this.blobOutline, 0, 0, s, s);
                   row.push(canvas);
               }
+          }
+          this.checkIfDoneLoading();
+      }
+      checkIfDoneLoading() {
+          if (this.blobCanvases.length > 0 &&
+              this.scoreSound.readyState == HTMLMediaElement.HAVE_ENOUGH_DATA &&
+              !this.doneLoadingAssets) {
+              this.doneLoadingAssets = true;
+              this.showModal("start-game-modal");
           }
       }
       drawCreature(context, x, y, r, health, facingLeft) {
@@ -19420,8 +19435,11 @@ var quarantine = (function (exports) {
           // Draw scoring nodes.
           context.shadowBlur = 80;
           context.shadowColor = "#009933";
+          let shouldPlayScoreSound = false;
           for (const c of scoringCreatures) {
-              const x = c.x + 4 * Math.sin(c.ticksLeftInScoringState);
+              if (c.scoringStateTicksSoFar == 1)
+                  shouldPlayScoreSound = true;
+              const x = c.x + 4 * Math.sin(c.scoringStateTicksSoFar);
               this.drawCreature(context, x, c.y, c.r, c.health, c.isFacingLeft);
               // Add temp score indicator. This ends up adding two scoring indicators for each pair, but that's OK; they're just printed on top of each other.
               this.tempScoreIndicators.add({
@@ -19433,6 +19451,8 @@ var quarantine = (function (exports) {
           }
           context.shadowBlur = undefined;
           context.shadowColor = undefined;
+          if (shouldPlayScoreSound)
+              this.scoreSound.play();
           // Print indicators when score increases.
           context.font = "bold 20px sans-serif";
           this.tempScoreIndicators.forEach((indicator) => {
@@ -19487,6 +19507,9 @@ var quarantine = (function (exports) {
           // Multiplier affecting creatures' bounce when running into walls.
           // If it's too high, their movement is too jittery.
           this.wallCollisionFactor = 0.25;
+          // Number of ticks a creature remains in scoring state when
+          // experiencing a true connection.
+          this.scoringStateTicks = 60;
       }
   }
   class Level1 extends Level {

@@ -93,13 +93,18 @@ body {
 }
 
 .start-game-modal {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-around;
 }
 
 .victory-modal {
   display: none;
+  align-items: center;
+}
+
+.loading-modal {
+  display: flex;
   align-items: center;
 }
 
