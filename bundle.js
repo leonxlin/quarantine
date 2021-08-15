@@ -19268,8 +19268,12 @@ var quarantine = (function (exports) {
           this.blobOutline = new Image();
           this.blobOutline.onload = this.predrawBlobs.bind(this);
           this.blobOutline.src = "./assets/blob1.svg";
-          this.scoreSound = new Audio("./assets/zapsplat_multimedia_game_sound_building_blocks_bricks_collect_click_001_70219.mp3");
-          this.scoreSound.addEventListener("canplaythrough", () => {
+          this.audioContext = new AudioContext();
+          fetch("./assets/zapsplat_multimedia_game_sound_building_blocks_bricks_collect_click_001_70219.mp3")
+              .then((response) => response.arrayBuffer())
+              .then((arrayBuffer) => this.audioContext.decodeAudioData(arrayBuffer))
+              .then((audioBuffer) => {
+              this.scoreSound = audioBuffer;
               this.checkIfDoneLoading();
           });
       }
@@ -19331,11 +19335,17 @@ var quarantine = (function (exports) {
       }
       checkIfDoneLoading() {
           if (this.blobCanvases.length > 0 &&
-              this.scoreSound.readyState == HTMLMediaElement.HAVE_ENOUGH_DATA &&
+              this.scoreSound &&
               !this.doneLoadingAssets) {
               this.doneLoadingAssets = true;
               this.showModal("start-game-modal");
           }
+      }
+      playAudioBuffer(audioBuffer) {
+          const source = this.audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(this.audioContext.destination);
+          source.start();
       }
       drawCreature(context, x, y, r, health, facingLeft) {
           const s = Math.round(2 * r);
@@ -19451,8 +19461,9 @@ var quarantine = (function (exports) {
           }
           context.shadowBlur = undefined;
           context.shadowColor = undefined;
+          // if (shouldPlayScoreSound) this.scoreSound.play();
           if (shouldPlayScoreSound)
-              this.scoreSound.play();
+              this.playAudioBuffer(this.scoreSound);
           // Print indicators when score increases.
           context.font = "bold 20px sans-serif";
           this.tempScoreIndicators.forEach((indicator) => {

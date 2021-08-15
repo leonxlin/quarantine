@@ -24,10 +24,12 @@ export class View {
   toolbeltMode = "select-mode";
   selectedObject: Selectable = null;
 
+  audioContext: AudioContext;
+
   // Assets
   blobBody: HTMLImageElement;
   blobOutline: HTMLImageElement;
-  scoreSound: HTMLAudioElement;
+  scoreSound: AudioBuffer;
   // Should only flip to true once and never change afterward.
   doneLoadingAssets = false;
 
@@ -87,12 +89,16 @@ export class View {
     this.blobOutline.onload = this.predrawBlobs.bind(this);
     this.blobOutline.src = "./assets/blob1.svg";
 
-    this.scoreSound = new Audio(
+    this.audioContext = new AudioContext();
+    fetch(
       "./assets/zapsplat_multimedia_game_sound_building_blocks_bricks_collect_click_001_70219.mp3"
-    );
-    this.scoreSound.addEventListener("canplaythrough", () => {
-      this.checkIfDoneLoading();
-    });
+    )
+      .then((response) => response.arrayBuffer())
+      .then((arrayBuffer) => this.audioContext.decodeAudioData(arrayBuffer))
+      .then((audioBuffer) => {
+        this.scoreSound = audioBuffer;
+        this.checkIfDoneLoading();
+      });
   }
 
   predrawBlobs(): void {
@@ -122,12 +128,19 @@ export class View {
   checkIfDoneLoading(): void {
     if (
       this.blobCanvases.length > 0 &&
-      this.scoreSound.readyState == HTMLMediaElement.HAVE_ENOUGH_DATA &&
+      this.scoreSound &&
       !this.doneLoadingAssets
     ) {
       this.doneLoadingAssets = true;
       this.showModal("start-game-modal");
     }
+  }
+
+  playAudioBuffer(audioBuffer: AudioBuffer): void {
+    const source = this.audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(this.audioContext.destination);
+    source.start();
   }
 
   drawCreature(
@@ -257,7 +270,8 @@ export class View {
     }
     context.shadowBlur = undefined;
     context.shadowColor = undefined;
-    if (shouldPlayScoreSound) this.scoreSound.play();
+    // if (shouldPlayScoreSound) this.scoreSound.play();
+    if (shouldPlayScoreSound) this.playAudioBuffer(this.scoreSound);
 
     // Print indicators when score increases.
     context.font = "bold 20px sans-serif";
