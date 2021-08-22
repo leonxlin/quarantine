@@ -40,5 +40,7 @@ in the top-level directory and visit `localhost:8000`.
   - pathing
     - research keywords: navmesh
     - AI Navigation: It's not a solved problem: https://gdcvault.com/play/1014514/AI-Navigation-It-s-Not
+      - constrained Delauney triangulation
+        - point location via cached jump-and-walk
     - https://gamedev.stackexchange.com/questions/183708/how-does-heavily-constrained-delaunay-triangulation-work
     - Efficient Triangulation-Based Pathfinding: https://www.aaai.org/Papers/AAAI/2006/AAAI06-148.pdf

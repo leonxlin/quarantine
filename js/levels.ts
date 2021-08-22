@@ -39,10 +39,10 @@ export class Level1 extends Level {
 }
 
 export class Level2 extends Level {
-  readonly numCreatures = 5;
+  readonly numCreatures = 12;
   readonly wallHalfWidth = 13;
   creatureRadius(): number {
-    return Math.round(Math.random() * 15 + 12);
+    return Math.round(Math.random() * 8 + 20);
   }
 
   readonly victoryScore = 50;

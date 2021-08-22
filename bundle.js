@@ -19536,12 +19536,12 @@ var quarantine = (function (exports) {
   class Level2 extends Level {
       constructor() {
           super(...arguments);
-          this.numCreatures = 5;
+          this.numCreatures = 12;
           this.wallHalfWidth = 13;
           this.victoryScore = 50;
       }
       creatureRadius() {
-          return Math.round(Math.random() * 15 + 12);
+          return Math.round(Math.random() * 8 + 20);
       }
   }
 
