@@ -14,6 +14,8 @@ import { getNextX, getNextY, collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
+import earcut from "earcut";
+
 export class World {
   simulation: d3.Simulation<Creature, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
@@ -35,6 +37,8 @@ export class World {
   quadtree: d3.Quadtree<SNode>;
 
   victoryCheckEnabled = true;
+
+  triangles: Array<Array<Point>> = [];
 
   constructor(
     readonly level: Level,
@@ -224,6 +228,35 @@ export class World {
         this.creatures.forEach((c) => {
           c.updateFaceDirection(this.t);
         });
+      })
+      .force("triangles", () => {
+        debugInfo.startTimer("triangulation");
+        const points: Array<Point> = [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: 0, y: 100 },
+          { x: 20, y: 20 },
+          { x: 80, y: 20 },
+          { x: 80, y: 80 },
+          { x: 20, y: 80 },
+        ];
+        const earcutInput = [];
+        for (const p of points) {
+          earcutInput.push(p.x);
+          earcutInput.push(p.y);
+        }
+        const earcutResult = earcut(earcutInput, [4]);
+        this.triangles = [];
+        for (let i = 0; i < earcutResult.length; i += 3) {
+          const triangle = [
+            points[earcutResult[i]],
+            points[earcutResult[i + 1]],
+            points[earcutResult[i + 2]],
+          ];
+          this.triangles.push(triangle);
+        }
+        debugInfo.stopTimer("triangulation");
       })
       // Only moving objects need to be registered as nodes in the d3 simulation.
       .nodes(this.creatures)

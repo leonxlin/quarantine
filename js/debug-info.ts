@@ -17,6 +17,7 @@ export class DebugInfo {
   constructor() {
     this.initTimer("step");
     this.initTimer("collision");
+    this.initTimer("triangulation");
 
     setInterval(
       function () {
@@ -24,6 +25,10 @@ export class DebugInfo {
         this.displayAndClearRecentTimerValues(
           "collision",
           ".collision-force-runtime"
+        );
+        this.displayAndClearRecentTimerValues(
+          "triangulation",
+          ".triangulation-runtime"
         );
 
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
