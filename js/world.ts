@@ -16,6 +16,7 @@ import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
 import earcut from "earcut";
+import polygonClipping from "polygon-clipping";
 
 export class World {
   simulation: d3.Simulation<Creature, undefined>;
@@ -40,6 +41,8 @@ export class World {
   victoryCheckEnabled = true;
 
   triangles: Array<Array<Point>> = [];
+
+  wallMultiPoly: polygonClipping.MultiPolygon;
 
   constructor(
     readonly level: Level,
@@ -239,42 +242,15 @@ export class World {
           { x: 0, y: this.height },
         ];
         const holeIndices = [];
-        // for (const wall of this.walls) {
-        //   if (wall.state != WallState.BUILT) continue;
-        //   for (const segment of wall.segments) {
-        //     holeIndices.push(points.length);
 
-        //     // A vector of length wall.halfWdith perpendicular to the wall segment.
-        //     const crossVec = {
-        //       x: (-segment.vec.y / segment.length) * wall.halfWidth,
-        //       y: (segment.vec.x / segment.length) * wall.halfWidth,
-        //     };
-        //     const halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
-
-        //     points.push({
-        //       x: segment.x + halfVec.x + crossVec.x,
-        //       y: segment.y + halfVec.y + crossVec.y,
-        //     });
-        //     points.push({
-        //       x: segment.x + halfVec.x - crossVec.x,
-        //       y: segment.y + halfVec.y - crossVec.y,
-        //     });
-        //     points.push({
-        //       x: segment.x - halfVec.x - crossVec.x,
-        //       y: segment.y - halfVec.y - crossVec.y,
-        //     });
-        //     points.push({
-        //       x: segment.x - halfVec.x + crossVec.x,
-        //       y: segment.y - halfVec.y + crossVec.y,
-        //     });
-        //   }
-        // }
+        const wallPolys: Array<polygonClipping.Polygon> = [];
 
         for (const wall of this.walls) {
           if (wall.state != WallState.BUILT || wall.points.length < 2) continue;
 
-          holeIndices.push(points.length);
-          const reversePoints = [];
+          const wallRing: polygonClipping.Ring = [];
+
+          const reversePairs: polygonClipping.Ring = [];
           let crossVec, halfVec;
 
           for (const segment of wall.segments) {
@@ -284,32 +260,46 @@ export class World {
             };
             halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
 
-            points.push({
-              x: segment.x - halfVec.x + crossVec.x,
-              y: segment.y - halfVec.y + crossVec.y,
-            });
-            reversePoints.push({
-              x: segment.x - halfVec.x - crossVec.x,
-              y: segment.y - halfVec.y - crossVec.y,
-            });
+            wallRing.push([
+              segment.x - halfVec.x + crossVec.x,
+              segment.y - halfVec.y + crossVec.y,
+            ]);
+            reversePairs.push([
+              segment.x - halfVec.x - crossVec.x,
+              segment.y - halfVec.y - crossVec.y,
+            ]);
           }
           const lastPoint = wall.points[wall.points.length - 1];
-          points.push({
-            x: lastPoint.x + crossVec.x,
-            y: lastPoint.y + crossVec.y,
-          });
-          points.push({
-            x: lastPoint.x - crossVec.x,
-            y: lastPoint.y - crossVec.y,
-          });
-          for (let i = reversePoints.length - 1; i >= 0; i--) {
-            points.push(reversePoints[i]);
+          wallRing.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
+          wallRing.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
+          for (let i = reversePairs.length - 1; i >= 0; i--) {
+            wallRing.push(reversePairs[i]);
+          }
+
+          wallPolys.push([wallRing]);
+        }
+
+        if (wallPolys.length > 0) {
+          const wallMultiPoly: polygonClipping.MultiPolygon = polygonClipping.union(
+            wallPolys[0],
+            ...wallPolys.slice(1)
+          );
+
+          this.wallMultiPoly = wallMultiPoly;
+
+          for (const poly of wallMultiPoly) {
+            for (const ring of poly) {
+              holeIndices.push(points.length);
+              for (const pair of ring) {
+                points.push({ x: pair[0], y: pair[1] });
+              }
+            }
           }
         }
+
         const earcutInput = [];
         for (const p of points) {
-          earcutInput.push(p.x);
-          earcutInput.push(p.y);
+          earcutInput.push(p.x, p.y);
         }
         const earcutResult = earcut(earcutInput, holeIndices);
         this.triangles = [];
