@@ -168,16 +168,16 @@ export class View {
     triangle: Array<Point>,
     context: CanvasRenderingContext2D
   ): void {
-    context.beginPath();
-    context.strokeStyle = "purple";
     context.moveTo(triangle[0].x, triangle[0].y);
     context.lineTo(triangle[1].x, triangle[1].y);
     context.lineTo(triangle[2].x, triangle[2].y);
     context.lineTo(triangle[0].x, triangle[0].y);
-    context.stroke();
   }
 
   render(world: World): void {
+    this.debugInfo.numTicksSinceLastRecord += 1;
+    this.debugInfo.startTimer("render");
+
     // TODO: The cursor style logic being here in `render`, which is only called
     // when the simulation is running, causes the cursor style to be stuck when the
     // game is paused. To repro: in select mode, hover over a wall to get the pointer
@@ -192,17 +192,9 @@ export class View {
     }
 
     const context = this.canvas.getContext("2d");
-    this.debugInfo.numTicksSinceLastRecord += 1;
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
-
-    // Draw triangulation.
-    if (world.triangles) {
-      for (const triangle of world.triangles) {
-        this.drawTriangle(triangle, context);
-      }
-    }
 
     // Draw parties.
     world.parties.forEach(function (d) {
@@ -307,8 +299,19 @@ export class View {
     context.textAlign = "right";
     context.fillText(String(world.score), this.canvas.width - 10, 30);
 
+    // Draw triangulation.
+    if (world.triangles) {
+      context.strokeStyle = "purple";
+      context.beginPath();
+      for (const triangle of world.triangles) {
+        this.drawTriangle(triangle, context);
+      }
+      context.stroke();
+    }
+
     context.restore();
 
+    this.debugInfo.stopTimer("render");
     this.debugInfo.stopTimer("step");
   }
 

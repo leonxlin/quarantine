@@ -19816,20 +19816,79 @@ var quarantine = (function (exports) {
               debugInfo.startTimer("triangulation");
               const points = [
                   { x: 0, y: 0 },
-                  { x: 100, y: 0 },
-                  { x: 100, y: 100 },
-                  { x: 0, y: 100 },
-                  { x: 20, y: 20 },
-                  { x: 80, y: 20 },
-                  { x: 80, y: 80 },
-                  { x: 20, y: 80 },
+                  { x: this.width, y: 0 },
+                  { x: this.width, y: this.height },
+                  { x: 0, y: this.height },
               ];
+              const holeIndices = [];
+              // for (const wall of this.walls) {
+              //   if (wall.state != WallState.BUILT) continue;
+              //   for (const segment of wall.segments) {
+              //     holeIndices.push(points.length);
+              //     // A vector of length wall.halfWdith perpendicular to the wall segment.
+              //     const crossVec = {
+              //       x: (-segment.vec.y / segment.length) * wall.halfWidth,
+              //       y: (segment.vec.x / segment.length) * wall.halfWidth,
+              //     };
+              //     const halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+              //     points.push({
+              //       x: segment.x + halfVec.x + crossVec.x,
+              //       y: segment.y + halfVec.y + crossVec.y,
+              //     });
+              //     points.push({
+              //       x: segment.x + halfVec.x - crossVec.x,
+              //       y: segment.y + halfVec.y - crossVec.y,
+              //     });
+              //     points.push({
+              //       x: segment.x - halfVec.x - crossVec.x,
+              //       y: segment.y - halfVec.y - crossVec.y,
+              //     });
+              //     points.push({
+              //       x: segment.x - halfVec.x + crossVec.x,
+              //       y: segment.y - halfVec.y + crossVec.y,
+              //     });
+              //   }
+              // }
+              for (const wall of this.walls) {
+                  if (wall.state != WallState.BUILT || wall.points.length < 2)
+                      continue;
+                  holeIndices.push(points.length);
+                  const reversePoints = [];
+                  let crossVec, halfVec;
+                  for (const segment of wall.segments) {
+                      crossVec = {
+                          x: (-segment.vec.y / segment.length) * wall.halfWidth,
+                          y: (segment.vec.x / segment.length) * wall.halfWidth,
+                      };
+                      halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+                      points.push({
+                          x: segment.x - halfVec.x + crossVec.x,
+                          y: segment.y - halfVec.y + crossVec.y,
+                      });
+                      reversePoints.push({
+                          x: segment.x - halfVec.x - crossVec.x,
+                          y: segment.y - halfVec.y - crossVec.y,
+                      });
+                  }
+                  const lastPoint = wall.points[wall.points.length - 1];
+                  points.push({
+                      x: lastPoint.x + crossVec.x,
+                      y: lastPoint.y + crossVec.y,
+                  });
+                  points.push({
+                      x: lastPoint.x - crossVec.x,
+                      y: lastPoint.y - crossVec.y,
+                  });
+                  for (let i = reversePoints.length - 1; i >= 0; i--) {
+                      points.push(reversePoints[i]);
+                  }
+              }
               const earcutInput = [];
               for (const p of points) {
                   earcutInput.push(p.x);
                   earcutInput.push(p.y);
               }
-              const earcutResult = earcut$1(earcutInput, [4]);
+              const earcutResult = earcut$1(earcutInput, holeIndices);
               this.triangles = [];
               for (let i = 0; i < earcutResult.length; i += 3) {
                   const triangle = [
@@ -19929,10 +19988,12 @@ var quarantine = (function (exports) {
           this.initTimer("step");
           this.initTimer("collision");
           this.initTimer("triangulation");
+          this.initTimer("render");
           setInterval(function () {
               this.displayAndClearRecentTimerValues("step", ".step-runtime");
               this.displayAndClearRecentTimerValues("collision", ".collision-force-runtime");
               this.displayAndClearRecentTimerValues("triangulation", ".triangulation-runtime");
+              this.displayAndClearRecentTimerValues("render", ".render-runtime");
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
@@ -20081,15 +20142,14 @@ var quarantine = (function (exports) {
           return;
       }
       drawTriangle(triangle, context) {
-          context.beginPath();
-          context.strokeStyle = "purple";
           context.moveTo(triangle[0].x, triangle[0].y);
           context.lineTo(triangle[1].x, triangle[1].y);
           context.lineTo(triangle[2].x, triangle[2].y);
           context.lineTo(triangle[0].x, triangle[0].y);
-          context.stroke();
       }
       render(world) {
+          this.debugInfo.numTicksSinceLastRecord += 1;
+          this.debugInfo.startTimer("render");
           // TODO: The cursor style logic being here in `render`, which is only called
           // when the simulation is running, causes the cursor style to be stuck when the
           // game is paused. To repro: in select mode, hover over a wall to get the pointer
@@ -20105,15 +20165,8 @@ var quarantine = (function (exports) {
               this.canvas.style.cursor = "default";
           }
           const context = this.canvas.getContext("2d");
-          this.debugInfo.numTicksSinceLastRecord += 1;
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
-          // Draw triangulation.
-          if (world.triangles) {
-              for (const triangle of world.triangles) {
-                  this.drawTriangle(triangle, context);
-              }
-          }
           // Draw parties.
           world.parties.forEach(function (d) {
               if (d.expired())
@@ -20210,7 +20263,17 @@ var quarantine = (function (exports) {
           context.font = "20px sans-serif";
           context.textAlign = "right";
           context.fillText(String(world.score), this.canvas.width - 10, 30);
+          // Draw triangulation.
+          if (world.triangles) {
+              context.strokeStyle = "purple";
+              context.beginPath();
+              for (const triangle of world.triangles) {
+                  this.drawTriangle(triangle, context);
+              }
+              context.stroke();
+          }
           context.restore();
+          this.debugInfo.stopTimer("render");
           this.debugInfo.stopTimer("step");
       }
       selectWall(wall, cursorLocation) {

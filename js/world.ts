@@ -3,6 +3,7 @@ import {
   SNode,
   CursorNode,
   Wall,
+  WallState,
   Creature,
   Party,
   isLiveCreature,
@@ -233,20 +234,84 @@ export class World {
         debugInfo.startTimer("triangulation");
         const points: Array<Point> = [
           { x: 0, y: 0 },
-          { x: 100, y: 0 },
-          { x: 100, y: 100 },
-          { x: 0, y: 100 },
-          { x: 20, y: 20 },
-          { x: 80, y: 20 },
-          { x: 80, y: 80 },
-          { x: 20, y: 80 },
+          { x: this.width, y: 0 },
+          { x: this.width, y: this.height },
+          { x: 0, y: this.height },
         ];
+        const holeIndices = [];
+        // for (const wall of this.walls) {
+        //   if (wall.state != WallState.BUILT) continue;
+        //   for (const segment of wall.segments) {
+        //     holeIndices.push(points.length);
+
+        //     // A vector of length wall.halfWdith perpendicular to the wall segment.
+        //     const crossVec = {
+        //       x: (-segment.vec.y / segment.length) * wall.halfWidth,
+        //       y: (segment.vec.x / segment.length) * wall.halfWidth,
+        //     };
+        //     const halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+
+        //     points.push({
+        //       x: segment.x + halfVec.x + crossVec.x,
+        //       y: segment.y + halfVec.y + crossVec.y,
+        //     });
+        //     points.push({
+        //       x: segment.x + halfVec.x - crossVec.x,
+        //       y: segment.y + halfVec.y - crossVec.y,
+        //     });
+        //     points.push({
+        //       x: segment.x - halfVec.x - crossVec.x,
+        //       y: segment.y - halfVec.y - crossVec.y,
+        //     });
+        //     points.push({
+        //       x: segment.x - halfVec.x + crossVec.x,
+        //       y: segment.y - halfVec.y + crossVec.y,
+        //     });
+        //   }
+        // }
+
+        for (const wall of this.walls) {
+          if (wall.state != WallState.BUILT || wall.points.length < 2) continue;
+
+          holeIndices.push(points.length);
+          const reversePoints = [];
+          let crossVec, halfVec;
+
+          for (const segment of wall.segments) {
+            crossVec = {
+              x: (-segment.vec.y / segment.length) * wall.halfWidth,
+              y: (segment.vec.x / segment.length) * wall.halfWidth,
+            };
+            halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+
+            points.push({
+              x: segment.x - halfVec.x + crossVec.x,
+              y: segment.y - halfVec.y + crossVec.y,
+            });
+            reversePoints.push({
+              x: segment.x - halfVec.x - crossVec.x,
+              y: segment.y - halfVec.y - crossVec.y,
+            });
+          }
+          const lastPoint = wall.points[wall.points.length - 1];
+          points.push({
+            x: lastPoint.x + crossVec.x,
+            y: lastPoint.y + crossVec.y,
+          });
+          points.push({
+            x: lastPoint.x - crossVec.x,
+            y: lastPoint.y - crossVec.y,
+          });
+          for (let i = reversePoints.length - 1; i >= 0; i--) {
+            points.push(reversePoints[i]);
+          }
+        }
         const earcutInput = [];
         for (const p of points) {
           earcutInput.push(p.x);
           earcutInput.push(p.y);
         }
-        const earcutResult = earcut(earcutInput, [4]);
+        const earcutResult = earcut(earcutInput, holeIndices);
         this.triangles = [];
         for (let i = 0; i < earcutResult.length; i += 3) {
           const triangle = [

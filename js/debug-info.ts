@@ -18,6 +18,7 @@ export class DebugInfo {
     this.initTimer("step");
     this.initTimer("collision");
     this.initTimer("triangulation");
+    this.initTimer("render");
 
     setInterval(
       function () {
@@ -30,6 +31,7 @@ export class DebugInfo {
           "triangulation",
           ".triangulation-runtime"
         );
+        this.displayAndClearRecentTimerValues("render", ".render-runtime");
 
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
         this.recentTicksPerSecond[
