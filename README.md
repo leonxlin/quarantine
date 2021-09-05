@@ -15,6 +15,8 @@ in the top-level directory and visit `localhost:8000`.
 ## TODO
 
 - triangulation doesn't work when walls enclose regions
+  - try libtess?
+  - try triangle-wasm? but it seems to want relatively clean data: https://www.cs.cmu.edu/~quake/triangle.poly.html
 
 - bug: dragging may not work with minified js
 - make creatures give up on goal after some amount of time
