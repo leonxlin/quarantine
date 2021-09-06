@@ -24,8 +24,7 @@
     "d3": "^5.16.0",
     "d3-drag": "^2.0.0",
     "d3-scale": "^3.2.4",
-    "earcut": "^2.2.3",
-    "polygon-clipping": "^0.15.3",
+    "libtess": "^1.2.2",
     "rollup-plugin-typescript2": "^0.29.0"
   },
   "devDependencies": {

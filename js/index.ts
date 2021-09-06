@@ -197,6 +197,6 @@ function dragEnded(game: Game) {
     game.view.deselectAll();
   } else if (game.view.toolbeltMode == "wall-mode") {
     const wall = d3.event.subject as Wall;
-    wall.complete();
+    game.world.completeWall(wall);
   }
 }

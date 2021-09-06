@@ -15,8 +15,7 @@ import { getNextX, getNextY, collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
-import earcut from "earcut";
-import polygonClipping from "polygon-clipping";
+import { initTesselator } from "./tessy";
 
 export class World {
   simulation: d3.Simulation<Creature, undefined>;
@@ -40,9 +39,9 @@ export class World {
 
   victoryCheckEnabled = true;
 
+  tessellator;
   triangles: Array<Array<Point>> = [];
-
-  wallMultiPoly: polygonClipping.MultiPolygon;
+  computedTriangulationSinceLastWall = false;
 
   constructor(
     readonly level: Level,
@@ -50,6 +49,8 @@ export class World {
     victoryCallback: () => void,
     debugInfo: DebugInfo
   ) {
+    this.tessellator = initTesselator();
+
     this.creatures = d3.range(level.numCreatures).map(
       () =>
         new Creature(
@@ -235,22 +236,40 @@ export class World {
       })
       .force("triangles", () => {
         debugInfo.startTimer("triangulation");
+
+        if (this.computedTriangulationSinceLastWall) {
+          debugInfo.stopTimer("triangulation");
+          return;
+        }
+        this.computedTriangulationSinceLastWall = true;
+
         const points: Array<Point> = [
           { x: 0, y: 0 },
           { x: this.width, y: 0 },
           { x: this.width, y: this.height },
           { x: 0, y: this.height },
         ];
-        const holeIndices = [];
 
-        const wallPolys: Array<polygonClipping.Polygon> = [];
+        this.tessellator.gluTessNormal(0, 0, 1);
+
+        const triangleVerts = [];
+        this.tessellator.gluTessBeginPolygon(triangleVerts);
+
+        // for (var i = 0; i < contours.length; i++) {
+        this.tessellator.gluTessBeginContour();
+        // var contour = contours[i];
+        for (const p of points) {
+          const coords = [p.x, p.y, 0];
+          this.tessellator.gluTessVertex(coords, coords);
+        }
+        this.tessellator.gluTessEndContour();
+        // }
 
         for (const wall of this.walls) {
           if (wall.state != WallState.BUILT || wall.points.length < 2) continue;
 
-          const wallRing: polygonClipping.Ring = [];
-
-          const reversePairs: polygonClipping.Ring = [];
+          const wallRing: Array<[number, number]> = [];
+          const reversePairs: Array<[number, number]> = [];
           let crossVec, halfVec;
 
           for (const segment of wall.segments) {
@@ -276,40 +295,25 @@ export class World {
             wallRing.push(reversePairs[i]);
           }
 
-          wallPolys.push([wallRing]);
-        }
+          this.tessellator.gluTessBeginContour();
 
-        if (wallPolys.length > 0) {
-          const wallMultiPoly: polygonClipping.MultiPolygon = polygonClipping.union(
-            wallPolys[0],
-            ...wallPolys.slice(1)
-          );
-
-          this.wallMultiPoly = wallMultiPoly;
-
-          for (const poly of wallMultiPoly) {
-            for (const ring of poly) {
-              holeIndices.push(points.length);
-              for (const pair of ring) {
-                points.push({ x: pair[0], y: pair[1] });
-              }
-            }
+          for (const p of wallRing) {
+            const coords = [p[0], p[1]];
+            this.tessellator.gluTessVertex(coords, coords);
           }
+
+          this.tessellator.gluTessEndContour();
         }
 
-        const earcutInput = [];
-        for (const p of points) {
-          earcutInput.push(p.x, p.y);
-        }
-        const earcutResult = earcut(earcutInput, holeIndices);
+        this.tessellator.gluTessEndPolygon();
+
         this.triangles = [];
-        for (let i = 0; i < earcutResult.length; i += 3) {
-          const triangle = [
-            points[earcutResult[i]],
-            points[earcutResult[i + 1]],
-            points[earcutResult[i + 2]],
-          ];
-          this.triangles.push(triangle);
+        for (let i = 0; i < triangleVerts.length; i += 6) {
+          this.triangles.push([
+            { x: triangleVerts[i], y: triangleVerts[i + 1] },
+            { x: triangleVerts[i + 2], y: triangleVerts[i + 3] },
+            { x: triangleVerts[i + 4], y: triangleVerts[i + 5] },
+          ]);
         }
         debugInfo.stopTimer("triangulation");
       })
@@ -367,6 +371,11 @@ export class World {
     wall.addPoint(p);
     this.walls.add(wall);
     return wall;
+  }
+
+  completeWall(wall: Wall): void {
+    wall.complete();
+    this.computedTriangulationSinceLastWall = false;
   }
 
   createParty(p: Point): Party {
