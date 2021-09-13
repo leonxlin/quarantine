@@ -18718,8 +18718,12 @@ var quarantine = (function (exports) {
       constructor(level) {
           this.points = [];
           this.state = WallState.PROVISIONAL;
+          // In BUILT walls, `joints` and `segments` are guaranteed to be in the same order
+          // as `points`.
           this.joints = [];
           this.segments = [];
+          // Approximate boundary of wall. Populated for BUILT walls. Used for navmesh.
+          this.polygon = null;
           this.halfWidth = level.wallHalfWidth;
       }
       // Add a point to the wall. This should only be called if the wall is still in
@@ -18746,7 +18750,42 @@ var quarantine = (function (exports) {
               const prevPoint = this.points[i - 1];
               this.segments.push(new SegmentNode(prevPoint, point, this));
           }
+          this.computeApproxBoundary();
           this.state = WallState.BUILT;
+      }
+      computeApproxBoundary() {
+          this.polygon = [];
+          // For single-point walls, approximate the circle with square.
+          if (this.points.length == 1) {
+              const p = this.points[0];
+              this.polygon.push([p.x, p.y - this.halfWidth], [p.x - this.halfWidth, p.y], [p.x, p.y + this.halfWidth], [p.x + this.halfWidth, p.y]);
+              return;
+          }
+          const reversePairs = [];
+          let crossVec, halfVec;
+          for (const segment of this.segments) {
+              crossVec = {
+                  x: (-segment.vec.y / segment.length) * this.halfWidth,
+                  y: (segment.vec.x / segment.length) * this.halfWidth,
+              };
+              halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+              this.polygon.push([
+                  segment.x - halfVec.x + crossVec.x,
+                  segment.y - halfVec.y + crossVec.y,
+              ]);
+              reversePairs.push([
+                  segment.x - halfVec.x - crossVec.x,
+                  segment.y - halfVec.y - crossVec.y,
+              ]);
+          }
+          if (this.points.length > 1) {
+              const lastPoint = this.points[this.points.length - 1];
+              this.polygon.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
+              this.polygon.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
+              for (let i = reversePairs.length - 1; i >= 0; i--) {
+                  this.polygon.push(reversePairs[i]);
+              }
+          }
       }
   }
   function isWallComponent(n) {
@@ -19266,34 +19305,10 @@ var quarantine = (function (exports) {
               this.tessellator.gluTessEndContour();
               // }
               for (const wall of this.walls) {
-                  if (wall.state != WallState.BUILT || wall.points.length < 2)
+                  if (wall.state != WallState.BUILT || wall.points.length < 1)
                       continue;
-                  const wallRing = [];
-                  const reversePairs = [];
-                  let crossVec, halfVec;
-                  for (const segment of wall.segments) {
-                      crossVec = {
-                          x: (-segment.vec.y / segment.length) * wall.halfWidth,
-                          y: (segment.vec.x / segment.length) * wall.halfWidth,
-                      };
-                      halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
-                      wallRing.push([
-                          segment.x - halfVec.x + crossVec.x,
-                          segment.y - halfVec.y + crossVec.y,
-                      ]);
-                      reversePairs.push([
-                          segment.x - halfVec.x - crossVec.x,
-                          segment.y - halfVec.y - crossVec.y,
-                      ]);
-                  }
-                  const lastPoint = wall.points[wall.points.length - 1];
-                  wallRing.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
-                  wallRing.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
-                  for (let i = reversePairs.length - 1; i >= 0; i--) {
-                      wallRing.push(reversePairs[i]);
-                  }
                   this.tessellator.gluTessBeginContour();
-                  for (const p of wallRing) {
+                  for (const p of wall.polygon) {
                       const coords = [p[0], p[1]];
                       this.tessellator.gluTessVertex(coords, coords);
                   }

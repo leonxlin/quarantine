@@ -143,8 +143,13 @@ export class Wall {
   state: WallState = WallState.PROVISIONAL;
   halfWidth: number;
 
+  // In BUILT walls, `joints` and `segments` are guaranteed to be in the same order
+  // as `points`.
   joints: Array<WallJoint> = [];
   segments: Array<SegmentNode> = [];
+
+  // Approximate boundary of wall. Populated for BUILT walls. Used for navmesh.
+  polygon: Array<[number, number]> = null;
 
   constructor(level: Level) {
     this.halfWidth = level.wallHalfWidth;
@@ -178,7 +183,54 @@ export class Wall {
       const prevPoint = this.points[i - 1];
       this.segments.push(new SegmentNode(prevPoint, point, this));
     }
+
+    this.computeApproxBoundary();
     this.state = WallState.BUILT;
+  }
+
+  computeApproxBoundary(): void {
+    this.polygon = [];
+
+    // For single-point walls, approximate the circle with square.
+    if (this.points.length == 1) {
+      const p = this.points[0];
+      this.polygon.push(
+        [p.x, p.y - this.halfWidth],
+        [p.x - this.halfWidth, p.y],
+        [p.x, p.y + this.halfWidth],
+        [p.x + this.halfWidth, p.y]
+      );
+      return;
+    }
+
+    const reversePairs: Array<[number, number]> = [];
+    let crossVec, halfVec;
+
+    for (const segment of this.segments) {
+      crossVec = {
+        x: (-segment.vec.y / segment.length) * this.halfWidth,
+        y: (segment.vec.x / segment.length) * this.halfWidth,
+      };
+      halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
+
+      this.polygon.push([
+        segment.x - halfVec.x + crossVec.x,
+        segment.y - halfVec.y + crossVec.y,
+      ]);
+      reversePairs.push([
+        segment.x - halfVec.x - crossVec.x,
+        segment.y - halfVec.y - crossVec.y,
+      ]);
+    }
+
+    if (this.points.length > 1) {
+      const lastPoint = this.points[this.points.length - 1];
+      this.polygon.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
+      this.polygon.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
+      for (let i = reversePairs.length - 1; i >= 0; i--) {
+        this.polygon.push(reversePairs[i]);
+      }
+    }
   }
 }
 

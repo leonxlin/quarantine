@@ -275,38 +275,10 @@ export class World {
         // }
 
         for (const wall of this.walls) {
-          if (wall.state != WallState.BUILT || wall.points.length < 2) continue;
-
-          const wallRing: Array<[number, number]> = [];
-          const reversePairs: Array<[number, number]> = [];
-          let crossVec, halfVec;
-
-          for (const segment of wall.segments) {
-            crossVec = {
-              x: (-segment.vec.y / segment.length) * wall.halfWidth,
-              y: (segment.vec.x / segment.length) * wall.halfWidth,
-            };
-            halfVec = { x: segment.vec.x / 2, y: segment.vec.y / 2 };
-
-            wallRing.push([
-              segment.x - halfVec.x + crossVec.x,
-              segment.y - halfVec.y + crossVec.y,
-            ]);
-            reversePairs.push([
-              segment.x - halfVec.x - crossVec.x,
-              segment.y - halfVec.y - crossVec.y,
-            ]);
-          }
-          const lastPoint = wall.points[wall.points.length - 1];
-          wallRing.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
-          wallRing.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
-          for (let i = reversePairs.length - 1; i >= 0; i--) {
-            wallRing.push(reversePairs[i]);
-          }
-
+          if (wall.state != WallState.BUILT || wall.points.length < 1) continue;
           this.tessellator.gluTessBeginContour();
 
-          for (const p of wallRing) {
+          for (const p of wall.polygon) {
             const coords = [p[0], p[1]];
             this.tessellator.gluTessVertex(coords, coords);
           }
