@@ -190,6 +190,7 @@ export class Wall {
 
   computeApproxBoundary(): void {
     this.polygon = [];
+    if (this.points.length < 1) return;
 
     // For single-point walls, approximate the circle with square.
     if (this.points.length == 1) {
@@ -206,6 +207,15 @@ export class Wall {
     const reversePairs: Array<[number, number]> = [];
     let crossVec, halfVec;
 
+    // Beginning tip point.
+    this.polygon.push([
+      this.points[0].x -
+        (this.segments[0].vec.x / this.segments[0].length) * this.halfWidth,
+      this.points[0].y -
+        (this.segments[0].vec.y / this.segments[0].length) * this.halfWidth,
+    ]);
+
+    // Main segment points.
     for (const segment of this.segments) {
       crossVec = {
         x: (-segment.vec.y / segment.length) * this.halfWidth,
@@ -223,13 +233,21 @@ export class Wall {
       ]);
     }
 
-    if (this.points.length > 1) {
-      const lastPoint = this.points[this.points.length - 1];
-      this.polygon.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
-      this.polygon.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
-      for (let i = reversePairs.length - 1; i >= 0; i--) {
-        this.polygon.push(reversePairs[i]);
-      }
+    // Last segment points.
+    const lastPoint = this.points[this.points.length - 1];
+    const lastSegment = this.segments[this.segments.length - 1];
+    this.polygon.push([lastPoint.x + crossVec.x, lastPoint.y + crossVec.y]);
+    reversePairs.push([lastPoint.x - crossVec.x, lastPoint.y - crossVec.y]);
+
+    // Ending tip point.
+    this.polygon.push([
+      lastPoint.x + (lastSegment.vec.x / lastSegment.length) * this.halfWidth,
+      lastPoint.y + (lastSegment.vec.y / lastSegment.length) * this.halfWidth,
+    ]);
+
+    // The path back to the start.
+    while (reversePairs.length > 0) {
+      this.polygon.push(reversePairs.pop());
     }
   }
 }
