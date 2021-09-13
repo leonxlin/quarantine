@@ -359,6 +359,11 @@ export class World {
     this.computedTriangulationSinceLastWall = false;
   }
 
+  deleteWall(wall: Wall): void {
+    this.walls.delete(wall);
+    this.computedTriangulationSinceLastWall = false;
+  }
+
   createParty(p: Point): Party {
     const party = new Party(p.x, p.y);
     this.parties.push(party);

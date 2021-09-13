@@ -95,7 +95,7 @@ export class Game {
 
     d3.select(".delete-wall").on("click", function () {
       if (!(view.selectedObject instanceof Wall)) return;
-      game.world.walls.delete(view.selectedObject);
+      game.world.deleteWall(view.selectedObject);
       view.deselectAll();
     });
   }

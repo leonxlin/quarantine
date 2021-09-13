@@ -19395,6 +19395,10 @@ var quarantine = (function (exports) {
           wall.complete();
           this.computedTriangulationSinceLastWall = false;
       }
+      deleteWall(wall) {
+          this.walls.delete(wall);
+          this.computedTriangulationSinceLastWall = false;
+      }
       createParty(p) {
           const party = new Party(p.x, p.y);
           this.parties.push(party);
@@ -19851,7 +19855,7 @@ var quarantine = (function (exports) {
           select(".delete-wall").on("click", function () {
               if (!(view.selectedObject instanceof Wall))
                   return;
-              game.world.walls.delete(view.selectedObject);
+              game.world.deleteWall(view.selectedObject);
               view.deselectAll();
           });
       }
