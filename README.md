@@ -6,16 +6,18 @@ To play, run
 
     npm run-script build
 
-and then simply open `index.html` in your browser or run
+and then run
 
     python -m SimpleHTTPServer 8000
 
-in the top-level directory and visit `localhost:8000`.
+in the top-level directory and visit `localhost:8000`. (If you simply open `index.html`, assets will not
+load.)
 
 ## TODO
 
 - point location algorithm for triangulations, with edge-walking: https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-728.pdf
-
+- bug: creatures sometimes repeatedly set goals outside the world boundary and therefore get stuck along
+  an edge of the world due to boundary enforcement
 - bug: dragging may not work with minified js
 - make creatures give up on goal after some amount of time
 - make initial speed uniform (currently creatures move faster at start)

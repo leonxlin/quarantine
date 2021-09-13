@@ -78,6 +78,15 @@ export class World {
           victoryCallback();
         }
       })
+      .force("enforce-boundary", () => {
+        // Forces may push creatures outside the boundary, but this step
+        // ensures each creature can be assumed to be inside the boundary
+        // at the beginning of each tick.
+        this.creatures.forEach((c) => {
+          c.x = Math.max(Math.min(c.x, this.width), 0);
+          c.y = Math.max(Math.min(c.y, this.height), 0);
+        });
+      })
       .force("agent", (alpha) => {
         this.creatures.forEach((c: Creature) => {
           let stuck = false;
