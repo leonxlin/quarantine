@@ -299,13 +299,32 @@ export class View {
     context.textAlign = "right";
     context.fillText(String(world.score), this.canvas.width - 10, 30);
 
-    // Draw triangulation.
-    if (world.triangles) {
-      context.strokeStyle = "purple";
+    if (world.mesh) {
+      context.strokeStyle = "green";
       context.beginPath();
-      for (const triangle of world.triangles) {
+      // Iterate over the faces of the mesh. Note that fHead is apparently a
+      // dummy face and should be skipped.
+      for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
+        let e = f.anEdge;
+        if (e.lNext.lNext.lNext !== e) {
+          console.log(
+            "Error! Mesh contains something that's not a triangle!!!!"
+          );
+          continue;
+        }
+        // Loop once for each edge (there will always be 3 edges)
+        const triangle = [];
+        do {
+          // TODO: figure out the difference between e.org.data and e.org.coords.
+          triangle.push({
+            x: e.org.data[0],
+            y: e.org.data[1],
+          });
+          e = e.lNext;
+        } while (e !== f.anEdge);
         this.drawTriangle(triangle, context);
       }
+
       context.stroke();
     }
 

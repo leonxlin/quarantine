@@ -17,7 +17,7 @@ import { Level } from "./levels";
 
 import { initTesselator } from "./tessy";
 
-import libtess from "libtess";
+import libtess from "libtess/libtess.cat.js";
 
 export class World {
   simulation: d3.Simulation<Creature, undefined>;
@@ -42,8 +42,8 @@ export class World {
   victoryCheckEnabled = true;
 
   tessellator;
-  triangles: Array<Array<Point>> = [];
   computedTriangulationSinceLastWall = false;
+  // TODO: consider using a wrapper for the mesh.
   mesh: libtess.GluMesh;
 
   constructor(
@@ -290,17 +290,9 @@ export class World {
 
           this.tessellator.gluTessEndContour();
         }
-
+        // The actual triangulation happens in this call. Which will invoke the
+        // mesh callback set in initTesselator, setting this.mesh.
         this.tessellator.gluTessEndPolygon();
-
-        this.triangles = [];
-        for (let i = 0; i < triangleVerts.length; i += 6) {
-          this.triangles.push([
-            { x: triangleVerts[i], y: triangleVerts[i + 1] },
-            { x: triangleVerts[i + 2], y: triangleVerts[i + 3] },
-            { x: triangleVerts[i + 4], y: triangleVerts[i + 5] },
-          ]);
-        }
         debugInfo.stopTimer("triangulation");
       })
       // Only moving objects need to be registered as nodes in the d3 simulation.

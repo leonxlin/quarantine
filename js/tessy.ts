@@ -33,7 +33,9 @@
 // Copyright in any portions created by third parties is as indicated
 // elsewhere herein. All Rights Reserved.
 
-import libtess from "libtess";
+// Need to specify the "cat.js" version since the default minified version
+// munges the names of the GluMesh internals that we want to use.
+import libtess from "libtess/libtess.cat.js";
 
 export function initTesselator(
   meshCallback: (mesh: libtess.GluMesh) => void
