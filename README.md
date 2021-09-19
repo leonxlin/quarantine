@@ -19,6 +19,7 @@ load.)
 - bug: creatures sometimes repeatedly set goals outside the world boundary and therefore get stuck along
   an edge of the world due to boundary enforcement
 - bug: dragging may not work with minified js
+- bug: single-point walls are not visible in Safari???
 - make creatures give up on goal after some amount of time
 - make initial speed uniform (currently creatures move faster at start)
 
