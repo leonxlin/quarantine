@@ -17,6 +17,8 @@ import { Level } from "./levels";
 
 import { initTesselator } from "./tessy";
 
+import libtess from "libtess";
+
 export class World {
   simulation: d3.Simulation<Creature, undefined>;
   // TODO: figure out if storing the cursor as a node is worth it. Maybe it would be cleaner and fast enough to loop through all nodes to check cursor target.
@@ -42,6 +44,7 @@ export class World {
   tessellator;
   triangles: Array<Array<Point>> = [];
   computedTriangulationSinceLastWall = false;
+  mesh: libtess.GluMesh;
 
   constructor(
     readonly level: Level,
@@ -49,7 +52,9 @@ export class World {
     victoryCallback: () => void,
     debugInfo: DebugInfo
   ) {
-    this.tessellator = initTesselator();
+    this.tessellator = initTesselator((mesh) => {
+      this.mesh = mesh;
+    });
 
     this.creatures = d3.range(level.numCreatures).map(
       () =>

@@ -1,4 +1,4 @@
-// This code is from
+// Portions of this code are from
 // https://github.com/brendankenny/libtess.js/blob/gh-pages/examples/simple_triangulation/triangulate.js
 
 // SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
@@ -35,7 +35,9 @@
 
 import libtess from "libtess";
 
-export function initTesselator(): libtess.GluTesselator {
+export function initTesselator(
+  meshCallback: (mesh: libtess.GluMesh) => void
+): libtess.GluTesselator {
   // function called for each vertex of tesselator output
   function vertexCallback(data, polyVertArray) {
     // console.log(data[0], data[1]);
@@ -71,6 +73,7 @@ export function initTesselator(): libtess.GluTesselator {
   tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_ERROR, errorcallback);
   tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_COMBINE, combinecallback);
   tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_EDGE_FLAG, edgeCallback);
+  tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_MESH, meshCallback);
 
   return tessy;
 }

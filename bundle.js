@@ -19067,8 +19067,8 @@ var quarantine = (function (exports) {
 
   var libtess = libtess_min.exports;
 
-  // This code is from
-  function initTesselator() {
+  // Portions of this code are from
+  function initTesselator(meshCallback) {
       // function called for each vertex of tesselator output
       function vertexCallback(data, polyVertArray) {
           // console.log(data[0], data[1]);
@@ -19100,6 +19100,7 @@ var quarantine = (function (exports) {
       tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_ERROR, errorcallback);
       tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_COMBINE, combinecallback);
       tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_EDGE_FLAG, edgeCallback);
+      tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_MESH, meshCallback);
       return tessy;
   }
 
@@ -19119,7 +19120,9 @@ var quarantine = (function (exports) {
           this.victoryCheckEnabled = true;
           this.triangles = [];
           this.computedTriangulationSinceLastWall = false;
-          this.tessellator = initTesselator();
+          this.tessellator = initTesselator((mesh) => {
+              this.mesh = mesh;
+          });
           this.creatures = sequence(level.numCreatures).map(() => new Creature(level, Math.random() * this.width, // x
           Math.random() * this.height // y
           ));
