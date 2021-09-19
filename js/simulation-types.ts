@@ -1,6 +1,8 @@
 import * as d3 from "d3";
 import { Level } from "./levels";
 
+import libtess from "libtess/libtess.cat.js";
+
 export function squaredDistance(p1: Point, p2: Point): number {
   const dx = p1.x - p2.x,
     dy = p1.y - p2.y;
@@ -83,6 +85,8 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
   isFacingLeft = true;
   lastFlipT = -100; // Allow flipping immediately at t=0.
 
+  meshFace: libtess.GluFace;
+
   constructor(level: Level, public x: number, public y: number) {
     this.r = level.creatureRadius();
     this.previousLoggedLocation = { x: x, y: y };
@@ -95,6 +99,8 @@ export class Creature implements SNode, d3.SimulationNodeDatum {
 
     this.goalStack = [];
     this.turnSign = 1;
+
+    this.meshFace = null;
   }
 
   fixPosition(p?: Point): void {

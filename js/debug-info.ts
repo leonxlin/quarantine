@@ -19,6 +19,7 @@ export class DebugInfo {
     this.initTimer("collision");
     this.initTimer("triangulation");
     this.initTimer("render");
+    this.initTimer("locate-creatures");
 
     setInterval(
       function () {
@@ -32,6 +33,10 @@ export class DebugInfo {
           ".triangulation-runtime"
         );
         this.displayAndClearRecentTimerValues("render", ".render-runtime");
+        this.displayAndClearRecentTimerValues(
+          "locate-creatures",
+          ".locate-creatures-runtime"
+        );
 
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);
         this.recentTicksPerSecond[

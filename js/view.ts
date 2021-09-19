@@ -9,6 +9,7 @@ import {
 } from "./simulation-types";
 import { World } from "./world";
 import { DebugInfo } from "./debug-info";
+import { getTrianglePoints } from "./tessy";
 
 export class View {
   canvas: HTMLCanvasElement;
@@ -161,10 +162,9 @@ export class View {
       context.drawImage(image, -x - r, y - r, s, s);
       context.setTransform(1, 0, 0, 1, 0, 0);
     }
-    return;
   }
 
-  drawTriangle(
+  outlineTriangle(
     triangle: Array<Point>,
     context: CanvasRenderingContext2D
   ): void {
@@ -195,6 +195,27 @@ export class View {
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
+
+    // Draw mesh.
+    if (world.mesh) {
+      context.strokeStyle = "green";
+      context.beginPath();
+      // Iterate over the faces of the mesh. Note that fHead is apparently a
+      // dummy face and should be skipped.
+      for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
+        this.outlineTriangle(getTrianglePoints(f), context);
+      }
+      context.stroke();
+    }
+
+    // Highlight mesh triangles that contain a creature.
+    world.creatures.forEach((c) => {
+      // Highlight the triangle that the creature is in.
+      context.beginPath();
+      this.outlineTriangle(getTrianglePoints(c.meshFace), context);
+      context.fillStyle = "lightgreen";
+      context.fill();
+    });
 
     // Draw parties.
     world.parties.forEach(function (d) {
@@ -298,35 +319,6 @@ export class View {
     context.font = "20px sans-serif";
     context.textAlign = "right";
     context.fillText(String(world.score), this.canvas.width - 10, 30);
-
-    if (world.mesh) {
-      context.strokeStyle = "green";
-      context.beginPath();
-      // Iterate over the faces of the mesh. Note that fHead is apparently a
-      // dummy face and should be skipped.
-      for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
-        let e = f.anEdge;
-        if (e.lNext.lNext.lNext !== e) {
-          console.log(
-            "Error! Mesh contains something that's not a triangle!!!!"
-          );
-          continue;
-        }
-        // Loop once for each edge (there will always be 3 edges)
-        const triangle = [];
-        do {
-          // TODO: figure out the difference between e.org.data and e.org.coords.
-          triangle.push({
-            x: e.org.data[0],
-            y: e.org.data[1],
-          });
-          e = e.lNext;
-        } while (e !== f.anEdge);
-        this.drawTriangle(triangle, context);
-      }
-
-      context.stroke();
-    }
 
     context.restore();
 

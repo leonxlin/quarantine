@@ -35,6 +35,7 @@
 
 // Need to specify the "cat.js" version since the default minified version
 // munges the names of the GluMesh internals that we want to use.
+import { Point } from "./simulation-types";
 import libtess from "libtess/libtess.cat.js";
 
 export function initTesselator(
@@ -78,4 +79,41 @@ export function initTesselator(
   tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_MESH, meshCallback);
 
   return tessy;
+}
+
+export function getTrianglePoints(f: libtess.GluFace): Array<Point> {
+  let e = f.anEdge;
+  if (e.lNext.lNext.lNext !== e) {
+    console.log("Error! Mesh contains something that's not a triangle!!!!");
+    return null;
+  }
+  // Loop once for each edge (there will always be 3 edges)
+  const triangle = [];
+  do {
+    // TODO: figure out the difference between e.org.data and e.org.coords.
+    triangle.push({
+      x: e.org.data[0],
+      y: e.org.data[1],
+    });
+    e = e.lNext;
+  } while (e !== f.anEdge);
+  return triangle;
+}
+
+function pointIsLeftOfEdge(p: Point, e: libtess.GluHalfEdge): boolean {
+  const org = e.org.data;
+  const dst = e.dst().data;
+  return (
+    -(dst[1] - org[1]) * (p.x - org[0]) + (dst[0] - org[0]) * (p.y - org[1]) >=
+    0
+  );
+}
+
+export function faceContainsPoint(face: libtess.GluFace, p: Point): boolean {
+  let e = face.anEdge;
+  do {
+    if (!pointIsLeftOfEdge(p, e)) return false;
+    e = e.lNext;
+  } while (e !== face.anEdge);
+  return true;
 }

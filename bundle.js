@@ -18675,6 +18675,7 @@ var quarantine = (function (exports) {
           this.scoringStateTicksSoFar = 0;
           this.goalStack = [];
           this.turnSign = 1;
+          this.meshFace = null;
       }
       fixPosition(p) {
           if (!p)
@@ -23802,6 +23803,39 @@ var quarantine = (function (exports) {
       tessy.gluTessCallback(libtess.gluEnum.GLU_TESS_MESH, meshCallback);
       return tessy;
   }
+  function getTrianglePoints(f) {
+      let e = f.anEdge;
+      if (e.lNext.lNext.lNext !== e) {
+          console.log("Error! Mesh contains something that's not a triangle!!!!");
+          return null;
+      }
+      // Loop once for each edge (there will always be 3 edges)
+      const triangle = [];
+      do {
+          // TODO: figure out the difference between e.org.data and e.org.coords.
+          triangle.push({
+              x: e.org.data[0],
+              y: e.org.data[1],
+          });
+          e = e.lNext;
+      } while (e !== f.anEdge);
+      return triangle;
+  }
+  function pointIsLeftOfEdge(p, e) {
+      const org = e.org.data;
+      const dst = e.dst().data;
+      return (-(dst[1] - org[1]) * (p.x - org[0]) + (dst[0] - org[0]) * (p.y - org[1]) >=
+          0);
+  }
+  function faceContainsPoint(face, p) {
+      let e = face.anEdge;
+      do {
+          if (!pointIsLeftOfEdge(p, e))
+              return false;
+          e = e.lNext;
+      } while (e !== face.anEdge);
+      return true;
+  }
 
   class World {
       constructor(level, renderFunction, victoryCallback, debugInfo) {
@@ -24036,6 +24070,18 @@ var quarantine = (function (exports) {
               this.tessellator.gluTessEndPolygon();
               debugInfo.stopTimer("triangulation");
           })
+              .force("locate-creatures", () => {
+              debugInfo.startTimer("locate-creatures");
+              // TODO: make this faster.
+              for (let f = this.mesh.fHead.prev; f !== this.mesh.fHead; f = f.prev) {
+                  for (const c of this.creatures) {
+                      if (faceContainsPoint(f, c)) {
+                          c.meshFace = f;
+                      }
+                  }
+              }
+              debugInfo.stopTimer("locate-creatures");
+          })
               // Only moving objects need to be registered as nodes in the d3 simulation.
               .nodes(this.creatures)
               .on("tick", () => {
@@ -24133,11 +24179,13 @@ var quarantine = (function (exports) {
           this.initTimer("collision");
           this.initTimer("triangulation");
           this.initTimer("render");
+          this.initTimer("locate-creatures");
           setInterval(function () {
               this.displayAndClearRecentTimerValues("step", ".step-runtime");
               this.displayAndClearRecentTimerValues("collision", ".collision-force-runtime");
               this.displayAndClearRecentTimerValues("triangulation", ".triangulation-runtime");
               this.displayAndClearRecentTimerValues("render", ".render-runtime");
+              this.displayAndClearRecentTimerValues("locate-creatures", ".locate-creatures-runtime");
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
@@ -24283,9 +24331,8 @@ var quarantine = (function (exports) {
               context.drawImage(image, -x - r, y - r, s, s);
               context.setTransform(1, 0, 0, 1, 0, 0);
           }
-          return;
       }
-      drawTriangle(triangle, context) {
+      outlineTriangle(triangle, context) {
           context.moveTo(triangle[0].x, triangle[0].y);
           context.lineTo(triangle[1].x, triangle[1].y);
           context.lineTo(triangle[2].x, triangle[2].y);
@@ -24311,6 +24358,25 @@ var quarantine = (function (exports) {
           const context = this.canvas.getContext("2d");
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
+          // Draw mesh.
+          if (world.mesh) {
+              context.strokeStyle = "green";
+              context.beginPath();
+              // Iterate over the faces of the mesh. Note that fHead is apparently a
+              // dummy face and should be skipped.
+              for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
+                  this.outlineTriangle(getTrianglePoints(f), context);
+              }
+              context.stroke();
+          }
+          // Highlight mesh triangles that contain a creature.
+          world.creatures.forEach((c) => {
+              // Highlight the triangle that the creature is in.
+              context.beginPath();
+              this.outlineTriangle(getTrianglePoints(c.meshFace), context);
+              context.fillStyle = "lightgreen";
+              context.fill();
+          });
           // Draw parties.
           world.parties.forEach(function (d) {
               if (d.expired())
@@ -24407,31 +24473,6 @@ var quarantine = (function (exports) {
           context.font = "20px sans-serif";
           context.textAlign = "right";
           context.fillText(String(world.score), this.canvas.width - 10, 30);
-          if (world.mesh) {
-              context.strokeStyle = "green";
-              context.beginPath();
-              // Iterate over the faces of the mesh. Note that fHead is apparently a
-              // dummy face and should be skipped.
-              for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
-                  let e = f.anEdge;
-                  if (e.lNext.lNext.lNext !== e) {
-                      console.log("Error! Mesh contains something that's not a triangle!!!!");
-                      continue;
-                  }
-                  // Loop once for each edge (there will always be 3 edges)
-                  const triangle = [];
-                  do {
-                      // TOOD: figure out the difference between e.org.data and e.org.coords.
-                      triangle.push({
-                          x: e.org.data[0],
-                          y: e.org.data[1],
-                      });
-                      e = e.lNext;
-                  } while (e !== f.anEdge);
-                  this.drawTriangle(triangle, context);
-              }
-              context.stroke();
-          }
           context.restore();
           this.debugInfo.stopTimer("render");
           this.debugInfo.stopTimer("step");

@@ -15,7 +15,7 @@ import { getNextX, getNextY, collisionInteraction } from "./collide";
 import { DebugInfo } from "./debug-info";
 import { Level } from "./levels";
 
-import { initTesselator } from "./tessy";
+import { initTesselator, faceContainsPoint } from "./tessy";
 
 import libtess from "libtess/libtess.cat.js";
 
@@ -294,6 +294,18 @@ export class World {
         // mesh callback set in initTesselator, setting this.mesh.
         this.tessellator.gluTessEndPolygon();
         debugInfo.stopTimer("triangulation");
+      })
+      .force("locate-creatures", () => {
+        debugInfo.startTimer("locate-creatures");
+        // TODO: make this faster.
+        for (let f = this.mesh.fHead.prev; f !== this.mesh.fHead; f = f.prev) {
+          for (const c of this.creatures) {
+            if (faceContainsPoint(f, c)) {
+              c.meshFace = f;
+            }
+          }
+        }
+        debugInfo.stopTimer("locate-creatures");
       })
       // Only moving objects need to be registered as nodes in the d3 simulation.
       .nodes(this.creatures)
