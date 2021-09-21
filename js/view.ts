@@ -13,10 +13,12 @@ import { getTrianglePoints } from "./tessy";
 
 export class View {
   canvas: HTMLCanvasElement;
+  wallCanvas: HTMLCanvasElement;
+  mouseCanvas: HTMLCanvasElement;
   CANVAS_ASPECT_RATIO = 3 / 2;
+  WIDTH = 900;
+  HEIGHT = 600;
   canvasClientScaleFactor: number;
-  width: number;
-  height: number;
 
   tempScoreIndicators: Set<TempScoreIndicator>;
 
@@ -37,8 +39,9 @@ export class View {
   // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
   blobCanvases: HTMLCanvasElement[][] = [];
 
+  lastWallHash: number;
+
   fitCanvas(): void {
-    const canvas = this.canvas;
     const left_panel = document.querySelector(".left-panel") as HTMLElement;
     const right_panel = document.querySelector(".right-panel") as HTMLElement;
     const body = document.querySelector("body") as HTMLElement;
@@ -46,17 +49,26 @@ export class View {
     const available_height =
       window.innerHeight - 2 * body.getBoundingClientRect().top;
 
-    canvas.style.width = left_panel.style.width =
+    const cssWidth =
       Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO) +
       "px";
-    canvas.style.height = left_panel.style.height =
+    const cssHeight =
       Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
       "px";
 
-    canvas.width = 900;
-    canvas.height = 600;
+    [this.canvas, this.wallCanvas, this.mouseCanvas, left_panel].forEach(
+      (c) => {
+        c.style.width = cssWidth;
+        c.style.height = cssHeight;
+      }
+    );
+    [this.canvas, this.wallCanvas, this.mouseCanvas].forEach((c) => {
+      c.width = this.WIDTH;
+      c.height = this.HEIGHT;
+    });
 
-    this.canvasClientScaleFactor = canvas.height / canvas.clientHeight;
+    this.canvasClientScaleFactor =
+      this.canvas.height / this.canvas.clientHeight;
   }
 
   // The following functions convert the coordinates from mouse events to canvas
@@ -79,6 +91,12 @@ export class View {
   constructor(public debugInfo: DebugInfo) {
     this.tempScoreIndicators = new Set<TempScoreIndicator>();
     this.canvas = document.querySelector(".game-canvas") as HTMLCanvasElement;
+    this.wallCanvas = document.querySelector(
+      ".wall-canvas"
+    ) as HTMLCanvasElement;
+    this.mouseCanvas = document.querySelector(
+      ".mouse-canvas"
+    ) as HTMLCanvasElement;
     this.fitCanvas();
 
     // Load assets.
@@ -174,6 +192,51 @@ export class View {
     context.lineTo(triangle[0].x, triangle[0].y);
   }
 
+  renderWalls(world: World): void {
+    // TODO: this is not a hash. Rename or fix.
+    let newHash = 0;
+    for (const wall of world.walls) {
+      newHash += wall.points.length + 1;
+      newHash += wall.state;
+    }
+    newHash += this.selectedObject instanceof Wall ? 3235 : 0;
+    if (newHash == this.lastWallHash) return;
+    this.lastWallHash = newHash;
+
+    const context = this.wallCanvas.getContext("2d");
+    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.save();
+
+    // Draw walls.
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    function drawWall(wall: Wall, color: string) {
+      context.lineWidth = 2 * wall.halfWidth;
+      context.beginPath();
+      const curve = d3.curveLinear(context);
+      curve.lineStart();
+      for (const point of wall.points) {
+        curve.point(point.x, point.y);
+      }
+      if (wall.points.length === 1)
+        curve.point(wall.points[0].x, wall.points[0].y);
+      curve.lineEnd();
+      context.strokeStyle = color;
+      context.stroke();
+    }
+    for (const wall of world.walls) {
+      // We want to draw the selected wall on top, so skip it here.
+      if (wall === this.selectedObject) continue;
+      drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
+    }
+    if (this.selectedObject instanceof Wall) {
+      drawWall(this.selectedObject, "#999900");
+    }
+    context.lineWidth = 1;
+
+    context.restore();
+  }
+
   render(world: World): void {
     this.debugInfo.numTicksSinceLastRecord += 1;
     this.debugInfo.startTimer("render");
@@ -184,14 +247,16 @@ export class View {
     // cursor; then, pause the game and move the mouse around the canvas. This should
     // be fixed.
     if (this.toolbeltMode != "select-mode") {
-      this.canvas.style.cursor = "default";
+      this.mouseCanvas.style.cursor = "default";
     } else if (world.cursorNode.target != null) {
-      this.canvas.style.cursor = "pointer";
+      this.mouseCanvas.style.cursor = "pointer";
     } else {
-      this.canvas.style.cursor = "default";
+      this.mouseCanvas.style.cursor = "default";
     }
 
     const context = this.canvas.getContext("2d");
+
+    this.renderWalls(world);
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
@@ -236,33 +301,6 @@ export class View {
       }
       this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
     });
-
-    // Draw walls.
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    function drawWall(wall: Wall, color: string) {
-      context.lineWidth = 2 * wall.halfWidth;
-      context.beginPath();
-      const curve = d3.curveLinear(context);
-      curve.lineStart();
-      for (const point of wall.points) {
-        curve.point(point.x, point.y);
-      }
-      if (wall.points.length === 1)
-        curve.point(wall.points[0].x, wall.points[0].y);
-      curve.lineEnd();
-      context.strokeStyle = color;
-      context.stroke();
-    }
-    for (const wall of world.walls) {
-      // We want to draw the selected wall on top, so skip it here.
-      if (wall === this.selectedObject) continue;
-      drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
-    }
-    if (this.selectedObject instanceof Wall) {
-      drawWall(this.selectedObject, "#999900");
-    }
-    context.lineWidth = 1;
 
     // Draw recently dead nodes.
     for (const c of world.deadCreatures) {

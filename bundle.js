@@ -24222,6 +24222,8 @@ var quarantine = (function (exports) {
       constructor(debugInfo) {
           this.debugInfo = debugInfo;
           this.CANVAS_ASPECT_RATIO = 3 / 2;
+          this.WIDTH = 900;
+          this.HEIGHT = 600;
           // View also maintains state related to the player's interactions with the game interface.
           // TODO: revisit whether these belong in View.
           this.toolbeltMode = "select-mode";
@@ -24232,6 +24234,8 @@ var quarantine = (function (exports) {
           this.blobCanvases = [];
           this.tempScoreIndicators = new Set();
           this.canvas = document.querySelector(".game-canvas");
+          this.wallCanvas = document.querySelector(".wall-canvas");
+          this.mouseCanvas = document.querySelector(".mouse-canvas");
           this.fitCanvas();
           // Load assets.
           this.blobBody = new Image();
@@ -24250,21 +24254,25 @@ var quarantine = (function (exports) {
           });
       }
       fitCanvas() {
-          const canvas = this.canvas;
           const left_panel = document.querySelector(".left-panel");
           const right_panel = document.querySelector(".right-panel");
           const body = document.querySelector("body");
           const available_width = body.clientWidth - right_panel.offsetWidth;
           const available_height = window.innerHeight - 2 * body.getBoundingClientRect().top;
-          canvas.style.width = left_panel.style.width =
-              Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO) +
-                  "px";
-          canvas.style.height = left_panel.style.height =
-              Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
-                  "px";
-          canvas.width = 900;
-          canvas.height = 600;
-          this.canvasClientScaleFactor = canvas.height / canvas.clientHeight;
+          const cssWidth = Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO) +
+              "px";
+          const cssHeight = Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
+              "px";
+          [this.canvas, this.wallCanvas, this.mouseCanvas, left_panel].forEach((c) => {
+              c.style.width = cssWidth;
+              c.style.height = cssHeight;
+          });
+          [this.canvas, this.wallCanvas, this.mouseCanvas].forEach((c) => {
+              c.width = this.WIDTH;
+              c.height = this.HEIGHT;
+          });
+          this.canvasClientScaleFactor =
+              this.canvas.height / this.canvas.clientHeight;
       }
       // The following functions convert the coordinates from mouse events to canvas
       // coordinates. Note that d3-drag will already do the shifting for you. Thus when
@@ -24338,6 +24346,49 @@ var quarantine = (function (exports) {
           context.lineTo(triangle[2].x, triangle[2].y);
           context.lineTo(triangle[0].x, triangle[0].y);
       }
+      renderWalls(world) {
+          // TODO: this is not a hash. Rename or fix.
+          let newHash = 0;
+          for (const wall of world.walls) {
+              newHash += wall.points.length + 1;
+              newHash += wall.state;
+          }
+          newHash += this.selectedObject instanceof Wall ? 3235 : 0;
+          if (newHash == this.lastWallHash)
+              return;
+          this.lastWallHash = newHash;
+          const context = this.wallCanvas.getContext("2d");
+          context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          context.save();
+          // Draw walls.
+          context.lineJoin = "round";
+          context.lineCap = "round";
+          function drawWall(wall, color) {
+              context.lineWidth = 2 * wall.halfWidth;
+              context.beginPath();
+              const curve = curveLinear(context);
+              curve.lineStart();
+              for (const point of wall.points) {
+                  curve.point(point.x, point.y);
+              }
+              if (wall.points.length === 1)
+                  curve.point(wall.points[0].x, wall.points[0].y);
+              curve.lineEnd();
+              context.strokeStyle = color;
+              context.stroke();
+          }
+          for (const wall of world.walls) {
+              // We want to draw the selected wall on top, so skip it here.
+              if (wall === this.selectedObject)
+                  continue;
+              drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
+          }
+          if (this.selectedObject instanceof Wall) {
+              drawWall(this.selectedObject, "#999900");
+          }
+          context.lineWidth = 1;
+          context.restore();
+      }
       render(world) {
           this.debugInfo.numTicksSinceLastRecord += 1;
           this.debugInfo.startTimer("render");
@@ -24347,15 +24398,16 @@ var quarantine = (function (exports) {
           // cursor; then, pause the game and move the mouse around the canvas. This should
           // be fixed.
           if (this.toolbeltMode != "select-mode") {
-              this.canvas.style.cursor = "default";
+              this.mouseCanvas.style.cursor = "default";
           }
           else if (world.cursorNode.target != null) {
-              this.canvas.style.cursor = "pointer";
+              this.mouseCanvas.style.cursor = "pointer";
           }
           else {
-              this.canvas.style.cursor = "default";
+              this.mouseCanvas.style.cursor = "default";
           }
           const context = this.canvas.getContext("2d");
+          this.renderWalls(world);
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
           // Draw mesh.
@@ -24396,33 +24448,6 @@ var quarantine = (function (exports) {
               }
               this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
           });
-          // Draw walls.
-          context.lineJoin = "round";
-          context.lineCap = "round";
-          function drawWall(wall, color) {
-              context.lineWidth = 2 * wall.halfWidth;
-              context.beginPath();
-              const curve = curveLinear(context);
-              curve.lineStart();
-              for (const point of wall.points) {
-                  curve.point(point.x, point.y);
-              }
-              if (wall.points.length === 1)
-                  curve.point(wall.points[0].x, wall.points[0].y);
-              curve.lineEnd();
-              context.strokeStyle = color;
-              context.stroke();
-          }
-          for (const wall of world.walls) {
-              // We want to draw the selected wall on top, so skip it here.
-              if (wall === this.selectedObject)
-                  continue;
-              drawWall(wall, wall.state == WallState.PROVISIONAL ? "#e6757e" : "red");
-          }
-          if (this.selectedObject instanceof Wall) {
-              drawWall(this.selectedObject, "#999900");
-          }
-          context.lineWidth = 1;
           // Draw recently dead nodes.
           for (const c of world.deadCreatures) {
               if (c.ticksSinceDeath >= 60)
@@ -24582,7 +24607,7 @@ var quarantine = (function (exports) {
           /* eslint-disable @typescript-eslint/no-this-alias */
           const game = this;
           /* eslint-enable @typescript-eslint/no-this-alias */
-          select(view.canvas)
+          select(view.mouseCanvas)
               .call(drag()
               .subject(dragSubject.bind(null, this))
               .on("start", dragStarted.bind(null, this))
