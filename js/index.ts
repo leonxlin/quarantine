@@ -62,7 +62,7 @@ export class Game {
     const game = this;
     /* eslint-enable @typescript-eslint/no-this-alias */
 
-    d3.select(view.canvas)
+    d3.select(view.mouseCanvas)
       .call(
         d3
           .drag()

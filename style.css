@@ -1,6 +1,22 @@
-.game-canvas {
+.canvas-wrapper {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.game-canvas {
+  z-index: 2;
+  position: absolute;
+}
+
+.wall-canvas {
+  z-index: 3;
+  position: absolute;
+}
+
+.mouse-canvas {
+  z-index: 10;
+  position: absolute;
 }
 
 .offscreen-canvas {
@@ -78,6 +94,7 @@ body {
   align-items: center;
   justify-content: center;
   display: none;
+  z-index: 100;
 }
 
 .modal-active {
@@ -118,4 +135,5 @@ body {
   left: 0;
   top: 0;
   display: none;
+  z-index: 20;
 }

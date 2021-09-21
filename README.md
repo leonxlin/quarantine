@@ -15,6 +15,7 @@ load.)
 
 ## TODO
 
+- dragged creatures should appear above walls
 - bug: creatures sometimes repeatedly set goals outside the world boundary and therefore get stuck along
   an edge of the world due to boundary enforcement
 - bug: dragging may not work with minified js

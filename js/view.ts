@@ -12,10 +12,12 @@ import { DebugInfo } from "./debug-info";
 
 export class View {
   canvas: HTMLCanvasElement;
+  wallCanvas: HTMLCanvasElement;
+  mouseCanvas: HTMLCanvasElement;
   CANVAS_ASPECT_RATIO = 3 / 2;
+  WIDTH = 900;
+  HEIGHT = 600;
   canvasClientScaleFactor: number;
-  width: number;
-  height: number;
 
   tempScoreIndicators: Set<TempScoreIndicator>;
 
@@ -36,8 +38,9 @@ export class View {
   // Predrawn blobs in different sizes and colors. Indexed by size (0-59) and then health (0-10).
   blobCanvases: HTMLCanvasElement[][] = [];
 
+  lastWallHash: number;
+
   fitCanvas(): void {
-    const canvas = this.canvas;
     const left_panel = document.querySelector(".left-panel") as HTMLElement;
     const right_panel = document.querySelector(".right-panel") as HTMLElement;
     const body = document.querySelector("body") as HTMLElement;
@@ -45,17 +48,26 @@ export class View {
     const available_height =
       window.innerHeight - 2 * body.getBoundingClientRect().top;
 
-    canvas.style.width = left_panel.style.width =
+    const cssWidth =
       Math.min(available_width, available_height * this.CANVAS_ASPECT_RATIO) +
       "px";
-    canvas.style.height = left_panel.style.height =
+    const cssHeight =
       Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
       "px";
 
-    canvas.width = 900;
-    canvas.height = 600;
+    [this.canvas, this.wallCanvas, this.mouseCanvas, left_panel].forEach(
+      (c) => {
+        c.style.width = cssWidth;
+        c.style.height = cssHeight;
+      }
+    );
+    [this.canvas, this.wallCanvas, this.mouseCanvas].forEach((c) => {
+      c.width = this.WIDTH;
+      c.height = this.HEIGHT;
+    });
 
-    this.canvasClientScaleFactor = canvas.height / canvas.clientHeight;
+    this.canvasClientScaleFactor =
+      this.canvas.height / this.canvas.clientHeight;
   }
 
   // The following functions convert the coordinates from mouse events to canvas
@@ -78,6 +90,12 @@ export class View {
   constructor(public debugInfo: DebugInfo) {
     this.tempScoreIndicators = new Set<TempScoreIndicator>();
     this.canvas = document.querySelector(".game-canvas") as HTMLCanvasElement;
+    this.wallCanvas = document.querySelector(
+      ".wall-canvas"
+    ) as HTMLCanvasElement;
+    this.mouseCanvas = document.querySelector(
+      ".mouse-canvas"
+    ) as HTMLCanvasElement;
     this.fitCanvas();
 
     // Load assets.
@@ -164,45 +182,20 @@ export class View {
     return;
   }
 
-  render(world: World): void {
-    // TODO: The cursor style logic being here in `render`, which is only called
-    // when the simulation is running, causes the cursor style to be stuck when the
-    // game is paused. To repro: in select mode, hover over a wall to get the pointer
-    // cursor; then, pause the game and move the mouse around the canvas. This should
-    // be fixed.
-    if (this.toolbeltMode != "select-mode") {
-      this.canvas.style.cursor = "default";
-    } else if (world.cursorNode.target != null) {
-      this.canvas.style.cursor = "pointer";
-    } else {
-      this.canvas.style.cursor = "default";
+  renderWalls(world: World): void {
+    // TODO: this is not a hash. Rename or fix.
+    let newHash = 0;
+    for (const wall of world.walls) {
+      newHash += wall.points.length + 1;
+      newHash += wall.state;
     }
+    newHash += this.selectedObject instanceof Wall ? 3235 : 0;
+    if (newHash == this.lastWallHash) return;
+    this.lastWallHash = newHash;
 
-    const context = this.canvas.getContext("2d");
-    this.debugInfo.numTicksSinceLastRecord += 1;
-
+    const context = this.wallCanvas.getContext("2d");
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
-
-    // Draw parties.
-    world.parties.forEach(function (d) {
-      if (d.expired()) return;
-      context.beginPath();
-      context.moveTo(d.x + d.visibleR, d.y);
-      context.arc(d.x, d.y, d.visibleR, 0, 2 * Math.PI);
-      context.fillStyle = "pink";
-      context.fill();
-    });
-
-    // Draw living creatures.
-    const scoringCreatures: Creature[] = [];
-    world.creatures.forEach((c) => {
-      if (c.scoring) {
-        scoringCreatures.push(c);
-        return;
-      }
-      this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
-    });
 
     // Draw walls.
     context.lineJoin = "round";
@@ -230,6 +223,51 @@ export class View {
       drawWall(this.selectedObject, "#999900");
     }
     context.lineWidth = 1;
+
+    context.restore();
+  }
+
+  render(world: World): void {
+    // TODO: The cursor style logic being here in `render`, which is only called
+    // when the simulation is running, causes the cursor style to be stuck when the
+    // game is paused. To repro: in select mode, hover over a wall to get the pointer
+    // cursor; then, pause the game and move the mouse around the canvas. This should
+    // be fixed.
+    if (this.toolbeltMode != "select-mode") {
+      this.mouseCanvas.style.cursor = "default";
+    } else if (world.cursorNode.target != null) {
+      this.mouseCanvas.style.cursor = "pointer";
+    } else {
+      this.mouseCanvas.style.cursor = "default";
+    }
+
+    const context = this.canvas.getContext("2d");
+    this.debugInfo.numTicksSinceLastRecord += 1;
+
+    this.renderWalls(world);
+
+    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.save();
+
+    // Draw parties.
+    world.parties.forEach(function (d) {
+      if (d.expired()) return;
+      context.beginPath();
+      context.moveTo(d.x + d.visibleR, d.y);
+      context.arc(d.x, d.y, d.visibleR, 0, 2 * Math.PI);
+      context.fillStyle = "pink";
+      context.fill();
+    });
+
+    // Draw living creatures.
+    const scoringCreatures: Creature[] = [];
+    world.creatures.forEach((c) => {
+      if (c.scoring) {
+        scoringCreatures.push(c);
+        return;
+      }
+      this.drawCreature(context, c.x, c.y, c.r, c.health, c.isFacingLeft);
+    });
 
     // Draw recently dead nodes.
     for (const c of world.deadCreatures) {
