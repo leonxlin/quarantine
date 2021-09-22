@@ -202,6 +202,7 @@ export class View {
     triangle: Array<Point>,
     context: CanvasRenderingContext2D
   ): void {
+    if (triangle.length != 3) return;
     context.moveTo(triangle[0].x, triangle[0].y);
     context.lineTo(triangle[1].x, triangle[1].y);
     context.lineTo(triangle[2].x, triangle[2].y);

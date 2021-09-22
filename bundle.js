@@ -23797,6 +23797,8 @@ var quarantine = (function (exports) {
       return tessy;
   }
   function getTrianglePoints(f) {
+      if (!f)
+          return [];
       let e = f.anEdge;
       if (e.lNext.lNext.lNext !== e) {
           console.log("Error! Mesh contains something that's not a triangle!!!!");
@@ -23845,8 +23847,10 @@ var quarantine = (function (exports) {
           this.parties = [];
           this.victoryCheckEnabled = true;
           this.computedTriangulationSinceLastWall = false;
+          this.needToLocateCreaturesFromScratch = false;
           this.tessellator = initTesselator((mesh) => {
               this.mesh = mesh;
+              this.needToLocateCreaturesFromScratch = true;
           });
           this.creatures = sequence(level.numCreatures).map(() => new Creature(level, Math.random() * this.width, // x
           Math.random() * this.height // y
@@ -24069,6 +24073,57 @@ var quarantine = (function (exports) {
           })
               .force("locate-creatures", () => {
               debugInfo.startTimer("locate-creatures");
+              if (!this.needToLocateCreaturesFromScratch) {
+                  // Point location algorithm from
+                  // https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-728.pdf
+                  this.creatures.forEach((c) => {
+                      if (!c.meshFace)
+                          return;
+                      let e = c.meshFace.anEdge;
+                      if (!pointIsLeftOfEdge(c, e))
+                          e = e.sym;
+                      for (let i = 0; i < 100; ++i) {
+                          if ((e.org.data[0] == c.x && e.org.data[1] == c.y) ||
+                              (e.dst().data[0] == c.x && e.dst().data[1] == c.y)) {
+                              c.meshFace = e.lFace;
+                              return;
+                          }
+                          let whichop = 0;
+                          if (pointIsLeftOfEdge(c, e.oNext))
+                              whichop += 1;
+                          if (pointIsLeftOfEdge(c, e.dPrev()))
+                              whichop += 2;
+                          switch (whichop) {
+                              case 0:
+                                  c.meshFace = e.lFace;
+                                  return;
+                              case 1:
+                                  e = e.oNext;
+                                  continue;
+                              case 2:
+                                  e = e.dPrev();
+                                  continue;
+                              case 3:
+                                  if ((e.oNext.org.data[0] - e.oNext.dst().data[0]) *
+                                      (c.x - e.oNext.dst().data[0]) +
+                                      (e.oNext.org.data[1] - e.oNext.dst().data[1]) *
+                                          (c.y - e.oNext.dst().data[1]) <
+                                      0) {
+                                      e = e.dPrev();
+                                  }
+                                  else {
+                                      e = e.oNext;
+                                  }
+                          }
+                      }
+                      console.log("No meshface found after 100 iterations");
+                      c.meshFace = null;
+                      return;
+                  });
+                  debugInfo.stopTimer("locate-creatures");
+                  return;
+              }
+              this.needToLocateCreaturesFromScratch = false;
               // TODO: make this faster.
               // Search for creatures within the bounding box of each triangle. Record
               // when a creature's center lies in a triangle.
@@ -24366,6 +24421,8 @@ var quarantine = (function (exports) {
           }
       }
       outlineTriangle(triangle, context) {
+          if (triangle.length != 3)
+              return;
           context.moveTo(triangle[0].x, triangle[0].y);
           context.lineTo(triangle[1].x, triangle[1].y);
           context.lineTo(triangle[2].x, triangle[2].y);

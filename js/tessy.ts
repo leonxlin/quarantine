@@ -82,6 +82,8 @@ export function initTesselator(
 }
 
 export function getTrianglePoints(f: libtess.GluFace): Array<Point> {
+  if (!f) return [];
+
   let e = f.anEdge;
   if (e.lNext.lNext.lNext !== e) {
     console.log("Error! Mesh contains something that's not a triangle!!!!");
@@ -100,7 +102,10 @@ export function getTrianglePoints(f: libtess.GluFace): Array<Point> {
   return triangle;
 }
 
-function pointIsLeftOfEdge(p: Point, e: libtess.GluHalfEdge): boolean {
+// "Left" here is with respect to the usual orientation of the x-y coordinate
+// plane. Canvas coords have y pointing down, so actually this does the opposite
+// of its name.
+export function pointIsLeftOfEdge(p: Point, e: libtess.GluHalfEdge): boolean {
   const org = e.org.data;
   const dst = e.dst().data;
   return (

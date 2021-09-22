@@ -16,6 +16,7 @@ load.)
 ## TODO
 
 - point location algorithm for triangulations, with edge-walking: https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-728.pdf
+  - investigate cases when edge walking fails!
 - bug: dragged creatures should appear above walls
 - bug: creatures sometimes repeatedly set goals outside the world boundary and therefore get stuck along
   an edge of the world due to boundary enforcement
