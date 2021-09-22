@@ -9,6 +9,12 @@ export function squaredDistance(p1: Point, p2: Point): number {
   return dx * dx + dy * dy;
 }
 
+export function isQuadtreeLeafNode<T>(
+  node: d3.QuadtreeInternalNode<T> | d3.QuadtreeLeaf<T>
+): node is d3.QuadtreeLeaf<T> {
+  return !node.length;
+}
+
 export type Selectable = Wall | Creature;
 
 export interface Point {

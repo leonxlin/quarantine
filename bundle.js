@@ -18638,6 +18638,9 @@ var quarantine = (function (exports) {
       const dx = p1.x - p2.x, dy = p1.y - p2.y;
       return dx * dx + dy * dy;
   }
+  function isQuadtreeLeafNode(node) {
+      return !node.length;
+  }
   class CursorNode {
       constructor() {
           this.r = 4;
@@ -24076,13 +24079,32 @@ var quarantine = (function (exports) {
           })
               .force("locate-creatures", () => {
               debugInfo.startTimer("locate-creatures");
-              // TODO: make this faster.
+              // Search for creatures within the bounding box of each triangle. Record
+              // when a creature's center lies in a triangle.
               for (let f = this.mesh.fHead.prev; f !== this.mesh.fHead; f = f.prev) {
-                  for (const c of this.creatures) {
-                      if (faceContainsPoint(f, c)) {
-                          c.meshFace = f;
+                  const trianglePoints = getTrianglePoints(f);
+                  const xs = trianglePoints.map((p) => p.x);
+                  const ys = trianglePoints.map((p) => p.y);
+                  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+                  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+                  this.quadtree.visit((node, x0, y0, x1, y1) => {
+                      if (isQuadtreeLeafNode(node)) {
+                          do {
+                              const c = node.data;
+                              if (!isLiveCreature(c))
+                                  continue;
+                              const x = getNextX(c), y = getNextY(c);
+                              if (x >= xmin &&
+                                  x < xmax &&
+                                  y >= ymin &&
+                                  y < ymax &&
+                                  faceContainsPoint(f, c)) {
+                                  c.meshFace = f;
+                              }
+                          } while ((node = node.next));
                       }
-                  }
+                      return x0 >= xmax || y0 >= ymax || x1 < xmin || y1 < ymin;
+                  });
               }
               debugInfo.stopTimer("locate-creatures");
           })
