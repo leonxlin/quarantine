@@ -154,7 +154,11 @@ export class World {
           c.vy += (alpha * (c.goal.y - c.y)) / len;
         });
       })
-      .force("quadtree", this.rebuildQuadtree.bind(this))
+      .force("quadtree", () => {
+        debugInfo.startTimer("build-quadtree");
+        this.rebuildQuadtree();
+        debugInfo.stopTimer("build-quadtree");
+      })
       .force(
         "interaction",
         collideForce(this, debugInfo)

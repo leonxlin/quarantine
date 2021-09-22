@@ -20,6 +20,7 @@ export class DebugInfo {
     this.initTimer("triangulation");
     this.initTimer("render");
     this.initTimer("locate-creatures");
+    this.initTimer("build-quadtree");
 
     setInterval(
       function () {
@@ -36,6 +37,10 @@ export class DebugInfo {
         this.displayAndClearRecentTimerValues(
           "locate-creatures",
           ".locate-creatures-runtime"
+        );
+        this.displayAndClearRecentTimerValues(
+          "build-quadtree",
+          ".build-quadtree-runtime"
         );
 
         d3.select(".frames-per-second").text(this.numTicksSinceLastRecord);

@@ -23943,7 +23943,11 @@ var quarantine = (function (exports) {
                   c.vy += (alpha * (c.goal.y - c.y)) / len;
               });
           })
-              .force("quadtree", this.rebuildQuadtree.bind(this))
+              .force("quadtree", () => {
+              debugInfo.startTimer("build-quadtree");
+              this.rebuildQuadtree();
+              debugInfo.stopTimer("build-quadtree");
+          })
               .force("interaction", collideForce(this, debugInfo)
               .interaction("collision", collisionInteraction.bind(null, level))
               .interaction("party", (creature, party) => {
@@ -24180,12 +24184,14 @@ var quarantine = (function (exports) {
           this.initTimer("triangulation");
           this.initTimer("render");
           this.initTimer("locate-creatures");
+          this.initTimer("build-quadtree");
           setInterval(function () {
               this.displayAndClearRecentTimerValues("step", ".step-runtime");
               this.displayAndClearRecentTimerValues("collision", ".collision-force-runtime");
               this.displayAndClearRecentTimerValues("triangulation", ".triangulation-runtime");
               this.displayAndClearRecentTimerValues("render", ".render-runtime");
               this.displayAndClearRecentTimerValues("locate-creatures", ".locate-creatures-runtime");
+              this.displayAndClearRecentTimerValues("build-quadtree", ".build-quadtree-runtime");
               select(".frames-per-second").text(this.numTicksSinceLastRecord);
               this.recentTicksPerSecond[this.recentTicksPerSecondIndex] = this.numTicksSinceLastRecord;
               this.recentTicksPerSecondIndex += 1;
