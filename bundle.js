@@ -18855,9 +18855,6 @@ var quarantine = (function (exports) {
           return this.age > 1000;
       }
   }
-  function isParty(n) {
-      return n instanceof Party;
-  }
 
   // The code in this file is adapted
   function jiggle() {
@@ -18873,26 +18870,23 @@ var quarantine = (function (exports) {
   }
   // Handles collision between two nodes.
   // TODO: document arguments.
-  function collisionInteraction(level, node1, node2, x, y, l, r, ri2, rj) {
-      if (isImpassableCircle(node1)) {
-          if (isImpassableCircle(node2)) {
-              circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
+  function collisionInteraction(level, c, n, x, y, l, r, ri2, rj) {
+      if (isCreature(c)) {
+          if (isImpassableCircle(n)) {
+              // Note the reversal of `n` and `c`!
+              // TODO: this is confusing as hell.
+              circleCircleCollisionInteraction(n, c, x, y, l, r, ri2, rj);
           }
-          else if (isImpassableSegment(node2)) {
-              circleLineCollisionInteraction(level, node1, node2);
-          }
-      }
-      else if (isImpassableSegment(node1)) {
-          if (isImpassableCircle(node2)) {
-              circleLineCollisionInteraction(level, node2, node1);
+          else if (isImpassableSegment(n)) {
+              circleLineCollisionInteraction(level, c, n);
           }
       }
-      else if (isCursorNode(node1)) {
-          if (isImpassableCircle(node2)) {
-              node1.reportPotentialTarget(node2, l);
+      else if (isCursorNode(c)) {
+          if (isImpassableCircle(n)) {
+              c.reportPotentialTarget(n, l);
           }
-          else if (isImpassableSegment(node2)) {
-              circleLineCollisionInteraction(level, node1, node2);
+          else if (isImpassableSegment(n)) {
+              circleLineCollisionInteraction(level, c, n);
           }
       }
   }
@@ -18952,42 +18946,38 @@ var quarantine = (function (exports) {
           debugInfo.startTimer("collision");
           let node, xi, yi, ri, ri2;
           const tree = world.quadtree;
+          const nodesToCollide = world.creatures.concat(...[...world.walls].map((w) => w.joints), ...[...world.walls].map((w) => w.segments), world.parties);
+          world.cursorNode.target = null;
           // For each node, visit other nodes that could collide.
-          for (node of world.creatures.concat([world.cursorNode])) {
-              // Only loop through nodes that might need to respond to a collision.
-              if (!(isLiveCreature(node) || isCursorNode(node)))
-                  continue;
-              if (isCursorNode(node))
-                  node.target = null;
+          for (node of nodesToCollide) {
               ri = node.r;
               ri2 = ri * ri;
               xi = getNextX(node);
               yi = getNextY(node);
-              tree.visit(apply);
-          }
-          function apply(quad, x0, y0, x1, y1) {
-              if (!quad.data) {
-                  const r = quad.r + ri;
-                  // Return true if there is no need to visit the children of `quad`.
-                  return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
-              }
-              let q = quad;
-              do {
-                  const data = q.data, rj = data.r, r = ri + rj;
-                  if (isWallComponent(data) ||
-                      isParty(data) ||
-                      data.index > node.index ||
-                      isCursorNode(node)) {
+              tree.visit((quad, x0, y0, x1, y1) => {
+                  if (!isQuadtreeLeafNode(quad)) {
+                      const r = quad.r + ri;
+                      // Return true if there is no need to visit the children of `quad`.
+                      return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+                  }
+                  let q = quad;
+                  do {
+                      const data = q.data, rj = data.r, r = ri + rj;
+                      // Avoid duplicate interaction between pairs of creatures.
+                      if (isLiveCreature(node) &&
+                          isLiveCreature(data) &&
+                          node.index >= data.index) {
+                          continue;
+                      }
                       const x = xi - getNextX(data), y = yi - getNextY(data), l = x * x + y * y;
                       if (l < r * r) {
-                          // Execute registered interactions for (node, data).
-                          interactions.forEach(function (interaction) {
-                              interaction(node, data, x, y, l, r, ri2, rj);
+                          // Execute registered interactions for (data, node).
+                          interactions.forEach((interaction) => {
+                              interaction(data, node, x, y, l, r, ri2, rj);
                           });
                       }
-                  }
-                  q = q.next;
-              } while (q);
+                  } while ((q = q.next));
+              });
           }
           debugInfo.stopTimer("collision");
       }
@@ -24079,6 +24069,7 @@ var quarantine = (function (exports) {
           })
               .force("locate-creatures", () => {
               debugInfo.startTimer("locate-creatures");
+              // TODO: make this faster.
               // Search for creatures within the bounding box of each triangle. Record
               // when a creature's center lies in a triangle.
               for (let f = this.mesh.fHead.prev; f !== this.mesh.fHead; f = f.prev) {
@@ -24124,33 +24115,30 @@ var quarantine = (function (exports) {
       }
       rebuildQuadtree() {
           this.quadtree = quadtree(this.creatures, getNextX, getNextY)
-              .addAll(this.parties);
-          for (const wall of this.walls) {
-              this.quadtree
-                  .addAll(wall.joints)
-                  .addAll(wall.segments)
-                  .add(this.cursorNode);
-          }
-          this.quadtree.visitAfter(setRadius);
-          // Sets the radius of each quad, both leaves and internal nodes. Invoked in postorder
-          // sequence.
-          function setRadius(quad) {
-              if (quad.data) {
-                  quad.r = quad.data.r;
+              .add(this.cursorNode);
+          // Set radius on leaves and internal nodes, in postorder sequence.
+          this.quadtree.visitAfter((quad) => {
+              const rquad = quad;
+              if (isQuadtreeLeafNode(quad)) {
+                  rquad.r = quad.data.r;
                   // Take the maximum radius of all items that are centered at the exact same (x, y).
                   let q = quad;
                   while (q.next) {
                       q = q.next;
-                      quad.r = Math.max(quad.r, q.data.r);
+                      rquad.r = Math.max(rquad.r, q.data.r);
                   }
                   return;
               }
-              for (let i = (quad.r = 0); i < 4; ++i) {
-                  if (quad[i] && quad[i].r > quad.r) {
-                      quad.r = quad[i].r;
+              rquad.r = 0;
+              for (let i = 0; i < 4; ++i) {
+                  if (!quad[i])
+                      continue;
+                  const rquadi = quad[i];
+                  if (rquadi.r > rquad.r) {
+                      rquad.r = rquadi.r;
                   }
               }
-          }
+          });
       }
       startNewWall(p) {
           const wall = new Wall(this.level);

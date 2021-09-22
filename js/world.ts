@@ -7,9 +7,10 @@ import {
   Creature,
   Party,
   isLiveCreature,
-  isQuadtreeLeafNode,
   squaredDistance,
   Point,
+  RadiusObject,
+  isQuadtreeLeafNode,
 } from "./simulation-types";
 import collideForce from "./collide";
 import { getNextX, getNextY, collisionInteraction } from "./collide";
@@ -38,7 +39,7 @@ export class World {
   walls: Set<Wall> = new Set();
   parties: Array<Party> = [];
 
-  quadtree: d3.Quadtree<SNode>;
+  quadtree: d3.Quadtree<Creature | CursorNode>;
 
   victoryCheckEnabled = true;
 
@@ -355,36 +356,33 @@ export class World {
 
   private rebuildQuadtree(): void {
     this.quadtree = d3
-      .quadtree<SNode>(this.creatures, getNextX, getNextY)
-      .addAll(this.parties);
-    for (const wall of this.walls) {
-      this.quadtree
-        .addAll(wall.joints)
-        .addAll(wall.segments)
-        .add(this.cursorNode);
-    }
-    this.quadtree.visitAfter(setRadius);
+      .quadtree<Creature | CursorNode>(this.creatures, getNextX, getNextY)
+      .add(this.cursorNode);
 
-    // Sets the radius of each quad, both leaves and internal nodes. Invoked in postorder
-    // sequence.
-    function setRadius(quad) {
-      if (quad.data) {
-        quad.r = quad.data.r;
+    // Set radius on leaves and internal nodes, in postorder sequence.
+    this.quadtree.visitAfter((quad) => {
+      const rquad = (quad as unknown) as RadiusObject;
+      if (isQuadtreeLeafNode(quad)) {
+        rquad.r = quad.data.r;
 
         // Take the maximum radius of all items that are centered at the exact same (x, y).
         let q = quad;
         while (q.next) {
           q = q.next;
-          quad.r = Math.max(quad.r, q.data.r);
+          rquad.r = Math.max(rquad.r, q.data.r);
         }
         return;
       }
-      for (let i = (quad.r = 0); i < 4; ++i) {
-        if (quad[i] && quad[i].r > quad.r) {
-          quad.r = quad[i].r;
+
+      rquad.r = 0;
+      for (let i = 0; i < 4; ++i) {
+        if (!quad[i]) continue;
+        const rquadi = (quad[i] as unknown) as RadiusObject;
+        if (rquadi.r > rquad.r) {
+          rquad.r = rquadi.r;
         }
       }
-    }
+    });
   }
 
   startNewWall(p: Point): Wall {
