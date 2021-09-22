@@ -10,11 +10,14 @@ import {
 import { World } from "./world";
 import { DebugInfo } from "./debug-info";
 import { getTrianglePoints } from "./tessy";
+import libtess from "libtess/libtess.cat.js";
 
 export class View {
   canvas: HTMLCanvasElement;
   wallCanvas: HTMLCanvasElement;
   mouseCanvas: HTMLCanvasElement;
+  debugTrianglesCanvas: HTMLCanvasElement;
+  debugTrianglesFixedCanvas: HTMLCanvasElement;
   CANVAS_ASPECT_RATIO = 3 / 2;
   WIDTH = 900;
   HEIGHT = 600;
@@ -40,6 +43,7 @@ export class View {
   blobCanvases: HTMLCanvasElement[][] = [];
 
   lastWallHash: number;
+  lastMesh: libtess.GluMesh;
 
   fitCanvas(): void {
     const left_panel = document.querySelector(".left-panel") as HTMLElement;
@@ -56,13 +60,19 @@ export class View {
       Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
       "px";
 
-    [this.canvas, this.wallCanvas, this.mouseCanvas, left_panel].forEach(
-      (c) => {
-        c.style.width = cssWidth;
-        c.style.height = cssHeight;
-      }
-    );
-    [this.canvas, this.wallCanvas, this.mouseCanvas].forEach((c) => {
+    const canvases = [
+      this.canvas,
+      this.wallCanvas,
+      this.mouseCanvas,
+      this.debugTrianglesCanvas,
+      this.debugTrianglesFixedCanvas,
+    ];
+
+    [left_panel].concat(canvases).forEach((c) => {
+      c.style.width = cssWidth;
+      c.style.height = cssHeight;
+    });
+    canvases.forEach((c) => {
       c.width = this.WIDTH;
       c.height = this.HEIGHT;
     });
@@ -96,6 +106,12 @@ export class View {
     ) as HTMLCanvasElement;
     this.mouseCanvas = document.querySelector(
       ".mouse-canvas"
+    ) as HTMLCanvasElement;
+    this.debugTrianglesCanvas = document.querySelector(
+      ".debug-triangles-canvas"
+    ) as HTMLCanvasElement;
+    this.debugTrianglesFixedCanvas = document.querySelector(
+      ".debug-triangles-fixed-canvas"
     ) as HTMLCanvasElement;
     this.fitCanvas();
 
@@ -193,7 +209,7 @@ export class View {
   }
 
   renderWalls(world: World): void {
-    // TODO: this is not a hash. Rename or fix.
+    // TODO: this is not a real hash. Rename or fix.
     let newHash = 0;
     for (const wall of world.walls) {
       newHash += wall.points.length + 1;
@@ -237,6 +253,44 @@ export class View {
     context.restore();
   }
 
+  renderDebugTriangles(world: World): void {
+    const context = this.debugTrianglesCanvas.getContext("2d");
+    context.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+    context.save();
+
+    // Highlight mesh triangles that contain a creature.
+    world.creatures.forEach((c) => {
+      // Highlight the triangle that the creature is in.
+      context.beginPath();
+      this.outlineTriangle(getTrianglePoints(c.meshFace), context);
+      context.fillStyle = "lightgreen";
+      context.fill();
+    });
+
+    context.restore();
+  }
+
+  renderDebugTrianglesFixed(world: World): void {
+    if (this.lastMesh === world.mesh) return;
+    this.lastMesh = world.mesh;
+
+    const context = this.debugTrianglesFixedCanvas.getContext("2d");
+    context.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+    context.save();
+
+    if (world.mesh) {
+      context.strokeStyle = "green";
+      context.beginPath();
+      // Iterate over the faces of the mesh. Note that fHead is apparently a
+      // dummy face and should be skipped.
+      for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
+        this.outlineTriangle(getTrianglePoints(f), context);
+      }
+      context.stroke();
+    }
+    context.restore();
+  }
+
   render(world: World): void {
     this.debugInfo.numTicksSinceLastRecord += 1;
     this.debugInfo.startTimer("render");
@@ -257,30 +311,11 @@ export class View {
     const context = this.canvas.getContext("2d");
 
     this.renderWalls(world);
+    this.renderDebugTriangles(world);
+    this.renderDebugTrianglesFixed(world);
 
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     context.save();
-
-    // Draw mesh.
-    if (world.mesh) {
-      context.strokeStyle = "green";
-      context.beginPath();
-      // Iterate over the faces of the mesh. Note that fHead is apparently a
-      // dummy face and should be skipped.
-      for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
-        this.outlineTriangle(getTrianglePoints(f), context);
-      }
-      context.stroke();
-    }
-
-    // Highlight mesh triangles that contain a creature.
-    world.creatures.forEach((c) => {
-      // Highlight the triangle that the creature is in.
-      context.beginPath();
-      this.outlineTriangle(getTrianglePoints(c.meshFace), context);
-      context.fillStyle = "lightgreen";
-      context.fill();
-    });
 
     // Draw parties.
     world.parties.forEach(function (d) {

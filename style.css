@@ -19,6 +19,16 @@
   position: absolute;
 }
 
+.debug-triangles-canvas {
+  z-index: -1;
+  position: absolute;
+}
+
+.debug-triangles-fixed-canvas {
+  z-index: -2;
+  position: absolute;
+}
+
 .offscreen-canvas {
   position: absolute;
   border: 2px solid black;

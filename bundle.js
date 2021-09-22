@@ -24242,6 +24242,8 @@ var quarantine = (function (exports) {
           this.canvas = document.querySelector(".game-canvas");
           this.wallCanvas = document.querySelector(".wall-canvas");
           this.mouseCanvas = document.querySelector(".mouse-canvas");
+          this.debugTrianglesCanvas = document.querySelector(".debug-triangles-canvas");
+          this.debugTrianglesFixedCanvas = document.querySelector(".debug-triangles-fixed-canvas");
           this.fitCanvas();
           // Load assets.
           this.blobBody = new Image();
@@ -24269,11 +24271,18 @@ var quarantine = (function (exports) {
               "px";
           const cssHeight = Math.min(available_height, available_width / this.CANVAS_ASPECT_RATIO) +
               "px";
-          [this.canvas, this.wallCanvas, this.mouseCanvas, left_panel].forEach((c) => {
+          const canvases = [
+              this.canvas,
+              this.wallCanvas,
+              this.mouseCanvas,
+              this.debugTrianglesCanvas,
+              this.debugTrianglesFixedCanvas,
+          ];
+          [left_panel].concat(canvases).forEach((c) => {
               c.style.width = cssWidth;
               c.style.height = cssHeight;
           });
-          [this.canvas, this.wallCanvas, this.mouseCanvas].forEach((c) => {
+          canvases.forEach((c) => {
               c.width = this.WIDTH;
               c.height = this.HEIGHT;
           });
@@ -24353,7 +24362,7 @@ var quarantine = (function (exports) {
           context.lineTo(triangle[0].x, triangle[0].y);
       }
       renderWalls(world) {
-          // TODO: this is not a hash. Rename or fix.
+          // TODO: this is not a real hash. Rename or fix.
           let newHash = 0;
           for (const wall of world.walls) {
               newHash += wall.points.length + 1;
@@ -24395,6 +24404,39 @@ var quarantine = (function (exports) {
           context.lineWidth = 1;
           context.restore();
       }
+      renderDebugTriangles(world) {
+          const context = this.debugTrianglesCanvas.getContext("2d");
+          context.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+          context.save();
+          // Highlight mesh triangles that contain a creature.
+          world.creatures.forEach((c) => {
+              // Highlight the triangle that the creature is in.
+              context.beginPath();
+              this.outlineTriangle(getTrianglePoints(c.meshFace), context);
+              context.fillStyle = "lightgreen";
+              context.fill();
+          });
+          context.restore();
+      }
+      renderDebugTrianglesFixed(world) {
+          if (this.lastMesh === world.mesh)
+              return;
+          this.lastMesh = world.mesh;
+          const context = this.debugTrianglesFixedCanvas.getContext("2d");
+          context.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+          context.save();
+          if (world.mesh) {
+              context.strokeStyle = "green";
+              context.beginPath();
+              // Iterate over the faces of the mesh. Note that fHead is apparently a
+              // dummy face and should be skipped.
+              for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
+                  this.outlineTriangle(getTrianglePoints(f), context);
+              }
+              context.stroke();
+          }
+          context.restore();
+      }
       render(world) {
           this.debugInfo.numTicksSinceLastRecord += 1;
           this.debugInfo.startTimer("render");
@@ -24414,27 +24456,10 @@ var quarantine = (function (exports) {
           }
           const context = this.canvas.getContext("2d");
           this.renderWalls(world);
+          this.renderDebugTriangles(world);
+          this.renderDebugTrianglesFixed(world);
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.save();
-          // Draw mesh.
-          if (world.mesh) {
-              context.strokeStyle = "green";
-              context.beginPath();
-              // Iterate over the faces of the mesh. Note that fHead is apparently a
-              // dummy face and should be skipped.
-              for (let f = world.mesh.fHead.prev; f !== world.mesh.fHead; f = f.prev) {
-                  this.outlineTriangle(getTrianglePoints(f), context);
-              }
-              context.stroke();
-          }
-          // Highlight mesh triangles that contain a creature.
-          world.creatures.forEach((c) => {
-              // Highlight the triangle that the creature is in.
-              context.beginPath();
-              this.outlineTriangle(getTrianglePoints(c.meshFace), context);
-              context.fillStyle = "lightgreen";
-              context.fill();
-          });
           // Draw parties.
           world.parties.forEach(function (d) {
               if (d.expired())
