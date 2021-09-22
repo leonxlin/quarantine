@@ -7,6 +7,18 @@ export function squaredDistance(p1: Point, p2: Point): number {
   return dx * dx + dy * dy;
 }
 
+// To make Typescript happy.
+// TODO: consider rewriting code that requires forced casts to RadiusObject.
+export interface RadiusObject {
+  r: number;
+}
+
+export function isQuadtreeLeafNode<T>(
+  node: d3.QuadtreeInternalNode<T> | d3.QuadtreeLeaf<T>
+): node is d3.QuadtreeLeaf<T> {
+  return !node.length;
+}
+
 export type Selectable = Wall | Creature;
 
 export interface Point {
@@ -15,7 +27,7 @@ export interface Point {
 }
 
 // Objects that can participate in collision/proximity detection.
-export interface SNode extends Point {
+export interface SNode extends Point, RadiusObject {
   // An upper bound on the distance from the center to any part of the node.
   // Used for collision detection.
   r: number;
@@ -253,8 +265,8 @@ export function isParty(n: SNode): n is Party {
 }
 
 export type Interaction = (
-  node1: SNode,
-  node2: SNode,
+  c: Creature | CursorNode,
+  n: SNode,
   ...args: unknown[]
 ) => void;
 

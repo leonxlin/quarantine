@@ -34,6 +34,8 @@
 // detects nearby objects on the map and handles interactions between them.
 
 import {
+  Creature,
+  CursorNode,
   SNode,
   SegmentNode,
   SForceCollide,
@@ -41,9 +43,10 @@ import {
   isImpassableCircle,
   isCursorNode,
   isImpassableSegment,
+  isQuadtreeLeafNode,
+  RadiusObject,
   isLiveCreature,
-  isWallComponent,
-  isParty,
+  isCreature,
 } from "./simulation-types";
 import { DebugInfo } from "./debug-info";
 import { World } from "./world";
@@ -66,8 +69,8 @@ export function getNextY(d: SNode): number {
 // TODO: document arguments.
 export function collisionInteraction(
   level: Level,
-  node1: SNode,
-  node2: SNode,
+  c: Creature | CursorNode,
+  n: SNode,
   x: number,
   y: number,
   l: number,
@@ -75,21 +78,19 @@ export function collisionInteraction(
   ri2: number,
   rj: number
 ): void {
-  if (isImpassableCircle(node1)) {
-    if (isImpassableCircle(node2)) {
-      circleCircleCollisionInteraction(node1, node2, x, y, l, r, ri2, rj);
-    } else if (isImpassableSegment(node2)) {
-      circleLineCollisionInteraction(level, node1, node2);
+  if (isCreature(c)) {
+    if (isImpassableCircle(n)) {
+      // Note the reversal of `n` and `c`!
+      // TODO: this is confusing as hell.
+      circleCircleCollisionInteraction(n, c, x, y, l, r, ri2, rj);
+    } else if (isImpassableSegment(n)) {
+      circleLineCollisionInteraction(level, c, n);
     }
-  } else if (isImpassableSegment(node1)) {
-    if (isImpassableCircle(node2)) {
-      circleLineCollisionInteraction(level, node2, node1);
-    }
-  } else if (isCursorNode(node1)) {
-    if (isImpassableCircle(node2)) {
-      node1.reportPotentialTarget(node2, l);
-    } else if (isImpassableSegment(node2)) {
-      circleLineCollisionInteraction(level, node1, node2);
+  } else if (isCursorNode(c)) {
+    if (isImpassableCircle(n)) {
+      c.reportPotentialTarget(n, l);
+    } else if (isImpassableSegment(n)) {
+      circleLineCollisionInteraction(level, c, n);
     }
   }
 }
@@ -171,50 +172,53 @@ export default function (world: World, debugInfo: DebugInfo): SForceCollide {
 
     const tree = world.quadtree;
 
-    // For each node, visit other nodes that could collide.
-    for (node of (world.creatures as SNode[]).concat([world.cursorNode])) {
-      // Only loop through nodes that might need to respond to a collision.
-      if (!(isLiveCreature(node) || isCursorNode(node))) continue;
-      if (isCursorNode(node)) node.target = null;
+    const nodesToCollide = (world.creatures as SNode[]).concat(
+      ...[...world.walls].map((w) => w.joints),
+      ...[...world.walls].map((w) => w.segments),
+      world.parties
+    );
+    world.cursorNode.target = null;
 
+    // For each node, visit other nodes that could collide.
+    for (node of nodesToCollide) {
       ri = node.r;
       ri2 = ri * ri;
       xi = getNextX(node);
       yi = getNextY(node);
-      tree.visit(apply);
-    }
 
-    function apply(quad, x0, y0, x1, y1) {
-      if (!quad.data) {
-        const r = quad.r + ri;
-        // Return true if there is no need to visit the children of `quad`.
-        return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
-      }
+      tree.visit((quad, x0, y0, x1, y1) => {
+        if (!isQuadtreeLeafNode(quad)) {
+          const r = ((quad as unknown) as RadiusObject).r + ri;
+          // Return true if there is no need to visit the children of `quad`.
+          return x0 > xi + r || x1 < xi - r || y0 > yi + r || y1 < yi - r;
+        }
 
-      let q = quad;
-      do {
-        const data = q.data,
-          rj = data.r,
-          r = ri + rj;
-        if (
-          isWallComponent(data) ||
-          isParty(data) ||
-          data.index > node.index ||
-          isCursorNode(node)
-        ) {
+        let q = quad;
+        do {
+          const data = q.data,
+            rj = data.r,
+            r = ri + rj;
+
+          // Avoid duplicate interaction between pairs of creatures.
+          if (
+            isLiveCreature(node) &&
+            isLiveCreature(data) &&
+            node.index >= data.index
+          ) {
+            continue;
+          }
+
           const x = xi - getNextX(data),
             y = yi - getNextY(data),
             l = x * x + y * y;
           if (l < r * r) {
-            // Execute registered interactions for (node, data).
-            interactions.forEach(function (interaction) {
-              interaction(node, data, x, y, l, r, ri2, rj);
+            // Execute registered interactions for (data, node).
+            interactions.forEach((interaction) => {
+              interaction(data, node, x, y, l, r, ri2, rj);
             });
           }
-        }
-
-        q = q.next;
-      } while (q);
+        } while ((q = q.next));
+      });
     }
 
     debugInfo.stopTimer("collision");
